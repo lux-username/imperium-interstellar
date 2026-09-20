@@ -1,0 +1,52 @@
+import type { Culture } from './culture'
+
+export const scottish: Culture = {
+  name: 'Scottish',
+  group: 'European',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "Lowland and Highland mixed; the feminised men's names (Williamina, Jacobina) are a genuine Victorian Scots habit.",
+  given: {
+    m: [
+      'John', 'James', 'William', 'Alexander', 'Robert', 'David', 'Thomas', 'George', 'Andrew', 'Charles',
+      'Archibald', 'Donald', 'Duncan', 'Hugh', 'Angus', 'Malcolm', 'Colin', 'Kenneth', 'Neil', 'Alasdair',
+      'Hamish', 'Ewan', 'Fergus', 'Finlay', 'Gregor', 'Lachlan', 'Murdoch', 'Iain', 'Alan', 'Douglas',
+      'Gavin', 'Gilbert', 'Gordon', 'Graham', 'Hector', 'Henry', 'Peter', 'Adam', 'Walter', 'Ninian',
+      'Mungo', 'Norman', 'Roderick', 'Ronald', 'Ruaridh', 'Torquil', 'Somerled', 'Patrick', 'Matthew', 'Magnus',
+      'Stuart', 'Crawford', 'Bruce', 'Blair', 'Lindsay', 'Leslie', 'Forbes', 'Wallace', 'Ramsay', 'Keith',
+      'Gilchrist', 'Farquhar', 'Callum', 'Coll', 'Dugald', 'Rory', 'Sandy', 'Jock', 'Ebenezer', 'Tam',
+      'Alastair', 'Alpin', 'Aulay', 'Coinneach', 'Eachann', 'Gillies', 'Innes', 'Ivor', 'Lorne', 'Munro',
+    ],
+    f: [
+      'Margaret', 'Mary', 'Janet', 'Elizabeth', 'Isabella', 'Agnes', 'Jane', 'Ann', 'Jean', 'Helen',
+      'Catherine', 'Christina', 'Marion', 'Euphemia', 'Grizel', 'Jessie', 'Williamina', 'Georgina', 'Alexandrina', 'Davina',
+      'Jemima', 'Barbara', 'Elspeth', 'Elsie', 'Ishbel', 'Isobel', 'Kirsty', 'Mairi', 'Morag', 'Moira',
+      'Fiona', 'Flora', 'Effie', 'Annie', 'Bessie', 'Mysie', 'Peggy', 'Maggie', 'Nessie', 'Sheena',
+      'Seonaid', 'Catriona', 'Ailsa', 'Iona', 'Rhona', 'Una', 'Beathag', 'Marsaili', 'Eilidh', 'Shona',
+      'Lilias', 'Alison', 'Bethia', 'Christian', 'Euphan', 'Grace', 'Henrietta', 'Joan', 'Marjory', 'Rachel',
+      'Sarah', 'Susanna', 'Wilhelmina', 'Robina', 'Thomasina', 'Jacobina', 'Hughina', 'Charlotte', 'Mabel', 'Nancy',
+      'Maisie', 'Isla', 'Jeannie', 'Kate', 'Minnie', 'Nan', 'Ada', 'Bella', 'Cathie', 'Lizzie',
+    ],
+  },
+  family: [
+    'MacDonald', 'Campbell', 'Stewart', 'Robertson', 'Anderson', 'Scott', 'Murray', 'MacKenzie', 'MacLeod', 'Fraser',
+    'Grant', 'Cameron', 'Gordon', 'Reid', 'Ross', 'Sinclair', 'Sutherland', 'Wallace', 'Douglas', 'Hamilton',
+    'Graham', 'Ferguson', 'Henderson', 'Paterson', 'Duncan', 'Morrison', 'Bruce', 'Munro', 'MacGregor', 'MacKay',
+    'MacIntosh', 'MacLean', 'MacPherson', 'MacRae', 'MacNeil', 'MacAllister', 'MacFarlane', 'MacInnes', 'MacLachlan', 'MacQueen',
+    'MacTavish', 'Buchanan', 'Cunningham', 'Drummond', 'Forbes', 'Gunn', 'Hay', 'Innes', 'Johnstone', 'Kerr',
+    'Keith', 'Lamont', 'Lindsay', 'Livingstone', 'Logan', 'Maxwell', 'Menzies', 'Moffat', 'Napier', 'Ogilvie',
+    'Ramsay', 'Rutherford', 'Shaw', 'Skene', 'Urquhart', 'Wemyss', 'Baird', 'Balfour', 'Blair', 'Boyd',
+    'Brodie', 'Burnett', 'Chisholm', 'Cochrane', 'Colquhoun', 'Crawford', 'Dalgleish', 'Dunbar', 'Elphinstone', 'Erskine',
+    'Fairbairn', 'Galbraith', 'Gillespie', 'Kinnaird', 'Leslie', 'Lockhart', 'Muir', 'Nairn', 'Pringle', 'Rennie',
+    'Tennant', 'Wishart',
+  ],
+  places: [
+    'Edinburgh', 'Glasgow', 'Aberdeen', 'Dundee', 'Perth', 'Stirling', 'Inverness', 'Dumfries', 'Ayr', 'Paisley',
+    'Greenock', 'Kilmarnock', 'Falkirk', 'Dunfermline', 'Kirkcaldy', 'St Andrews', 'Montrose', 'Arbroath', 'Forfar', 'Elgin',
+    'Nairn', 'Wick', 'Thurso', 'Kirkwall', 'Lerwick', 'Stornoway', 'Oban', 'Fort William', 'Dingwall', 'Dornoch',
+    'Peebles', 'Selkirk', 'Melrose', 'Jedburgh', 'Kelso', 'Hawick', 'Lanark', 'Dunbar', 'Haddington', 'Linlithgow',
+    'Crieff', 'Pitlochry', 'Braemar', 'Ballater', 'Banff', 'Fraserburgh', 'Peterhead', 'Stonehaven', 'Brechin', 'Callander',
+    'Lochaber', 'Badenoch', 'Lothian', 'Galloway', 'Argyll', 'Moray', 'Buchan', 'Skye', 'Mull', 'Islay',
+    'Jura', 'Arran', 'Tay', 'Clyde', 'Forth', 'Tweed', 'Spey', 'Cairngorm', 'Glencoe', 'Rannoch',
+  ],
+}

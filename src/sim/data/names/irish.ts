@@ -1,0 +1,52 @@
+import type { Culture } from './culture'
+
+export const irish: Culture = {
+  name: 'Irish',
+  group: 'European',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: 'Anglicised forms dominate nineteenth-century records; Gaelic forms are included at the rate the Revival brought them back.',
+  given: {
+    m: [
+      'Patrick', 'Michael', 'John', 'James', 'Thomas', 'William', 'Daniel', 'Denis', 'Timothy', 'Cornelius',
+      'Jeremiah', 'Bartholomew', 'Owen', 'Hugh', 'Edward', 'Peter', 'Martin', 'Bernard', 'Francis', 'Laurence',
+      'Matthew', 'Philip', 'Andrew', 'Anthony', 'Brian', 'Charles', 'Christopher', 'Dominick', 'Edmond', 'Eugene',
+      'Felix', 'Garrett', 'Gerald', 'Jerome', 'Malachy', 'Manus', 'Myles', 'Nicholas', 'Terence', 'Dermot',
+      'Donal', 'Rory', 'Turlough', 'Fergus', 'Cormac', 'Conor', 'Cathal', 'Niall', 'Eamon', 'Kieran',
+      'Declan', 'Colm', 'Lorcan', 'Tadhg', 'Eoghan', 'Aengus', 'Ambrose', 'Augustine', 'Darby', 'Dudley',
+      'Ignatius', 'Jasper', 'Joseph', 'Kevin', 'Luke', 'Maurice', 'Morgan', 'Mortimer', 'Murtagh', 'Oliver',
+      'Redmond', 'Richard', 'Robert', 'Roger', 'Simon', 'Stephen', 'Ulick', 'Valentine', 'Walter', 'Finbar',
+    ],
+    f: [
+      'Mary', 'Bridget', 'Margaret', 'Catherine', 'Ellen', 'Anne', 'Johanna', 'Honora', 'Julia', 'Ann',
+      'Elizabeth', 'Hannah', 'Winifred', 'Nora', 'Kate', 'Maria', 'Sarah', 'Jane', 'Eliza', 'Rose',
+      'Alice', 'Agnes', 'Cecilia', 'Delia', 'Teresa', 'Brigid', 'Norah', 'Sheila', 'Una', 'Maeve',
+      'Deirdre', 'Grainne', 'Siobhan', 'Aoife', 'Niamh', 'Eileen', 'Kathleen', 'Maureen', 'Nuala', 'Sinead',
+      'Roisin', 'Clare', 'Josephine', 'Joanna', 'Lucy', 'Susan', 'Matilda', 'Frances', 'Fanny', 'Abigail',
+      'Amelia', 'Beatrice', 'Bessie', 'Celia', 'Charlotte', 'Christina', 'Dorothea', 'Ellie', 'Emily', 'Esther',
+      'Eva', 'Gertrude', 'Hanora', 'Helena', 'Isabella', 'Judith', 'Kitty', 'Letitia', 'Lily', 'Louisa',
+      'Lizzie', 'Marcella', 'Martha', 'Molly', 'Nancy', 'Peggy', 'Philomena', 'Rebecca', 'Sabina', 'Sophia',
+    ],
+  },
+  family: [
+    'Murphy', 'Kelly', "O'Sullivan", 'Walsh', "O'Brien", 'Byrne', 'Ryan', "O'Connor", "O'Neill", "O'Reilly",
+    'Doyle', 'McCarthy', 'Gallagher', "O'Doherty", 'Kennedy', 'Lynch', 'Murray', 'Quinn', 'Moore', 'McLoughlin',
+    "O'Carroll", 'Connolly', 'Daly', "O'Connell", 'Dunne', 'Brennan', 'Burke', 'Collins', 'Hughes', "O'Farrell",
+    'Fitzgerald', 'Maguire', 'Nolan', 'Flynn', "O'Callaghan", "O'Donnell", 'Duffy', "O'Mahony", 'Boyle', 'Healy',
+    "O'Shea", 'Sweeney', 'Hayes', 'Kavanagh', 'Power', 'McGrath', 'Moran', 'Brady', 'Casey', 'Foley',
+    'Fitzpatrick', "O'Leary", 'McDonnell', 'MacMahon', 'Donnelly', 'Regan', 'Donovan', 'Flanagan', 'Barry', 'Kane',
+    'Cunningham', 'Griffin', 'Kenny', 'Sheehan', 'Whelan', 'Lyons', 'Higgins', 'Cullen', 'Keane', 'Maher',
+    'McKenna', 'Hogan', "O'Keeffe", 'Magee', 'McNamara', 'Carroll', 'Rafferty', 'Tierney', 'Dempsey', 'Mulcahy',
+    'Costello', 'Hennessy', 'Cusack', 'Plunkett', 'Nugent', 'Dillon', 'Butler', 'Roche', 'Purcell', 'Tobin',
+    'Kinsella', 'Devlin', 'Meagher', 'Kearney', 'Hanrahan', 'Cronin', 'Scanlon', 'Dwyer', 'Egan', 'Delaney',
+  ],
+  places: [
+    'Dublin', 'Cork', 'Limerick', 'Galway', 'Waterford', 'Kilkenny', 'Belfast', 'Derry', 'Drogheda', 'Dundalk',
+    'Sligo', 'Wexford', 'Wicklow', 'Athlone', 'Ennis', 'Tralee', 'Killarney', 'Clonmel', 'Cashel', 'Tipperary',
+    'Carlow', 'Kildare', 'Naas', 'Mullingar', 'Longford', 'Roscommon', 'Castlebar', 'Westport', 'Ballina', 'Donegal',
+    'Letterkenny', 'Enniskillen', 'Armagh', 'Newry', 'Lisburn', 'Antrim', 'Coleraine', 'Omagh', 'Strabane', 'Monaghan',
+    'Cavan', 'Navan', 'Trim', 'Kells', 'Youghal', 'Kinsale', 'Bantry', 'Skibbereen', 'Dingle', 'Listowel',
+    'Nenagh', 'Thurles', 'Birr', 'Tullamore', 'Arklow', 'Bray', 'Shannon', 'Liffey', 'Boyne', 'Suir',
+    'Barrow', 'Nore', 'Blackwater', 'Connemara', 'Burren', 'Aran', 'Achill', 'Mourne', 'Slieve', 'Lough Erne',
+  ],
+}
