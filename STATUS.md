@@ -1,14 +1,12 @@
-> Generated 2026-09-20 by /end-session at commit 1284948.
+> Generated 2026-09-20 by /end-session at commit 4238d3e.
 
 # STATUS
 
 ## Where things stand
 
-**Phase 0 is done and accepted.** The user played the prototype and called it functional — good enough to build Phase 1 on (`#16`, closed). Branch `worktree-phase0-prototype` holds the whole of it as **PR #15** (ready for review; closes `#2`–`#9` on merge). `npm run dev` gives a generated subsector, a last-known map with age badges, an inbox of governor reports stamped observed / sent / arrived, a dossier per world where every claim links to the report it rests on, and one action: write to a governor for a report and wait for the reply.
+**Phase 0 is merged and closed** (PR #15, milestone 1 at 10/10). **Session 5 (design)** set up Phase 1: three milestones — [1a Hulls and people](https://github.com/lux-username/imperium-interstellar/milestone/2), [1b Trouble](https://github.com/lux-username/imperium-interstellar/milestone/3), [1c The Empire](https://github.com/lux-username/imperium-interstellar/milestone/4) — each ending in a playtest issue, and 19 new issues (`#22`–`#40`) filed against them. The design conversation resolved `#13`'s four open questions and settled the load-bearing calls for Phase 1, all now in `spec.md`: **events** are the unit of news; every report names its **channel** (`official` / `agent` / `merchant` / `docks`) and there is no fidelity number; rumours get their **own inbox pile**; Council **standing** is a hidden 0–20 with placeholder numbers and stated invariants (caught lying −5 vs honest failure −1; rumour never moves standing, only rumoured truth); starting scale and aid doubled; the parade is Warlord-captured-and-pleased-at-term-end; the map gives colour to allegiance and keeps age as the badge only; the **Warlord** gets a tracked belief state and scouts; **agents** are accurate on-site observers with a per-world traffic log, and **scout ships** are tiny hulls that excel at escaping. Rationale in `decisions.md` (eight entries dated 2026-09-20). No code changed this session.
 
-Playtest feedback shaped the last four commits: the inbox opens as compact expandable rows; a governor's letter is *one* report with hulls in port inside it, not a message per sighting; sightings in the dossier link to their source report; report text no longer repeats the starport class. The bigger piece of feedback — governors should write only when something matters, filtered by loyalty and boldness — is the first Phase 1 design item (`#20`).
-
-Current thinking: **merge PR #15, pull `main`, remove the worktree.** Then create the Phase 1 milestone and assign `#11`, `#13`, `#18`–`#21`. `#20` deserves a design conversation before code: it decides what a Character's traits actually *do* in the first place they'll be felt, and it is the same shape as the Council's reported-vs-rumoured judgement one level up, so one mechanism might serve both.
+Current thinking: the next code step is **1a**, in this order — `#22` Event primitive, `#23` `Report.channel`, then `#11` (reshaped per its latest comment) with `#18`/`#19`, then `#24` warships and scouts, `#20` selective governors, `#25` rumour, `#26` the rumours pane, and the `#27` playtest. Officer conversation stays Phase 2 unless the 1b playtest shows appointments feel blind.
 
 ## Derived facts
 
@@ -19,14 +17,15 @@ Current thinking: **merge PR #15, pull `main`, remove the worktree.** Then creat
 | Version | 0.0.1 |
 | Sim modules | `chart.ts`, `game.ts`, `generate.ts`, `hex.ts`, `lanes.ts`, `mail.ts`, `names.ts`, `orders.ts`, `player.ts`, `rng.ts`, `save.ts`, `types.ts`, `view.ts` |
 | Order types implemented | `courier`, `hold`, `move` |
-| Open issues | 14 (#2–#9 close when PR #15 merges; #11, #13, #18–#21) |
-| HEAD | 1284948 — Inbox: drop starport from report text (branch `worktree-phase0-prototype`, on `main` at 74fdb90) |
+| Open issues | 24 (`#11`, `#18`–`#40` less `#13`) |
+| HEAD | 4238d3e — Spec: Phase 1 design (branch `worktree-phase1-milestones`, on `main` at aa3a898) |
 
 ## Active milestone
 
-[Phase 0 — Belief map](https://github.com/lux-username/imperium-interstellar/milestone/1) — 8 open / 2 closed; the 8 close when PR #15 merges, completing the milestone.
+[Phase 1a — Hulls and people](https://github.com/lux-username/imperium-interstellar/milestone/2) — 10 open / 1 closed. Then 1b (8 open), 1c (6 open).
 
 ## Blockers / open questions
 
-- **PR #15 needs merging** (the user merges; the session cannot push to `main`). After merge: `git pull`, `git worktree remove .claude/worktrees/phase0-prototype`, delete the branch.
-- No Phase 1 milestone exists yet; `#11`, `#13`, `#18`–`#21` are waiting for it.
+- **This branch needs merging** (docs only: `spec.md`, `decisions.md`, this file, journal). PR opened by the session; the user merges. After merge: `git pull`, `git worktree remove .claude/worktrees/phase1-milestones`, delete the branch.
+- The user's local `main` was 9 commits behind `origin/main` at session start (PR #15's merge); `git pull` fast-forwards it. `.claude/worktrees/phase0-prototype` can be removed.
+- No open design questions. Standing numbers and starting scale are placeholders tuned by the 1b/1c playtests against the invariants in `spec.md → Council standing`.
