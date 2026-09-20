@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const quechua: Culture = {
+  name: 'Quechua',
+  group: 'Indigenous American',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "The southern Andes — Cuzco, Puno, the Bolivian altiplano — in the republican century. Given names were Spanish saints' names, chosen from the calendar; the Quechua and Aymara heritage lives in the surnames (Quispe, Mamani, Huamán). Two or three Inca given names survived as family pride.",
+  given: {
+    m: [
+      'José', 'Manuel', 'Juan', 'Pedro', 'Francisco', 'Mariano', 'Gregorio', 'Tomás', 'Santos', 'Esteban',
+      'Andrés', 'Nicolás', 'Agustín', 'Pascual', 'Melchor', 'Gaspar', 'Baltasar', 'Ignacio', 'Domingo', 'Bernardo',
+      'Lorenzo', 'Toribio', 'Ambrosio', 'Anselmo', 'Apolinario', 'Bartolomé', 'Bonifacio', 'Casimiro', 'Cipriano', 'Ciriaco',
+      'Clemente', 'Crisóstomo', 'Damián', 'Dionisio', 'Eusebio', 'Evaristo', 'Fabián', 'Faustino', 'Feliciano', 'Fermín',
+      'Fidel', 'Florencio', 'Fortunato', 'Fulgencio', 'Genaro', 'Hilario', 'Isidro', 'Jacinto', 'Julián', 'Leandro',
+      'Leoncio', 'Marcelino', 'Martín', 'Mateo', 'Máximo', 'Modesto', 'Narciso', 'Natalio', 'Pantaleón', 'Patricio',
+      'Remigio', 'Roque', 'Rufino', 'Saturnino', 'Sebastián', 'Silverio', 'Simón', 'Tiburcio', 'Valentín', 'Venancio',
+      'Vicente', 'Victoriano', 'Wenceslao', 'Zenón', 'Túpac', 'Amaru', 'Sinchi', 'Rumi', 'Cusi', 'Inti',
+    ],
+    f: [
+      'María', 'Juana', 'Josefa', 'Manuela', 'Francisca', 'Petrona', 'Tomasa', 'Gregoria', 'Mariana', 'Antonia',
+      'Andrea', 'Asunta', 'Asunción', 'Bartola', 'Benita', 'Bernardina', 'Brígida', 'Casimira', 'Catalina', 'Cipriana',
+      'Clara', 'Dionisia', 'Dominga', 'Dorotea', 'Eduviges', 'Eulalia', 'Eusebia', 'Felipa', 'Feliciana', 'Fermina',
+      'Florentina', 'Fortunata', 'Gerónima', 'Hilaria', 'Ignacia', 'Inés', 'Isidora', 'Jacinta', 'Julia', 'Juliana',
+      'Justina', 'Leandra', 'Lorenza', 'Lucía', 'Marcelina', 'Margarita', 'Martina', 'Matilde', 'Mauricia', 'Melchora',
+      'Mercedes', 'Micaela', 'Narcisa', 'Natividad', 'Nicolasa', 'Pascuala', 'Paula', 'Paulina', 'Petronila', 'Rosa',
+      'Rosalía', 'Rufina', 'Santusa', 'Saturnina', 'Sebastiana', 'Simona', 'Teodora', 'Teresa', 'Toribia', 'Úrsula',
+      'Valentina', 'Valeriana', 'Venancia', 'Vicenta', 'Victoria', 'Zenobia', 'Agustina', 'Ambrosia', 'Apolonia', 'Bonifacia',
+    ],
+  },
+  family: [
+    'Quispe', 'Mamani', 'Huamán', 'Condori', 'Choque', 'Apaza', 'Cusi', 'Puma', 'Inca', 'Yupanqui',
+    'Ttito', 'Huanca', 'Sullca', 'Ccopa', 'Taipe', 'Chuquimia', 'Ticona', 'Callisaya', 'Poma', 'Guamán',
+    'Colque', 'Cutipa', 'Ccorimanya', 'Chambi', 'Quenta', 'Ccahuana', 'Huallpa', 'Auccapuma', 'Pillco', 'Sinchi',
+    'Ñahui', 'Vilca', 'Yucra', 'Hancco', 'Ayma', 'Arocutipa', 'Chura', 'Larico', 'Machaca', 'Nina',
+    'Paucar', 'Pari', 'Quilla', 'Sacaca', 'Sanca', 'Suyo', 'Turpo', 'Umiña', 'Vilcapaza', 'Yanqui',
+    'Ccaso', 'Achahui', 'Anco', 'Aroni', 'Cahuana', 'Calla', 'Canaza', 'Catacora', 'Chalco', 'Checya',
+    'Choquehuanca', 'Coila', 'Cutimbo', 'Huaracha', 'Huarcaya', 'Kana', 'Layme', 'Limachi', 'Llanque', 'Mayta',
+    'Ochochoque', 'Pacco', 'Phuyo', 'Quenaya', 'Quilca', 'Siña', 'Supo', 'Tacuri', 'Tintaya', 'Yana',
+  ],
+  places: [
+    'Cuzco', 'Puno', 'Ayacucho', 'Huamanga', 'Huancavelica', 'Abancay', 'Andahuaylas', 'Arequipa', 'Cajamarca', 'Huancayo',
+    'Jauja', 'Huánuco', 'Cerro de Pasco', 'Tarma', 'Huaraz', 'Ancash', 'Urubamba', 'Ollantaytambo', 'Pisac', 'Calca',
+    'Paucartambo', 'Quillabamba', 'Sicuani', 'Espinar', 'Chumbivilcas', 'Cotabambas', 'Juliaca', 'Azángaro', 'Lampa', 'Ayaviri',
+    'Huancané', 'Chucuito', 'Yunguyo', 'Copacabana', 'La Paz', 'Oruro', 'Potosí', 'Sucre', 'Chuquisaca', 'Cochabamba',
+    'Tarija', 'Tiahuanaco', 'Titicaca', 'Vilcanota', 'Apurímac', 'Mantaro', 'Marañón', 'Huallaga', 'Ucayali', 'Pachachaca',
+    'Ausangate', 'Salcantay', 'Illimani', 'Illampu', 'Sajama', 'Altiplano', 'Collao', 'Vilcabamba', 'Antisuyo', 'Contisuyo',
+    'Collasuyo', 'Chinchaysuyo',
+  ],
+}

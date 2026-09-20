@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const nahuatl: Culture = {
+  name: 'Nahuatl',
+  group: 'Indigenous American',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "The Nahua villages of central Mexico — the Valley, Tlaxcala, Puebla, Morelos — from the Reform through the Porfiriato. Given names are the calendar saints' names the parish gave; roughly half the surnames are Nahuatl (the Tlaxcalan -tzi names above all), the rest the Spanish ones the same villages carried.",
+  given: {
+    m: [
+      'José', 'Juan', 'Francisco', 'Antonio', 'Manuel', 'Pedro', 'Miguel', 'Agustín', 'Vicente', 'Mariano',
+      'Ignacio', 'Nicolás', 'Tomás', 'Pablo', 'Diego', 'Marcos', 'Gabriel', 'Anastasio', 'Apolonio', 'Atanasio',
+      'Bonifacio', 'Candelario', 'Cayetano', 'Cirilo', 'Crescencio', 'Cristóbal', 'Doroteo', 'Eleuterio', 'Emiliano', 'Encarnación',
+      'Epifanio', 'Espiridión', 'Eulogio', 'Felipe', 'Filomeno', 'Guadalupe', 'Hermenegildo', 'Higinio', 'Inocencio', 'Isidoro',
+      'Jesús', 'Leocadio', 'Luciano', 'Macedonio', 'Margarito', 'Melquiades', 'Nabor', 'Nazario', 'Nemesio', 'Octaviano',
+      'Onofre', 'Pánfilo', 'Pioquinto', 'Policarpo', 'Porfirio', 'Primitivo', 'Refugio', 'Reyes', 'Rómulo', 'Rosendo',
+      'Sabino', 'Salustio', 'Serapio', 'Severiano', 'Silvestre', 'Sixto', 'Sotero', 'Telésforo', 'Teófilo', 'Timoteo',
+      'Trinidad', 'Ubaldo', 'Urbano', 'Victorio', 'Zeferino', 'Cuauhtémoc', 'Ambrosio', 'Casimiro', 'Dámaso', 'Fulgencio',
+    ],
+    f: [
+      'María', 'Guadalupe', 'Juana', 'Josefa', 'Francisca', 'Antonia', 'Petra', 'Tomasa', 'Dolores', 'Refugio',
+      'Soledad', 'Concepción', 'Encarnación', 'Trinidad', 'Asunción', 'Natividad', 'Pilar', 'Rosario', 'Carmen', 'Luz',
+      'Paz', 'Merced', 'Socorro', 'Altagracia', 'Amada', 'Anastasia', 'Apolonia', 'Bartola', 'Basilia', 'Bibiana',
+      'Brígida', 'Cándida', 'Cecilia', 'Cirila', 'Cleofas', 'Crescencia', 'Cruz', 'Dionisia', 'Eduviges', 'Eleuteria',
+      'Emiliana', 'Epifania', 'Estefana', 'Eulalia', 'Eustolia', 'Felícitas', 'Filomena', 'Genoveva', 'Gregoria', 'Herlinda',
+      'Higinia', 'Hilaria', 'Ignacia', 'Inés', 'Isabel', 'Juliana', 'Leocadia', 'Librada', 'Lorenza', 'Luciana',
+      'Macaria', 'Marcelina', 'Margarita', 'Martina', 'Matiana', 'Modesta', 'Nicolasa', 'Otilia', 'Pascuala', 'Paula',
+      'Perfecta', 'Petronila', 'Plácida', 'Porfiria', 'Remedios', 'Romana', 'Salomé', 'Ventura', 'Xóchitl', 'Zeferina',
+    ],
+  },
+  family: [
+    'Cuamatzi', 'Cocoletzi', 'Tzompantzi', 'Tepetzi', 'Papalotzi', 'Ahuatzi', 'Tlilayatzi', 'Xochitiotzin', 'Cuautle', 'Tlapa',
+    'Tlatelpa', 'Tecuapacho', 'Tlachi', 'Xochihua', 'Quechol', 'Tecpanecatl', 'Cuatecontzi', 'Huitzil', 'Texis', 'Tlacuilo',
+    'Zempoalteca', 'Xicoténcatl', 'Cuayahuitl', 'Tochtli', 'Tototl', 'Tecuanhuey', 'Zacatenco', 'Quiahua', 'Tepale', 'Cuatzo',
+    'Coyotl', 'Nopal', 'Xolo', 'Tlaxcalteca', 'Chicahual', 'Mazatl', 'Ocelotl', 'Tenorio', 'Zacatzin', 'Tepeyahuitl',
+    'Hernández', 'García', 'Martínez', 'López', 'Pérez', 'Sánchez', 'Ramírez', 'Cruz', 'Flores', 'Morales',
+    'Reyes', 'Jiménez', 'Torres', 'Díaz', 'Vázquez', 'Ruiz', 'Mendoza', 'Castillo', 'Ortiz', 'Ramos',
+    'Juárez', 'de la Cruz', 'Santiago', 'Bautista', 'de los Santos', 'de Jesús', 'San Juan', 'Rojas', 'Rosas', 'Espinosa',
+    'Galicia', 'Meneses', 'Nava', 'Romero', 'Salazar', 'Sandoval', 'Vargas', 'Zamora', 'Zárate', 'Cortés',
+  ],
+  places: [
+    'México', 'Tenochtitlan', 'Texcoco', 'Tlaxcala', 'Puebla', 'Cholula', 'Cuernavaca', 'Toluca', 'Pachuca', 'Tula',
+    'Tulancingo', 'Huejotzingo', 'Atlixco', 'Tehuacán', 'Cuautla', 'Xochimilco', 'Tlalpan', 'Coyoacán', 'Tacuba', 'Azcapotzalco',
+    'Chalco', 'Amecameca', 'Teotihuacán', 'Otumba', 'Apan', 'Tepeaca', 'Apizaco', 'Huamantla', 'Zacatlán', 'Huauchinango',
+    'Teziutlán', 'Orizaba', 'Xalapa', 'Zongolica', 'Tepoztlán', 'Tlayacapan', 'Taxco', 'Iguala', 'Chilpancingo', 'Tixtla',
+    'Popocatépetl', 'Iztaccíhuatl', 'Malinche', 'Ajusco', 'Anáhuac', 'Chapultepec', 'Lerma', 'Balsas', 'Pánuco', 'Papaloapan',
+    'Tenayuca', 'Tlatelolco', 'Culhuacán', 'Ixtapalapa', 'Mixquic', 'Milpa Alta', 'Tepotzotlán', 'Cuauhtitlán', 'Zumpango', 'Tizayuca',
+    'Actopan', 'Ixmiquilpan', 'Huichapan',
+  ],
+}
