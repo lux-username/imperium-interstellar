@@ -4,21 +4,37 @@
  * arrived — and opens on click to show the full stamps and the report.
  * This week's arrivals are highlighted. Sortable by arrival or observation.
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PlayerView, Report, ReportId, WorldId } from '../sim/view'
 import { ago, subjectWorld, unrestWord, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
   onSelect: (world: WorldId) => void
+  /** A report to open and scroll to, e.g. the source of a claim in the dossier. Changes each time it is requested. */
+  focus: { id: ReportId; nonce: number } | null
 }
 
 type Sort = 'arrived' | 'observed'
 
-export function Inbox({ view, onSelect }: Props) {
+export function Inbox({ view, onSelect, focus }: Props) {
   const [sort, setSort] = useState<Sort>('arrived')
   const [onlyNew, setOnlyNew] = useState(false)
   const [open, setOpen] = useState<Set<ReportId>>(() => new Set())
+  const [seenFocus, setSeenFocus] = useState<number | null>(null)
+  const rows = useRef<Record<string, HTMLLIElement | null>>({})
+
+  // A new focus request opens its row and lifts the "new only" filter so the row is on screen.
+  if (focus && focus.nonce !== seenFocus) {
+    setSeenFocus(focus.nonce)
+    setOpen((prev) => new Set(prev).add(focus.id))
+    setOnlyNew(false)
+  }
+
+  useEffect(() => {
+    if (!focus) return
+    rows.current[focus.id]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [focus])
 
   let reports = view.inbox
   if (onlyNew) reports = reports.filter((r) => r.delivered === view.week)
@@ -58,7 +74,14 @@ export function Inbox({ view, onSelect }: Props) {
         {reports.map((r) => {
           const isOpen = open.has(r.id)
           return (
-            <li key={r.id} className={[r.delivered === view.week ? 'new' : '', isOpen ? 'open' : ''].join(' ')} onClick={() => toggle(r)}>
+            <li
+              key={r.id}
+              ref={(el) => {
+                rows.current[r.id] = el
+              }}
+              className={[r.delivered === view.week ? 'new' : '', isOpen ? 'open' : '', focus?.id === r.id ? 'flash' : ''].join(' ')}
+              onClick={() => toggle(r)}
+            >
               <div className="line1">
                 <span className="kind">{r.snapshot.kind === 'world' ? '◉' : '▲'}</span>
                 <span className="subject">{subject(r)}</span>

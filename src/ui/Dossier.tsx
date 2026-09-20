@@ -4,16 +4,23 @@
  * the player can do — write to its governor and ask for news.
  */
 import { hexLabel } from '../sim/hex'
-import { expectedArrival, route, type CharacterId, type PlayerView, type WorldId } from '../sim/view'
+import { expectedArrival, route, type CharacterId, type PlayerView, type ReportId, type WorldId } from '../sim/view'
 import { ago, profileString, unrestWord, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
   world: WorldId | null
   onRequest: (world: WorldId, governor: CharacterId) => void
+  /** Show the report a claim rests on. */
+  onShowReport: (id: ReportId) => void
 }
 
-export function Dossier({ view, world, onRequest }: Props) {
+/** Reports the desk made itself (the capital, seen directly) have no message behind them. */
+function isDeskObservation(id: ReportId): boolean {
+  return id.startsWith('r-desk-') || id.startsWith('r-survey-')
+}
+
+export function Dossier({ view, world, onRequest, onShowReport }: Props) {
   if (!world) return <p className="empty">Select a world on the map or a report in the inbox.</p>
   const entry = view.chart[world]
   const report = view.known.worlds[world]
@@ -41,7 +48,16 @@ export function Dossier({ view, world, onRequest }: Props) {
       {snap && report && (
         <>
           <p className="asof">
-            {isCapital ? 'Seen directly from the desk.' : `As of ${weekLabel(report.observed)} — ${ago(view.week, report.observed)}, reported by ${report.observerName}.`}
+            {isCapital && 'Seen directly from the desk.'}
+            {!isCapital && isDeskObservation(report.id) && `As of ${weekLabel(report.observed)} — ${ago(view.week, report.observed)}, from ${report.observerName}.`}
+            {!isCapital && !isDeskObservation(report.id) && (
+              <>
+                As of {weekLabel(report.observed)} — {ago(view.week, report.observed)}, reported by {report.observerName}.{' '}
+                <button type="button" className="link" onClick={() => onShowReport(report.id)}>
+                  show report
+                </button>
+              </>
+            )}
           </p>
           <dl>
             <dt>Profile</dt>
@@ -100,7 +116,14 @@ export function Dossier({ view, world, onRequest }: Props) {
           <ul className="ships">
             {shipsHere.map((s) => (
               <li key={s.ship.id}>
-                {s.ship.name} <span className="muted">({s.ship.role}) — {ago(view.week, s.observed)}</span>
+                {s.ship.name} <span className="muted">({s.ship.role}) — {ago(view.week, s.observed)}</span>{' '}
+                {isDeskObservation(s.report) ? (
+                  <span className="muted">(seen from the desk)</span>
+                ) : (
+                  <button type="button" className="link" onClick={() => onShowReport(s.report)}>
+                    show report
+                  </button>
+                )}
               </li>
             ))}
           </ul>

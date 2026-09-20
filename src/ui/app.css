@@ -194,6 +194,21 @@ ul.reports li.new {
   border-left: 2px solid var(--accent);
 }
 
+ul.reports li.flash {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+button.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
 .line1 {
   display: flex;
   gap: 0.5rem;
