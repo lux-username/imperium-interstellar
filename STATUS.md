@@ -1,12 +1,12 @@
-> Generated 2026-09-20 by /end-session at commit 5dd7bc1.
+> Generated 2026-09-20 by /end-session at commit cc74f17.
 
 # STATUS
 
 ## Where things stand
 
-Second session. The core data model is in (`#1`, merged via PR #10): ground truth lives in `src/sim/types.ts`, everything the player may see lives in `src/sim/view.ts`, and the Phase 0 order kinds live in `src/sim/orders.ts`. All entities are plain id-keyed data, so `GameState` round-trips through JSON; a report carries its own snapshot rather than the truth record, so the UI structurally cannot read ground truth. The UI is still the empty two-pane shell.
+Two sessions ran in parallel on 2026-09-20. **Session 2 (code)** landed the core data model (`#1`, PR #10): ground truth in `src/sim/types.ts`, everything the player may see in `src/sim/view.ts`, Phase 0 order kinds in `src/sim/orders.ts`; all entities are plain id-keyed data so `GameState` round-trips through JSON, and a report carries its own snapshot so the UI structurally cannot read ground truth. **Session 3 (design)** wrote the first campaign into `spec.md`: **"The Governor's Term"** — premise, week-1 crisis, loyal and rogue paths, five endings, five threats (Warlord, pirates, planetary governors, unrest, the Council), tribute and the envoy's monthly visit with a per-topic report, model consequences, and four open questions — plus a rumour-propagation rule in the information model and officer conversations under Characters. The UI is still the empty two-pane shell.
 
-Current thinking: the next step is `#2` (subsector generation), which is the first module that produces `World[]`/`Lane[]` against these types. `#3` (lanes and packet schedules) and `#4` (mail propagation) follow; `#4` should move both reports and dispatches through the single `Mail` wrapper. `PlayerView` is deliberately derived, not stored — `#5` builds it from `GameState.beliefs[player]` each week.
+Current thinking: the next code step is unchanged — `#2` (subsector generation), then `#3` (lanes and packet schedules) and `#4` (mail propagation through the single `Mail` wrapper); `PlayerView` stays derived, built by `#5` from `GameState.beliefs[player]` each week. The campaign adds three constraints to keep in mind when `#11` fleshes out the Phase 1 stubs (posted there as a comment): `Faction` allegiance needs a neutral state, pirate ships need a per-ship knowledge record from day one, and `Report` wants a fidelity field so rumours are reports rather than a second type.
 
 ## Derived facts
 
@@ -17,8 +17,8 @@ Current thinking: the next step is `#2` (subsector generation), which is the fir
 | Version | 0.0.1 |
 | Sim modules | `hex.ts`, `orders.ts`, `rng.ts`, `types.ts`, `view.ts` |
 | Order types implemented | `courier`, `hold`, `move` |
-| Open issues | 8 (#2–#9) |
-| HEAD | 5dd7bc1 — Merge pull request #10 (core types) |
+| Open issues | 10 (#2–#9, #11, #13) |
+| HEAD | cc74f17 — Spec: pirate havens, prizes, bonus pay (branch `worktree-spec-first-campaign`, rebased on `main` at 32599d9) |
 
 ## Active milestone
 
@@ -26,4 +26,6 @@ Current thinking: the next step is `#2` (subsector generation), which is the fir
 
 ## Blockers / open questions
 
-- None blocking. The `Test count` command in CLAUDE.md's Derived Facts table was returning nothing because vitest colours its summary line; fixed this session with `NO_COLOR=1`.
+- None blocking. The design branch `worktree-spec-first-campaign` (docs only: `spec.md`, `decisions.md`, this file, journal) is pushed and needs merging into `main`.
+- Four campaign design questions remain — starting scale, aid amounts, parade threshold, agents vs. rumour — recorded in `spec.md → First campaign → Open questions` and tracked as `#13`. They gate Phase 1 generation, not Phase 0.
+- No Phase 1 milestone exists yet; `#11` and `#13` are waiting to be assigned to it.
