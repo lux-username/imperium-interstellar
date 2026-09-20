@@ -26,6 +26,7 @@ function fixture(): GameState {
   const report: Report = {
     id: 'r-1' as ReportId,
     observer: governor,
+    observerName: 'Governor of Outpost',
     observedAt: outpost,
     observed: 2,
     snapshot: {
@@ -37,6 +38,7 @@ function fixture(): GameState {
         profile: { starport: 'C', size: 4, atmosphere: 5, hydrographics: 3, population: 4, government: 2, law: 3, tech: 7 },
         faction: admin,
         governor,
+        governorName: 'Governor of Outpost',
         unrest: 1,
         garrison: 1,
       },
@@ -47,6 +49,7 @@ function fixture(): GameState {
   return {
     seed: 42,
     week: 3,
+    nextId: 1,
     rng: createRng(42),
     capital,
     player,

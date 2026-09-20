@@ -178,6 +178,8 @@ export interface GameState {
   seed: number
   week: Week
   rng: Rng
+  /** Next serial for minting ids of things created during play (mail, reports, dispatches). */
+  nextId: number
   capital: WorldId
   /** The character the player governs as. Their belief state is the source of the PlayerView. */
   player: CharacterId

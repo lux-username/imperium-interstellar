@@ -58,6 +58,8 @@ export interface WorldSnapshot {
   profile: WorldProfile
   faction: FactionId
   governor: CharacterId | null
+  /** As the observer knew it; carried in the snapshot so the desk learns a new name only when a report says so. */
+  governorName: string | null
   unrest: number
   garrison: number
 }
@@ -96,6 +98,7 @@ export interface Envelope {
 export interface Report {
   id: ReportId
   observer: CharacterId
+  observerName: string
   /** Where the observation was made. Can differ from `envelope.origin` when a ship saw something and posted it from its next port. */
   observedAt: WorldId
   observed: Week
@@ -135,6 +138,13 @@ export interface Belief {
   ships: Record<ShipId, Report>
 }
 
+/** A world's entry on the star chart: where it is and what it is called. Public, like the lanes. */
+export interface ChartEntry {
+  id: WorldId
+  name: string
+  hex: Hex
+}
+
 /**
  * The player's whole picture, rebuilt each week from their belief state and
  * their own outgoing mail. This is the only thing the UI renders.
@@ -144,9 +154,11 @@ export interface PlayerView {
   capital: WorldId
   /** The lane chart is public knowledge and never stale. */
   lanes: Lane[]
+  /** Every world's name and position. What is *happening* there is only in `known`. */
+  chart: Record<WorldId, ChartEntry>
   known: Belief
-  /** Reports that reached the desk this week, newest first. */
+  /** Everything that has reached the desk, newest arrival first. This week's news is whatever has `delivered === week`. */
   inbox: Report[]
-  /** Dispatches the player has sent, whose fate is unknown until a report says otherwise. */
+  /** Dispatches the player has sent, newest first. Their fate is unknown until a report says otherwise. */
   outgoing: Dispatch[]
 }
