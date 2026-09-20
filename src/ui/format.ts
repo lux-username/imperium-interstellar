@@ -1,5 +1,5 @@
 /** Small formatting helpers shared by the panes. Everything takes PlayerView data only. */
-import type { Event, PlayerView, Report, Week, WorldId, WorldProfile } from '../sim/view'
+import type { Dispatch, Event, Order, PlayerView, Report, ShipId, Week, WorldId, WorldProfile } from '../sim/view'
 
 /** "now", "1 wk ago", "14 wk ago". */
 export function ago(week: Week, observed: Week): string {
@@ -59,4 +59,29 @@ export const UNREST_WORDS = ['calm', 'calm', 'grumbling', 'grumbling', 'restive'
 
 export function unrestWord(n: number): string {
   return UNREST_WORDS[Math.max(0, Math.min(10, n))]
+}
+
+/** An order as the desk would write it. */
+export function orderText(view: PlayerView, order: Order): string {
+  const then = 'then' in order && order.then?.kind === 'world' ? `, then ${worldName(view, order.then.world)}` : ''
+  switch (order.kind) {
+    case 'hold':
+      return 'hold position'
+    case 'move':
+      return `proceed to ${worldName(view, order.to)}${then}`
+    case 'patrol':
+      return `patrol ${worldName(view, order.world)} for ${order.weeks} wk${then}`
+    case 'scout':
+      return `scout ${worldName(view, order.world)} and report${then}`
+    case 'courier':
+      return `run mail ${order.route.map((w) => worldName(view, w)).join(' → ')}${order.repeat ? ' and repeat' : ''}${then}`
+  }
+}
+
+/** The newest order the desk has sent to a ship, if any. */
+export function lastOrderSent(view: PlayerView, ship: ShipId): Dispatch | null {
+  for (const d of view.outgoing) {
+    if (d.payload.kind === 'order' && d.payload.ship === ship) return d
+  }
+  return null
 }

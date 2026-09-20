@@ -4,13 +4,15 @@
  * the player can do — write to its governor and ask for news.
  */
 import { hexLabel } from '../sim/hex'
-import { expectedArrival, route, type CharacterId, type PlayerView, type ReportId, type WorldId } from '../sim/view'
-import { ago, profileString, unrestWord, weekLabel, worldName } from './format'
+import { expectedArrival, route, type CharacterId, type Order, type PlayerView, type ReportId, type ShipId, type WorldId } from '../sim/view'
+import { ago, eventText, profileString, unrestWord, weekLabel, worldName } from './format'
+import { OrderForm } from './OrderForm'
 
 interface Props {
   view: PlayerView
   world: WorldId | null
   onRequest: (world: WorldId, governor: CharacterId) => void
+  onOrder: (ship: ShipId, order: Order) => void
   /** Show the report a claim rests on. */
   onShowReport: (id: ReportId) => void
 }
@@ -20,7 +22,7 @@ function isDeskObservation(id: ReportId): boolean {
   return id.startsWith('r-desk-') || id.startsWith('r-survey-')
 }
 
-export function Dossier({ view, world, onRequest, onShowReport }: Props) {
+export function Dossier({ view, world, onRequest, onOrder, onShowReport }: Props) {
   if (!world) return <p className="empty">Select a world on the map or a report in the inbox.</p>
   const entry = view.chart[world]
   const report = view.known.worlds[world]
@@ -110,6 +112,8 @@ export function Dossier({ view, world, onRequest, onShowReport }: Props) {
         </div>
       )}
 
+      {!isCapital && <OrderForm view={view} world={world} onOrder={onOrder} />}
+
       {shipsHere.length > 0 && (
         <>
           <h4>Hulls last seen here</h4>
@@ -136,7 +140,8 @@ export function Dossier({ view, world, onRequest, onShowReport }: Props) {
           <ul className="history">
             {history.map((r) => r.snapshot.kind === 'world' && (
               <li key={r.id}>
-                <span className="muted">obs. {weekLabel(r.observed)}, arrived {weekLabel(r.delivered ?? 0)}:</span> unrest {r.snapshot.world.unrest}, garrison {r.snapshot.world.garrison}, Governor {r.snapshot.world.governorName ?? '—'}
+                <span className="muted">obs. {weekLabel(r.observed)}, arrived {weekLabel(r.delivered ?? 0)}, {r.observerName}:</span>{' '}
+                {r.events.length > 0 ? r.events.map(eventText).join(' ') : `unrest ${r.snapshot.world.unrest}, garrison ${r.snapshot.world.garrison}, Governor ${r.snapshot.world.governorName ?? '—'}`}
               </li>
             ))}
           </ul>

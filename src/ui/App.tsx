@@ -6,12 +6,13 @@
  * contain it.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { advanceWeek, newGame, requestReport } from '../sim/game'
+import { advanceWeek, newGame, orderShip, requestReport } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { clone, deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
-import type { CharacterId, ReportId, WorldId } from '../sim/view'
+import type { CharacterId, Order, ReportId, ShipId, WorldId } from '../sim/view'
 import { Dossier } from './Dossier'
+import { Fleet } from './Fleet'
 import { Inbox } from './Inbox'
 import { Map } from './Map'
 import type { Overlay } from './geometry'
@@ -34,7 +35,7 @@ type GodModule = typeof import('./dev')
 export function App() {
   const [state, setState] = useState<GameState>(initialState)
   const [selected, setSelected] = useState<WorldId | null>(null)
-  const [tab, setTab] = useState<'inbox' | 'outgoing'>('inbox')
+  const [tab, setTab] = useState<'inbox' | 'rumours' | 'fleet' | 'outgoing'>('inbox')
   const [focus, setFocus] = useState<{ id: ReportId; nonce: number } | null>(null)
   const [seedText, setSeedText] = useState('')
   const [god, setGod] = useState(false)
@@ -92,7 +93,7 @@ export function App() {
   }
 
   const showReport = (id: ReportId) => {
-    setTab('inbox')
+    setTab(view.rumours.some((r) => r.id === id) ? 'rumours' : 'inbox')
     setFocus({ id, nonce: Date.now() })
   }
 
@@ -132,11 +133,20 @@ export function App() {
             <button type="button" className={tab === 'inbox' ? 'on' : ''} onClick={() => setTab('inbox')}>
               Inbox
             </button>
+            <button type="button" className={tab === 'rumours' ? 'on' : ''} onClick={() => setTab('rumours')}>
+              Rumours{view.rumours.some((r) => r.delivered === view.week) ? ' •' : ''}
+            </button>
+            <button type="button" className={tab === 'fleet' ? 'on' : ''} onClick={() => setTab('fleet')}>
+              Fleet ({view.roster.length})
+            </button>
             <button type="button" className={tab === 'outgoing' ? 'on' : ''} onClick={() => setTab('outgoing')}>
               Outgoing ({view.outgoing.length})
             </button>
           </div>
-          {tab === 'inbox' ? <Inbox view={view} onSelect={setSelected} focus={focus} /> : <Outgoing view={view} onSelect={setSelected} />}
+          {tab === 'inbox' && <Inbox view={view} pile="inbox" onSelect={setSelected} focus={focus} />}
+          {tab === 'rumours' && <Inbox view={view} pile="rumours" onSelect={setSelected} focus={focus} />}
+          {tab === 'fleet' && <Fleet view={view} onSelect={setSelected} onShowReport={showReport} />}
+          {tab === 'outgoing' && <Outgoing view={view} onSelect={setSelected} />}
         </section>
         <section className="pane centre">
           <Map view={view} selected={selected} onSelect={setSelected} overlay={overlay} />
@@ -150,6 +160,7 @@ export function App() {
             view={view}
             world={selected}
             onRequest={(world, governor: CharacterId) => mutate((s) => void requestReport(s, world, governor))}
+            onOrder={(ship: ShipId, order: Order) => mutate((s) => void orderShip(s, ship, order))}
             onShowReport={showReport}
           />
           {import.meta.env.DEV && god && godModule && <godModule.GodView state={state} view={view} world={selected} />}

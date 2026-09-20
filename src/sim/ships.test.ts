@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { advanceWeek } from './game'
+import { advanceWeek, newGame, orderShip } from './game'
 import { governorReport, postDispatch } from './mail'
 import { buildPlayerView } from './player'
 import { playerTraits } from './characters'
@@ -114,6 +114,29 @@ describe('ordered hulls', () => {
     // X, back to C, out through X to Y, then home to the rally point through X.
     expect(landings).toEqual([X, C, X, Y, X, C])
     expect(patrol(s).order?.kind).toBe('hold')
+  })
+
+  it('a new game starts with the fleet in port at the capital, on the books and seen from the desk', () => {
+    const s = newGame(9)
+    const view = buildPlayerView(s)
+    expect(view.roster).toHaveLength(14)
+    expect(view.roster.map((r) => r.role).sort()).toEqual(['courier', 'courier', 'courier', 'courier', 'escort', 'escort', 'patrol', 'patrol', 'patrol', 'patrol', 'scout', 'scout', 'transport', 'transport'])
+    for (const entry of view.roster) {
+      expect(entry.commanderName).not.toBeNull()
+      expect(view.known.ships[entry.id]?.ship.at).toBe(s.capital)
+    }
+    // Order a patrol craft to the nearest world on the chart; the dispatch is read at once and the hull sails this week.
+    const target = Object.values(s.lanes).find((l) => l.ends.includes(s.capital))!
+    const dest = target.ends[0] === s.capital ? target.ends[1] : target.ends[0]
+    const ship = view.roster.find((r) => r.role === 'patrol')!.id
+    const mail = orderShip(s, ship, { kind: 'move', to: dest, then: null })
+    expect(mail.status.kind).toBe('delivered')
+    expect(s.ships[ship].order).toEqual({ kind: 'move', to: dest, then: null })
+    advanceWeek(s)
+    expect(s.ships[ship].location).toEqual({ kind: 'transit', from: s.capital, to: dest, arrives: 2 })
+    // The desk's last word of it is still "in port here": nothing has reported it since.
+    expect(buildPlayerView(s).known.ships[ship].ship.at).toBe(s.capital)
+    expect(buildPlayerView(s).outgoing[0].payload.kind).toBe('order')
   })
 
   it('a ship with nowhere to go holds and waits', () => {

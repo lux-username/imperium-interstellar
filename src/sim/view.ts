@@ -216,6 +216,18 @@ export interface ChartEntry {
 }
 
 /**
+ * A hull on the desk's books: what it is and who was given it. Where it is
+ * and what it is doing are belief, in `known.ships` and `outgoing`.
+ */
+export interface RosterEntry {
+  id: ShipId
+  name: string
+  role: ShipRole
+  jump: number
+  commanderName: string | null
+}
+
+/**
  * The player's whole picture, rebuilt each week from their belief state and
  * their own outgoing mail. This is the only thing the UI renders.
  */
@@ -227,6 +239,8 @@ export interface PlayerView {
   /** Every world's name and position. What is *happening* there is only in `known`. */
   chart: Record<WorldId, ChartEntry>
   known: Belief
+  /** The hulls the desk commands, as listed on its books. Their whereabouts are in `known.ships`. */
+  roster: RosterEntry[]
   /** Every official and agent report that has reached the desk, newest arrival first. This week's news is whatever has `delivered === week`. */
   inbox: Report[]
   /** What the docks are saying: merchant and docks-channel reports, kept apart from the mail so the two piles are never confused. */

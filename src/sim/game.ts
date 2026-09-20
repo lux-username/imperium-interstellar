@@ -12,8 +12,10 @@ import { arriveShips, departShips } from './ships'
 import { forgetOldEvents, governorChangedEvent, unrestEvent } from './events'
 import { newCharacter } from './characters'
 import { createRng, roll } from './rng'
-import { generateWorlds, PLAYER } from './generate'
-import type { CharacterId, GameState, Mail, World, WorldId } from './types'
+import { generateWorlds, ADMINISTRATION, PLAYER } from './generate'
+import { startingFleet } from './fleet'
+import type { CharacterId, GameState, Mail, ShipId, World, WorldId } from './types'
+import type { Order } from './orders'
 import type { Report, ReportId } from './view'
 
 // ---------------------------------------------------------------------------
@@ -27,6 +29,9 @@ export function newGame(seed: number): GameState {
   const { worlds, characters, factions, capital } = generateWorlds(rng)
   const lanes = chartLanes(rng, worlds)
   const ships = packetShips(rng, lanes)
+  const fleet = startingFleet(rng, ADMINISTRATION, capital)
+  Object.assign(ships, fleet.ships)
+  Object.assign(characters, fleet.characters)
   const state: GameState = {
     seed,
     week: 0,
@@ -178,4 +183,16 @@ function observeCapital(state: GameState): void {
  */
 export function requestReport(state: GameState, world: WorldId, governor: CharacterId): Mail {
   return postDispatch(state, { kind: 'character', character: governor }, world, { kind: 'letter', text: 'Send a full report of your world and any hulls in port by the next packet.' })
+}
+
+/**
+ * Give a ship an order. The dispatch is addressed to where the desk last
+ * saw the hull — the capital if it has never been seen elsewhere — and is
+ * held there until the ship turns up. A ship in port at the capital reads it
+ * at once.
+ */
+export function orderShip(state: GameState, ship: ShipId, order: Order): Mail {
+  const seen = state.beliefs[state.player]?.ships[ship]
+  const address = seen?.ship.at ?? state.capital
+  return postDispatch(state, { kind: 'ship', ship }, address, { kind: 'order', ship, order })
 }

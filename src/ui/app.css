@@ -162,17 +162,25 @@ input[type="text"] {
 }
 
 ul.reports,
-ul.outgoing {
+ul.outgoing,
+ul.fleet {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 ul.reports li,
-ul.outgoing li {
+ul.outgoing li,
+ul.fleet li {
   padding: 0.35rem 0.5rem;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
+}
+
+ul.reports ul.events {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
 }
 
 ul.reports li.open {
@@ -186,8 +194,37 @@ ul.reports .from {
 }
 
 ul.reports li:hover,
-ul.outgoing li:hover {
+ul.outgoing li:hover,
+ul.fleet li:hover {
   background: var(--panel);
+}
+
+/* ---- orders ---- */
+
+.orderform {
+  margin-top: 1rem;
+}
+
+.orderform select {
+  width: 100%;
+  margin-bottom: 0.4rem;
+}
+
+.orderform .orderkind {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.orderform .orderkind input[type='number'] {
+  width: 3rem;
+}
+
+.orderform button {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 ul.reports li.new {

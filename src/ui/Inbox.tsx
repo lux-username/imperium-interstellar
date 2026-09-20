@@ -10,6 +10,8 @@ import { ago, eventText, subjectWorld, unrestWord, weekLabel, worldName } from '
 
 interface Props {
   view: PlayerView
+  /** Official mail, or what the docks are saying. Two piles, never mixed. */
+  pile: 'inbox' | 'rumours'
   onSelect: (world: WorldId) => void
   /** A report to open and scroll to, e.g. the source of a claim in the dossier. Changes each time it is requested. */
   focus: { id: ReportId; nonce: number } | null
@@ -17,7 +19,7 @@ interface Props {
 
 type Sort = 'arrived' | 'observed'
 
-export function Inbox({ view, onSelect, focus }: Props) {
+export function Inbox({ view, pile, onSelect, focus }: Props) {
   const [sort, setSort] = useState<Sort>('arrived')
   const [onlyNew, setOnlyNew] = useState(false)
   const [open, setOpen] = useState<Set<ReportId>>(() => new Set())
@@ -36,11 +38,12 @@ export function Inbox({ view, onSelect, focus }: Props) {
     rows.current[focus.id]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [focus])
 
-  let reports = view.inbox
+  const all = pile === 'inbox' ? view.inbox : view.rumours
+  let reports = all
   if (onlyNew) reports = reports.filter((r) => r.delivered === view.week)
   if (sort === 'observed') reports = [...reports].sort((a, b) => b.observed - a.observed || (b.delivered ?? 0) - (a.delivered ?? 0))
 
-  const fresh = view.inbox.filter((r) => r.delivered === view.week).length
+  const fresh = all.filter((r) => r.delivered === view.week).length
 
   const toggle = (r: Report) => {
     setOpen((prev) => {
@@ -69,7 +72,7 @@ export function Inbox({ view, onSelect, focus }: Props) {
           </button>
         </span>
       </div>
-      {reports.length === 0 && <p className="empty">Nothing has arrived yet. Advance the week.</p>}
+      {reports.length === 0 && <p className="empty">{pile === 'inbox' ? 'Nothing has arrived yet. Advance the week.' : 'The docks have nothing to say yet.'}</p>}
       <ul className="reports">
         {reports.map((r) => {
           const isOpen = open.has(r.id)
@@ -89,7 +92,10 @@ export function Inbox({ view, onSelect, focus }: Props) {
                   sent {weekLabel(r.envelope.sent)} · arr. {weekLabel(r.delivered ?? 0)}
                 </span>
               </div>
-              <div className="from">{r.observerName}, {worldName(view, r.observedAt)}</div>
+              <div className="from">
+                {r.channel === 'docks' ? 'Word on the docks' : r.channel === 'merchant' ? `A merchant, ${r.observerName}` : r.observerName}
+                {r.channel === 'docks' || r.channel === 'merchant' ? `, of ${worldName(view, r.observedAt)}` : `, ${worldName(view, r.observedAt)}`}
+              </div>
               {isOpen && (
                 <>
                   <div className="line2">
