@@ -33,3 +33,7 @@ Because a single 8×10 subsector is the natural unit of the source material and 
 ## 2026-09-19 — Chose Vitest 5 over Vitest 3
 
 Because Vitest 3's config types do not recognise Vite 8, so `tsc -b` failed on `vite.config.ts`. Vitest 5 pairs with Vite 8.
+
+## 2026-09-19 — Chose a two-file truth/view split over a lint rule or a single types file
+
+Because the belief model is meant to be enforced by structure: `src/sim/types.ts` holds ground truth and `src/sim/view.ts` holds everything the player may see (reports, snapshots, dispatches, `PlayerView`), re-exporting the few shared primitives so the UI never has a reason to import `types.ts`. A report carries its own `WorldSnapshot`/`ShipSnapshot`, never the `World`/`Ship` record, so stale or coloured reports are real objects rather than copies of the truth. The split is visible in the import graph and greppable; a lint rule was rejected because it would fight the one sanctioned exception (the dev-only god view, #9) and is enforcement of a habit the code layout already makes obvious. Mail in transit is one ground-truth `Mail` wrapper around either a report or a dispatch, so issue #4 propagates both directions with one mechanism. The player's view is derived from `GameState.beliefs[player]` rather than stored, so it cannot drift from the reports that justify it (issue #1).
