@@ -1,33 +1,32 @@
-> Generated 2026-09-20 by /end-session at commit b062574.
+> Generated 2026-09-20 by /end-session at commit 1284948.
 
 # STATUS
 
 ## Where things stand
 
-**The Phase 0 prototype exists and plays.** Session 4 built every open Phase 0 issue (`#2`–`#9`) on branch `worktree-phase0-prototype`, open as draft **PR #15**, which closes them on merge. `npm run dev` gives you a generated subsector, a last-known map with age badges, an inbox of reports stamped observed / sent / arrived, a dossier per world, and one action: write to a governor for a report and wait for the reply. In a playtest the dossier's timetable estimate at week 10 (letter lands wk 13, reply wk 15) matched the simulation exactly. The dev-only god view (truth beside belief, true ship positions, mail counts) is verified absent from the production bundle.
+**Phase 0 is done and accepted.** The user played the prototype and called it functional — good enough to build Phase 1 on (`#16`, closed). Branch `worktree-phase0-prototype` holds the whole of it as **PR #15** (ready for review; closes `#2`–`#9` on merge). `npm run dev` gives a generated subsector, a last-known map with age badges, an inbox of governor reports stamped observed / sent / arrived, a dossier per world where every claim links to the report it rests on, and one action: write to a governor for a report and wait for the reply.
 
-What makes staleness matter: unrest drifts weekly and governors occasionally turn over, so the belief map diverges from truth between reports; the player starts from an old survey; off-lane worlds' reports pile up at ports no packet visits.
+Playtest feedback shaped the last four commits: the inbox opens as compact expandable rows; a governor's letter is *one* report with hulls in port inside it, not a message per sighting; sightings in the dossier link to their source report; report text no longer repeats the starport class. The bigger piece of feedback — governors should write only when something matters, filtered by loyalty and boldness — is the first Phase 1 design item (`#20`).
 
-Current thinking: **merge PR #15, then playtest** — Phase 0's stated goal is to prove that watching stale information arrive is interesting on its own, and that judgement is the user's, not the code's (`#16`). After that, create the Phase 1 milestone and assign `#11`, `#13`, `#17`. The sim has three Phase 1-shaped loose ends filed this session (`#17` report cadence as a governor order, `#18` courier progress tracking, `#19` mail growth).
+Current thinking: **merge PR #15, pull `main`, remove the worktree.** Then create the Phase 1 milestone and assign `#11`, `#13`, `#18`–`#21`. `#20` deserves a design conversation before code: it decides what a Character's traits actually *do* in the first place they'll be felt, and it is the same shape as the Council's reported-vs-rumoured judgement one level up, so one mechanism might serve both.
 
 ## Derived facts
 
 | Fact | Value |
 |---|---|
-| Test status | 42 passed (42) |
+| Test status | 43 passed (43) |
 | Typecheck | ok |
 | Version | 0.0.1 |
 | Sim modules | `chart.ts`, `game.ts`, `generate.ts`, `hex.ts`, `lanes.ts`, `mail.ts`, `names.ts`, `orders.ts`, `player.ts`, `rng.ts`, `save.ts`, `types.ts`, `view.ts` |
 | Order types implemented | `courier`, `hold`, `move` |
-| Open issues | 14 (#2–#9 pending PR #15 merge, #11, #13, #16–#19) |
-| HEAD | b062574 — Phase 0 UI (branch `worktree-phase0-prototype`, on `main` at 74fdb90) |
+| Open issues | 14 (#2–#9 close when PR #15 merges; #11, #13, #18–#21) |
+| HEAD | 1284948 — Inbox: drop starport from report text (branch `worktree-phase0-prototype`, on `main` at 74fdb90) |
 
 ## Active milestone
 
-[Phase 0 — Belief map](https://github.com/lux-username/imperium-interstellar/milestone/1) — 8 open / 1 closed; all 8 close when PR #15 merges, leaving the playtest (`#16`).
+[Phase 0 — Belief map](https://github.com/lux-username/imperium-interstellar/milestone/1) — 8 open / 2 closed; the 8 close when PR #15 merges, completing the milestone.
 
 ## Blockers / open questions
 
-- None blocking. **PR #15 needs merging** (draft; the user merges).
-- The Phase 0 question itself is open: is it interesting? (`#16`.) Tuning knobs are all constants in `src/sim/game.ts` and `src/sim/generate.ts`.
-- No Phase 1 milestone exists yet; `#11`, `#13`, `#17`–`#19` are waiting for it.
+- **PR #15 needs merging** (the user merges; the session cannot push to `main`). After merge: `git pull`, `git worktree remove .claude/worktrees/phase0-prototype`, delete the branch.
+- No Phase 1 milestone exists yet; `#11`, `#13`, `#18`–`#21` are waiting for it.

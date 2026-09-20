@@ -73,3 +73,11 @@ Because the player addresses "the governor of X" by the name they believe holds 
 ## 2026-09-20 — Chose to split chart arithmetic into `chart.ts` and export it through `view.ts`
 
 Because routing and packet timetables are public knowledge — a printed schedule — and the UI should show the player the *same* ETA sums the sim uses, so a promise in the dossier is the sim's own promise. Keeping it in `lanes.ts` would have dragged generation code into the UI's import graph.
+
+## 2026-09-20 — Chose one report per governor letter, with hulls in port inside the world snapshot
+
+Because a governor writing home sends one letter, and the playtest showed the alternative for what it was: three "Packet 85 in port" messages riding alongside every status report, tripling the inbox with news nobody wanted. `WorldSnapshot.ships` carries the hulls seen in port at the time of observation; `Belief.ships` is a *sighting* (ship, week, source report) derived from those. Reports *about* a ship (a commander's own after-action report, Phase 1) remain possible as a separate snapshot kind — they are a different thing, written by a different person. The opening survey lists no ships: a survey describes worlds, not traffic.
+
+## 2026-09-20 — Chose to make every belief traceable to a specific report, and to link it in the UI
+
+Because the player's picture is a stack of claims made by particular people at particular times, and "who told me that, and when?" is the question the whole design turns on once reports can be late, wrong or self-serving. A sighting stores the id of the report that made it; the dossier links each hull and its own "as of" line to that report, which opens and scrolls into view in the inbox. Sightings the desk made directly have no message and say so. This cost nothing in the model — the id was already there — and sets the pattern for Phase 1, where a report's *observer* will matter as much as its content.
