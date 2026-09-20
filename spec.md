@@ -93,6 +93,49 @@ Resolved by the simulation when hostile forces share a system: strength, posture
 
 Two primary panes: **Inbox** (dispatches with origin/arrival stamps, reply and order actions) and **Map** (SVG hex subsector with lanes, last-known markers for ships and worlds carrying age badges; click for dossier). Secondary: **Roster**, **Outgoing** (dispatches queued on couriers), **Ledger**. One **Advance Week** button. Save/load as local JSON.
 
+## First campaign — "The Governor's Term"
+
+The scenario Phases 1–2 are built to deliver. It is the default game; other seats (see *Phasing*, Phase 3) come later.
+
+### Premise
+
+The player is the **Subsector Governor**, holding supreme civil and military authority over the subsector on the Empire's behalf — and confined to an office in orbit above the **subsector capital**. Everything is done through subordinates, dispatches, and the hulls that carry them.
+
+### Goals
+
+Two ways to win, and they pull against each other:
+
+- **Loyal path — complete the term.** Serve out a fixed term of office without being recalled. Career advancement follows. Success is measured by the Empire's standing axis (*The Empire*, above): what the Council has heard about the subsector by the time the term ends.
+- **Rogue path — the pocket kingdom.** Place enough loyalists (characters whose loyalty runs to the player rather than the Empire) into the seats that matter — planetary governorships, ship and squadron commands, the garrison — and then declare the subsector independent. From that moment the Empire is an enemy: after an **unknown number of weeks** the Council assembles a fleet and sends it straight for the capital. The rogue path is won by still holding the capital when that expedition is defeated or turned back.
+
+The loyal path is Phase 1 scope. The rogue path needs the full loyalty model and is Phase 2 scope; Phase 1 should nonetheless track per-character loyalty so appointments made in Phase 1 games already carry weight.
+
+### Threats
+
+Five sources of trouble. Each one reaches the player only as reports (Pillar 1) and is answered only by sending people and ships (Pillar 2).
+
+- **The Warlord.** A former Commodore of the subsector fleet who defected, taking ships with him. He holds a handful of worlds and is trying to take more, aiming to make the subsector his own independent kingdom. He is the campaign's *rival polity* and its example of a *governor's secession* at once. Worlds and ships he captures go dark to the player until someone observes them again.
+- **Pirates.** Raid the trade lanes, cutting revenue at A/B ports and sometimes taking tax convoys and packets (lost dispatches). They put in for repair and resupply at spaceports whose planetary governor is corrupt enough to look the other way — so a pirate problem on a lane is usually also a *governor* problem at one end of it.
+- **Planetary governors.** (Placeholder title; better ones wanted.) In theory they answer to the Subsector Governor and are recalled at will. In practice a recall dispatch is a piece of paper: replacing a governor who does not want to go requires a **detachment of marines** arriving with the appointment. Their competence, loyalty, and self-interest (corruption is high *loyalty to self*, in the *Characters* model) decide how much tax arrives, how honest their reports are, and whether pirates find a welcome.
+- **Unrest.** No single world here can project power or rival the Empire, even one that declares independence. But an unrestful world can blow up the planetary governor's office, stop paying taxes, and occupy the spaceport — closing the port to packets and fuel, and so to information. Garrisons keep unrest from boiling over; when it does, the answer is ships carrying **army and marine detachments**, which take weeks to arrive and may find the situation changed.
+- **The Imperial Council** (the player's boss). Judges the player on reports that were months old when read. Too much bad news — lost worlds, unpaid taxes, a Warlord still at large — and the Council recalls the player: the loyal path is lost. On the rogue path, the Council is the enemy that sends the fleet.
+
+### Consequences for the model
+
+Things this campaign requires beyond what *Requirements* already lists:
+
+- **Troops.** Army detachments (garrison, hold a world) and marine detachments (boarding, seizing a spaceport or a governor's office) as transportable units with strength, carried by ships under the *Transport* order.
+- **Appointments travel.** An appointment is a dispatch; it takes effect when it arrives — and, for a hostile incumbent, when the marines do.
+- **Loyalty as a resource.** Each seat records whose man or woman holds it. The count of loyalist-held seats gates the rogue declaration.
+- **The Empire's reaction clock.** Recall and the punitive expedition are driven by what the Council has *received*, not by ground truth. The expedition's departure week is rolled and hidden; the player can only infer it from what packets from the imperial capital stop saying.
+- **World states.** A world can be loyal, unrestful, in revolt, independent, or Warlord-held, and the player's belief about which may be wrong.
+
+### Open questions
+
+- Term length (placeholder: four years, ~208 weeks — long enough that the Warlord and at least one governor crisis play out).
+- What counts as "enough loyalists" for the rogue declaration — a fixed number of seats, a fraction of worlds, or specific seats (capital garrison, the fleet)?
+- Whether the Warlord can be negotiated with (Phase 3 diplomacy) or only fought.
+
 ## Architecture
 
 - `src/sim/` — pure TypeScript, deterministic, no DOM. Subsector generation, entities, orders, movement, courier and report propagation, combat, events, character behaviour. Seeded PRNG; whole state serializable to JSON.
@@ -117,8 +160,8 @@ Sketch; formalized in `src/sim/types.ts` as it lands.
 ## Phasing
 
 - **Phase 0 — Belief map.** Subsector generation, lanes, packet schedules, couriers, reports, hex map with age badges. No ships to command, no combat. Goal: prove that watching stale information arrive is interesting on its own.
-- **Phase 1 — The desk.** Ships and orders, patrols, pirates, governors with basic traits, the inbox, Empire demands. A complete, winnable/losable loop.
-- **Phase 2 — People.** Full character traits and relationships, deputies, player mobility (leaving the capital, with a deputy holding the seal), ambition and usurpation.
+- **Phase 1 — The desk.** Ships and orders, patrols, pirates, governors with basic traits, troops, the inbox, Empire demands, the Warlord. A complete, winnable/losable loop: the *loyal path* of the first campaign.
+- **Phase 2 — People.** Full character traits and relationships, deputies, player mobility (leaving the capital, with a deputy holding the seal), ambition and usurpation — including the first campaign's *rogue path*.
 - **Phase 3 — Other seats.** Pocket polities and a rogue admiral as playable roles; richer economy; diplomacy.
 
 ## Out of scope
