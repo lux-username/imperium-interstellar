@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const persian: Culture = {
+  name: 'Persian',
+  group: 'Middle Eastern',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "Qajar Iran. Surnames came only in the next century; `family` holds the nisba — the town or province a person was known by (Tabrizi, Isfahani) — which followed the given name for both sexes. Titles (Mirza, Khan, Agha, Hajji; Khanum) are the generator's to add. The old epic names (Rostam, Tahmineh) were in real use among the elite.",
+  given: {
+    m: [
+      'Mohammad', 'Ali', 'Hasan', 'Hosein', 'Reza', 'Mehdi', 'Abbas', 'Ahmad', 'Mahmud', 'Mostafa',
+      'Morteza', 'Javad', 'Kazem', 'Taqi', 'Naqi', 'Sadeq', 'Baqer', 'Jafar', 'Musa', 'Isa',
+      'Ebrahim', 'Esmail', 'Yusof', 'Yaqub', 'Davud', 'Soleiman', 'Abolfazl', 'Abolqasem', 'Abdollah', 'Abdolhosein',
+      'Abdolreza', 'Abdolkarim', 'Gholamreza', 'Gholamhosein', 'Gholamali', 'Nasrollah', 'Fazlollah', 'Ruhollah', 'Habibollah', 'Nematollah',
+      'Lotfollah', 'Zeynolabedin', 'Amir', 'Asadollah', 'Ezzatollah', 'Hedayat', 'Hashem', 'Ghasem', 'Karim', 'Rahim',
+      'Nasser', 'Nader', 'Manuchehr', 'Jamshid', 'Bahram', 'Kaveh', 'Dariush', 'Kurosh', 'Khosrow', 'Parviz',
+      'Rostam', 'Bijan', 'Farhad', 'Faramarz', 'Fereydun', 'Hushang', 'Iraj', 'Kambiz', 'Kiumars', 'Siavash',
+      'Sohrab', 'Shapur', 'Ardeshir', 'Anushirvan', 'Esfandiar', 'Goudarz', 'Tahmasp', 'Homayun', 'Jahangir', 'Yahya',
+    ],
+    f: [
+      'Fatemeh', 'Zahra', 'Maryam', 'Khadijeh', 'Zeynab', 'Sakineh', 'Masumeh', 'Sedigheh', 'Tahereh', 'Roqiyeh',
+      'Kolsum', 'Batul', 'Narges', 'Soghra', 'Kobra', 'Robabeh', 'Ozra', 'Ashraf', 'Ezzat', 'Effat',
+      'Esmat', 'Iran', 'Turan', 'Malakeh', 'Shahzadeh', 'Shokat', 'Anis', 'Monir', 'Nayyer', 'Qamar',
+      'Mahtab', 'Mahin', 'Nahid', 'Parvin', 'Parvaneh', 'Pari', 'Golnar', 'Golbahar', 'Golchehreh', 'Gohar',
+      'Javaher', 'Marjan', 'Morvarid', 'Nosrat', 'Hajar', 'Havva', 'Sara', 'Leila', 'Shirin', 'Tahmineh',
+      'Rudabeh', 'Manijeh', 'Gordafarid', 'Farangis', 'Sudabeh', 'Homa', 'Simin', 'Mehri', 'Mahbubeh', 'Nimtaj',
+      'Taj', 'Shams', 'Badr', 'Aghdas', 'Afsar', 'Akram', 'Alam', 'Azar', 'Banu', 'Bibi',
+      'Dorri', 'Farideh', 'Forugh', 'Haideh', 'Jamileh', 'Khorshid', 'Mahvash', 'Nazanin', 'Setareh', 'Sorayya',
+    ],
+  },
+  family: [
+    'Tabrizi', 'Isfahani', 'Shirazi', 'Kermani', 'Yazdi', 'Kashani', 'Qomi', 'Rashti', 'Mashhadi', 'Tehrani',
+    'Hamadani', 'Qazvini', 'Zanjani', 'Astarabadi', 'Khorasani', 'Gilani', 'Mazandarani', 'Semnani', 'Damghani', 'Sabzevari',
+    'Nishaburi', 'Birjandi', 'Sistani', 'Bami', 'Lari', 'Bushehri', 'Dezfuli', 'Shushtari', 'Ahvazi', 'Kermanshahi',
+    'Sanandaji', 'Borujerdi', 'Golpayegani', 'Khansari', 'Natanzi', 'Ardestani', 'Naini', 'Abadehi', 'Jahromi', 'Darabi',
+    'Bandari', 'Qochani', 'Torbati', 'Gonabadi', 'Tabasi', 'Ardabili', 'Khalkhali', 'Maraghei', 'Urumi', 'Khoyi',
+    'Salmasi', 'Marandi', 'Ahari', 'Sarabi', 'Mianeji', 'Ashtiani', 'Farahani', 'Araki', 'Malayeri', 'Nahavandi',
+    'Tuyserkani', 'Kangavari', 'Bijari', 'Saqqezi', 'Mahabadi', 'Khorramabadi', 'Bakhtiari', 'Qashqai', 'Lorestani', 'Kordestani',
+    'Talesh', 'Lahijani', 'Langarudi', 'Amoli', 'Sari', 'Babolsari', 'Behshahri', 'Bojnurdi', 'Shirvani', 'Kashmari',
+  ],
+  places: [
+    'Tehran', 'Tabriz', 'Isfahan', 'Shiraz', 'Mashhad', 'Kerman', 'Yazd', 'Kashan', 'Qom', 'Rasht',
+    'Hamadan', 'Qazvin', 'Zanjan', 'Astarabad', 'Gilan', 'Mazandaran', 'Semnan', 'Damghan', 'Sabzevar', 'Nishapur',
+    'Birjand', 'Sistan', 'Bam', 'Lar', 'Bushehr', 'Dezful', 'Shushtar', 'Ahvaz', 'Kermanshah', 'Sanandaj',
+    'Borujerd', 'Golpayegan', 'Khansar', 'Natanz', 'Ardestan', 'Nain', 'Abadeh', 'Jahrom', 'Darab', 'Bandar Abbas',
+    'Qochan', 'Torbat', 'Gonabad', 'Tabas', 'Ardabil', 'Khalkhal', 'Maragheh', 'Urmia', 'Khoy', 'Salmas',
+    'Marand', 'Ahar', 'Sarab', 'Mianeh', 'Alborz', 'Damavand', 'Zagros', 'Sahand', 'Sabalan', 'Karun',
+    'Zayandeh', 'Sefidrud', 'Atrak', 'Aras', 'Khorasan', 'Fars', 'Luristan', 'Khuzestan', 'Azarbaijan', 'Kavir',
+  ],
+}
