@@ -149,3 +149,7 @@ Because the Royal Navy never needed nested orders: the Admiralty wrote to a stat
 ## 2026-09-20 — Chose to load stranded mail only where the hull's run reaches its destination
 
 Because a hull leaving the capital taking every stranded letter regardless of direction sent orders for off-lane worlds off the wrong way, to ride around forever. A hull now takes stranded mail, and copies of waiting reports, only when its planned run calls at the destination or at a port on a lane network that reaches it. "Going to" is read as the whole run, not the next jump, so a hull that will pass a connected port later still takes the letters.
+
+## 2026-09-20 — Chose that captured couriers and packets destroy their mail
+
+Supersedes the same-day note that a captured packet would feed its dispatches to the captor's belief state. Because it is simpler, and because it is what a packet crew would do — the Post Office packets carried their mail in weighted bags to be sunk if taken. So capture is pure loss: nothing is read, nothing arrives, and the desk hears of it only through a report of the capture. Reading captured dispatches can return if the Warlord's belief state ever needs the feed.
