@@ -125,3 +125,19 @@ Because the spec already says an observation leaves on "whatever ship happens to
 ## 2026-09-20 — Chose commander letters at the ordered world and at patrol end, not at every port
 
 Because the playtest that produced #20 was about inbox noise, and a hull transiting three worlds would otherwise write three letters saying nothing. A commander writes on reaching the world their order was about, and again when a patrol there ends. Waypoints are silent. The hull's arrival is still an event at each port, so a governor there may mention it and the docks may talk.
+
+## 2026-09-20 — Chose unrest thresholds over per-step events, with extremes reported once per visit
+
+Because the 1a preview showed governors and the docks narrating every point of drift, which the user called too many letters. Unrest is news when a world changes mood (content 0–1, neutral 2–5, hostile 6–10) or reaches 0 or 10; since most worlds flicker between 0 and 1, "reached the bottom" fires only if the last unrest event at that world did not already say so — derived from the event log, not new state. Twenty weeks of a fresh game now bring about one letter a week from ~20 connected governors instead of two or three.
+
+## 2026-09-20 — Chose commander letters from every friendly port over only at the ordered world
+
+Supersedes the earlier same-day decision to write only at the destination. Because the user wants to follow a hull port to port, and a letter by the next packet costs the hull nothing; the noise concern is answered by the unrest threshold rule instead. Off the lanes the old rule stands: write where the order was taking them, carry it to a port with a lane home.
+
+## 2026-09-20 — Chose to keep rumour out of belief entirely
+
+Because a rumour that placed a hull on the map was knowledge the player had not earned. Talk goes in the rumours pile, the dossier shows it beneath the official reports, and nothing on the map rests on it. `learn()` ignores event snapshots.
+
+## 2026-09-20 — Chose one orders dialog over per-world forms
+
+Because orders have the same six parts whichever way you arrive at them — hull, address, destination, task, disposition, afterwards — and a form on each dossier could not offer the address or the rendezvous. The dialog opens from a world with the destination filled in, or from a ship with the hull filled in; disposition and rally point ride with the dispatch as standing orders so the desk's intent and the hull's standing orders cannot disagree.
