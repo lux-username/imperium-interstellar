@@ -9,7 +9,7 @@
  */
 import type { CharacterId, DispatchId, GameState, Mail, MailId, ReportId, Ship, ShipId, Week, World, WorldId } from './types'
 import type { Dispatch, DispatchPayload, Envelope, Recipient, Report, Snapshot } from './view'
-import { expectedArrival, laneBetween, nextDeparture, route } from './lanes'
+import { expectedArrival, laneBetween, nextDeparture, route } from './chart'
 
 // ---------------------------------------------------------------------------
 // Minting

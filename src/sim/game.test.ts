@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { advanceWeek, newGame, requestReport } from './game'
-import { route } from './lanes'
+import { route } from './chart'
 import { departShips, governorReports } from './mail'
 import { buildPlayerView } from './player'
 import { createRng } from './rng'

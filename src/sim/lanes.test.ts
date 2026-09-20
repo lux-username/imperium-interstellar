@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { generateFromSeed } from './generate'
 import { hexDistance } from './hex'
-import { chartLanes, expectedArrival, nextDeparture, packetShips, route } from './lanes'
+import { expectedArrival, nextDeparture, route } from './chart'
+import { chartLanes, packetShips } from './lanes'
 import type { Lane, LaneId, WorldId } from './types'
 
 function chart(seed: number) {

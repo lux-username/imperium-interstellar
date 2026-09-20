@@ -5,7 +5,8 @@
  * copy (see ./save.ts).
  */
 import { hexLabel } from './hex'
-import { chartLanes, packetShips, route } from './lanes'
+import { route } from './chart'
+import { chartLanes, packetShips } from './lanes'
 import { arriveShips, deliverHeld, departShips, governorReports, learn, postDispatch, shipsAt, snapshotShip, snapshotWorld } from './mail'
 import { personName } from './names'
 import { createRng, roll } from './rng'
