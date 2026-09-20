@@ -81,3 +81,35 @@ Because a governor writing home sends one letter, and the playtest showed the al
 ## 2026-09-20 — Chose to make every belief traceable to a specific report, and to link it in the UI
 
 Because the player's picture is a stack of claims made by particular people at particular times, and "who told me that, and when?" is the question the whole design turns on once reports can be late, wrong or self-serving. A sighting stores the id of the report that made it; the dossier links each hull and its own "as of" line to that report, which opens and scrolls into view in the inbox. Sightings the desk made directly have no message and say so. This cost nothing in the model — the id was already there — and sets the pattern for Phase 1, where a report's *observer* will matter as much as its content.
+
+## 2026-09-20 — Chose three Phase 1 milestones (1a/1b/1c) over one
+
+Because Phase 0 showed the playtest, not the plan, deciding the design — half its commits were feedback — and a single milestone of twenty issues hides where the work is. Each cut ends in a playable build with one question to answer: 1a *does a subordinate feel like a person through letters alone?*, 1b *can you tell what is going wrong from the inbox, and does sending hulls feel like an answer?*, 1c *is the loyal path a game?* Officer conversation stays in Phase 2 unless 1b shows appointments feel blind.
+
+## 2026-09-20 — Chose events as the unit of news over per-schedule snapshots
+
+Because governors who write "when something matters" need a *something*: an `Event` (where, when, kind, subject, valence, severity) that a letter mentions or withholds, that a rumour degrades, and that the Council folds into its rumoured truth. Phase 0's unit was the snapshot; it stays, riding inside the letter, but the decision of *whether to write* is made per event. One primitive serves governors, rumour, and the Council, which are the same selective-reporting shape at three levels (#20).
+
+## 2026-09-20 — Chose `Report.channel` over `Report.fidelity`
+
+Because a fidelity number is a reliability score computed from ground truth, and putting it on a report the UI renders is a leak — "60% true" is knowledge nobody in the fiction has. What the player legitimately knows is *who said it and how it came*: `official`, `agent`, `merchant`, `docks`. Distortion is applied when the report is written and never recorded on it. Rumours get their own section of the inbox so the two piles are never confused; reverses the fidelity suggestion recorded on #11.
+
+## 2026-09-20 — Chose standing moved by the player's own words and tribute, never by rumour directly
+
+Because standing is the loyal path's win/lose dial and the user wants its balance legible: rumour only moves the Council's *rumoured truth*, and the cost comes from being *caught* contradicting it (liar check, −5 and a three-visit memory) against a +1 for each topic reported fine and −1 for each reported a disaster. The invariants — caught is worse than three honest failures, a lie has negative expected value whenever the rumours are against you, honesty never raises standing — are recorded in spec.md with the placeholder numbers so tuning can move the numbers without breaking the shape.
+
+## 2026-09-20 — Chose to give the Warlord a tracked belief state and scouts
+
+Because an antagonist who sees truth and picks the weakest world is an omniscient general on the other side of the board, which Pillar 1 forbids as much for him as for the player. His belief is `beliefs[warlord]`, built from what his governors, captains, and scouts deliver to his capital; he can be wrong, he can be deceived by what he is allowed to see, and his scouts are hulls the player's people can spot. Same machinery as the player, pointed the other way.
+
+## 2026-09-20 — Chose agents as accurate on-site observers, not rumour verifiers
+
+Because the user has other plans for agents: an agent sent to a world for N weeks writes the one fully truthful report in the game — the world's state, every hull that called, when it arrived and left and whether it refuelled, and any scout that came to look. That makes agents scarce truth against a sea of coloured letters, and it means ground truth needs a per-world traffic log. Scout ships (tiny two-person hulls, J-2, a large bonus to escape) are the cheap complement for everyone, the Warlord included. Neither sharpens rumour; the earlier open question is closed as "no".
+
+## 2026-09-20 — Chose the imperial capital as an off-map node on a border lane
+
+Because the delegation, the successor, the expedition, aid, and rumour in both directions all need a transit time to and from the Empire, and one lane with a fixed transit gives them all the same timetable with the existing mail machinery. An abstract "weeks until the Council reacts" timer would have been a second clock the sim did not otherwise have.
+
+## 2026-09-20 — Chose colour for allegiance and the badge for age on the map
+
+Because Phase 1 needs colour for who holds a world and the user did not want age as marker opacity: age stays exactly the coloured "as of N weeks ago" badge above each marker and nothing else. Lane line style is dropped as a channel; the schedule reads in the dossier and on hover (#21).
