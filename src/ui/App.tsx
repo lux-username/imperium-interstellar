@@ -10,10 +10,11 @@ import { advanceWeek, newGame, orderShip, requestReport } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { clone, deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
-import type { CharacterId, Order, ReportId, ShipId, WorldId } from '../sim/view'
+import type { CharacterId, Order, ReportId, ShipId, StandingOrders, WorldId } from '../sim/view'
 import { Dossier } from './Dossier'
 import { Fleet } from './Fleet'
 import { Inbox } from './Inbox'
+import { OrdersDialog, type OrdersDraft } from './OrdersDialog'
 import { Map } from './Map'
 import type { Overlay } from './geometry'
 import { Outgoing } from './Outgoing'
@@ -37,6 +38,7 @@ export function App() {
   const [selected, setSelected] = useState<WorldId | null>(null)
   const [tab, setTab] = useState<'inbox' | 'rumours' | 'fleet' | 'outgoing'>('inbox')
   const [focus, setFocus] = useState<{ id: ReportId; nonce: number } | null>(null)
+  const [orders, setOrders] = useState<OrdersDraft | null>(null)
   const [seedText, setSeedText] = useState('')
   const [god, setGod] = useState(false)
   const [godModule, setGodModule] = useState<GodModule | null>(null)
@@ -145,7 +147,7 @@ export function App() {
           </div>
           {tab === 'inbox' && <Inbox view={view} pile="inbox" onSelect={setSelected} focus={focus} />}
           {tab === 'rumours' && <Inbox view={view} pile="rumours" onSelect={setSelected} focus={focus} />}
-          {tab === 'fleet' && <Fleet view={view} onSelect={setSelected} onShowReport={showReport} />}
+          {tab === 'fleet' && <Fleet view={view} onSelect={setSelected} onShowReport={showReport} onOrders={(ship) => setOrders({ ship })} />}
           {tab === 'outgoing' && <Outgoing view={view} onSelect={setSelected} />}
         </section>
         <section className="pane centre">
@@ -160,12 +162,20 @@ export function App() {
             view={view}
             world={selected}
             onRequest={(world, governor: CharacterId) => mutate((s) => void requestReport(s, world, governor))}
-            onOrder={(ship: ShipId, order: Order) => mutate((s) => void orderShip(s, ship, order))}
+            onOrders={(world) => setOrders({ destination: world })}
             onShowReport={showReport}
           />
           {import.meta.env.DEV && god && godModule && <godModule.GodView state={state} view={view} world={selected} />}
         </section>
       </main>
+      {orders && (
+        <OrdersDialog
+          view={view}
+          draft={orders}
+          onSubmit={(ship: ShipId, order: Order, address: WorldId, standing: Partial<StandingOrders>) => mutate((s) => void orderShip(s, ship, order, address, standing))}
+          onClose={() => setOrders(null)}
+        />
+      )}
     </div>
   )
 }

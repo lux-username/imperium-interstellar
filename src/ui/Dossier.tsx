@@ -4,15 +4,15 @@
  * the player can do — write to its governor and ask for news.
  */
 import { hexLabel } from '../sim/hex'
-import { expectedArrival, route, type CharacterId, type Order, type PlayerView, type ReportId, type ShipId, type WorldId } from '../sim/view'
+import { expectedArrival, route, type CharacterId, type PlayerView, type ReportId, type WorldId } from '../sim/view'
 import { ago, eventText, profileString, unrestWord, weekLabel, worldName } from './format'
-import { OrderForm } from './OrderForm'
 
 interface Props {
   view: PlayerView
   world: WorldId | null
   onRequest: (world: WorldId, governor: CharacterId) => void
-  onOrder: (ship: ShipId, order: Order) => void
+  /** Open the orders dialog with this world as the destination. */
+  onOrders: (world: WorldId) => void
   /** Show the report a claim rests on. */
   onShowReport: (id: ReportId) => void
 }
@@ -22,7 +22,7 @@ function isDeskObservation(id: ReportId): boolean {
   return id.startsWith('r-desk-') || id.startsWith('r-survey-')
 }
 
-export function Dossier({ view, world, onRequest, onOrder, onShowReport }: Props) {
+export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Props) {
   if (!world) return <p className="empty">Select a world on the map or a report in the inbox.</p>
   const entry = view.chart[world]
   const report = view.known.worlds[world]
@@ -113,7 +113,13 @@ export function Dossier({ view, world, onRequest, onOrder, onShowReport }: Props
         </div>
       )}
 
-      {!isCapital && <OrderForm view={view} world={world} onOrder={onOrder} />}
+      {!isCapital && (
+        <div className="actions">
+          <button type="button" onClick={() => onOrders(world)}>
+            Send a hull here…
+          </button>
+        </div>
+      )}
 
       {shipsHere.length > 0 && (
         <>

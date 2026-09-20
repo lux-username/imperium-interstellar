@@ -3,20 +3,22 @@
  * by whom, and the last order sent to it. Nothing here is the truth about
  * where a ship is; it is the newest report and the desk's own mail.
  */
-import type { PlayerView, ReportId, WorldId } from '../sim/view'
+import type { PlayerView, ReportId, ShipId, WorldId } from '../sim/view'
 import { ago, lastOrderSent, orderText, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
   onSelect: (world: WorldId) => void
   onShowReport: (id: ReportId) => void
+  /** Open the orders dialog with this hull chosen. */
+  onOrders: (ship: ShipId) => void
 }
 
 function isDeskObservation(id: ReportId): boolean {
   return id.startsWith('r-desk-') || id.startsWith('r-survey-')
 }
 
-export function Fleet({ view, onSelect, onShowReport }: Props) {
+export function Fleet({ view, onSelect, onShowReport, onOrders }: Props) {
   if (view.roster.length === 0) return <p className="empty">No hulls on the books.</p>
   return (
     <ul className="fleet">
@@ -31,6 +33,16 @@ export function Fleet({ view, onSelect, onShowReport }: Props) {
                 {entry.role}, J-{entry.jump}
               </span>
               <span className="arrived">{seen ? `${worldName(view, seen.ship.at)}, ${ago(view.week, seen.observed)}` : 'never seen'}</span>
+              <button
+                type="button"
+                className="small"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onOrders(entry.id)
+                }}
+              >
+                Give orders…
+              </button>
             </div>
             <div className="line2">
               {entry.commanderName ? `Commander ${entry.commanderName}` : 'No commander'}
