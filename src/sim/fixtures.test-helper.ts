@@ -53,6 +53,7 @@ export function line(): GameState {
     factions: { [admin]: { id: admin, name: 'Admin', kind: 'administration' } },
     mail: {},
     events: {},
+    rumours: [],
     beliefs: { [player]: { worlds: {}, ships: {} } },
   }
   departShips(state) // as newGame() does: week 0's sailings are already under way

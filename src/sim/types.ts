@@ -10,6 +10,7 @@
 import type { Hex } from './hex'
 import type { Order } from './orders'
 import type { Rng } from './rng'
+import type { Rumour } from './rumours'
 import type { Belief, Dispatch, Event, Report } from './view'
 
 // ---------------------------------------------------------------------------
@@ -227,6 +228,8 @@ export interface GameState {
   mail: Record<MailId, Mail>
   /** What has happened, by week and world: the unit of news. Forgotten after EVENT_MEMORY weeks (see ./events.ts). */
   events: Record<EventId, Event>
+  /** Talk in transit along the lanes (see ./rumours.ts). */
+  rumours: Rumour[]
   /**
    * What each acting character knows, built only from reports delivered to
    * them. The player's view is derived from `beliefs[player]` rather than

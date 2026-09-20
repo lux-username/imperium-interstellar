@@ -37,6 +37,7 @@ export function Dossier({ view, world, onRequest, onOrder, onShowReport }: Props
     .filter((s) => s.ship.at === world)
     .sort((a, b) => b.observed - a.observed || (a.ship.name < b.ship.name ? -1 : 1))
   const history = view.inbox.filter((r) => r.snapshot.kind === 'world' && r.snapshot.world.id === world)
+  const talk = view.rumours.filter((r) => r.snapshot.kind === 'event' && r.snapshot.event.at === world)
   const pending = view.outgoing.filter((d) => d.envelope.destination.kind === 'world' && d.envelope.destination.world === world)
 
   return (
@@ -128,6 +129,22 @@ export function Dossier({ view, world, onRequest, onOrder, onShowReport }: Props
                     show report
                   </button>
                 )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {talk.length > 0 && (
+        <>
+          <h4>What the docks say</h4>
+          <ul className="history">
+            {talk.map((r) => r.snapshot.kind === 'event' && (
+              <li key={r.id}>
+                <span className="muted">around {weekLabel(r.observed)}, heard {weekLabel(r.delivered ?? 0)}:</span> {eventText(r.snapshot.event)}{' '}
+                <button type="button" className="link" onClick={() => onShowReport(r.id)}>
+                  show
+                </button>
               </li>
             ))}
           </ul>

@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { PlayerView, Report, ReportId, WorldId } from '../sim/view'
-import { ago, eventText, subjectWorld, unrestWord, weekLabel, worldName } from './format'
+import { ago, eventLabel, eventText, subjectWorld, unrestWord, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
@@ -87,9 +87,9 @@ export function Inbox({ view, pile, onSelect, focus }: Props) {
             >
               <div className="line1">
                 <span className="kind">{r.snapshot.kind === 'world' ? '◉' : r.snapshot.kind === 'ship' ? '▲' : '~'}</span>
-                <span className="subject">{subject(r)}</span>
+                <span className="subject">{subject(view, r)}</span>
                 <span className="arrived">
-                  sent {weekLabel(r.envelope.sent)} · arr. {weekLabel(r.delivered ?? 0)}
+                  {pile === 'rumours' ? <>about {weekLabel(r.observed)} · heard {weekLabel(r.delivered ?? 0)}</> : <>sent {weekLabel(r.envelope.sent)} · arr. {weekLabel(r.delivered ?? 0)}</>}
                 </span>
               </div>
               <div className="from">
@@ -99,7 +99,7 @@ export function Inbox({ view, pile, onSelect, focus }: Props) {
               {isOpen && (
                 <>
                   <div className="line2">
-                    observed {weekLabel(r.observed)} ({ago(view.week, r.observed)}) · sent {weekLabel(r.envelope.sent)} · arrived {weekLabel(r.delivered ?? 0)}
+                    {pile === 'rumours' ? 'said to be from around' : 'observed'} {weekLabel(r.observed)} ({ago(view.week, r.observed)}) · {pile === 'rumours' ? 'talk since' : 'sent'} {weekLabel(r.envelope.sent)} · {pile === 'rumours' ? 'heard' : 'arrived'} {weekLabel(r.delivered ?? 0)}
                     {r.delivered !== null && r.delivered - r.observed > 0 && <> · {r.delivered - r.observed} wk in transit</>}
                     {r.envelope.route.length > 2 && <> · via {r.envelope.route.slice(1, -1).map((id) => worldName(view, id)).join(', ')}</>}
                   </div>
@@ -122,15 +122,15 @@ export function Inbox({ view, pile, onSelect, focus }: Props) {
 }
 
 /** One line that says what the report is about. A letter leads with what happened, if anything did. */
-function subject(r: Report): string {
+function subject(view: PlayerView, r: Report): string {
   if (r.snapshot.kind === 'world') {
     const w = r.snapshot.world
-    if (r.events.length > 0) return `${w.name}: ${eventText(r.events[0]).replace(/\.$/, '')}${r.events.length > 1 ? ` (+${r.events.length - 1})` : ''}`
+    if (r.events.length > 0) return `${w.name}: ${eventLabel(r.events[0])}${r.events.length > 1 ? ` (+${r.events.length - 1})` : ''}`
     const hulls = w.ships.length > 0 ? `, ${w.ships.length} hull${w.ships.length === 1 ? '' : 's'} in port` : ''
     return `${w.name}: ${unrestWord(w.unrest)}, garrison ${w.garrison}${hulls}`
   }
   if (r.snapshot.kind === 'ship') return `${r.snapshot.ship.name} sighted`
-  return eventText(r.snapshot.event)
+  return `${worldName(view, r.snapshot.event.at)}: ${eventLabel(r.snapshot.event)}`
 }
 
 function body(r: Report): string {

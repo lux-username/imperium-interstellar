@@ -28,6 +28,24 @@ export function subjectWorld(report: Report): WorldId {
   return s.kind === 'world' ? s.world.id : s.kind === 'ship' ? s.ship.at : s.event.at
 }
 
+/** A few words for an event, for a subject line. */
+export function eventLabel(e: Event): string {
+  switch (e.kind) {
+    case 'unrest_rose':
+      return `unrest up, now ${unrestWord(e.level ?? 0)}`
+    case 'unrest_fell':
+      return `unrest down, now ${unrestWord(e.level ?? 0)}`
+    case 'governor_changed':
+      return `new governor ${e.person ?? ''}`.trim()
+    case 'hull_arrived':
+      return `${e.ship?.name ?? 'a hull'} made port`
+    case 'hull_departed':
+      return `${e.ship?.name ?? 'a hull'} sailed`
+    case 'dispatch_received':
+      return 'your letter received'
+  }
+}
+
 /** One sentence for an event, as a letter or a rumour would put it. */
 export function eventText(e: Event): string {
   switch (e.kind) {
@@ -55,7 +73,7 @@ export function freshness(week: Week, observed: Week): 'fresh' | 'aging' | 'stal
   return 'ancient'
 }
 
-export const UNREST_WORDS = ['calm', 'calm', 'grumbling', 'grumbling', 'restive', 'restive', 'unruly', 'unruly', 'rioting', 'rioting', 'in revolt']
+export const UNREST_WORDS = ['calm', 'uneasy', 'grumbling', 'grumbling', 'restive', 'restive', 'unruly', 'unruly', 'rioting', 'rioting', 'in revolt']
 
 export function unrestWord(n: number): string {
   return UNREST_WORDS[Math.max(0, Math.min(10, n))]

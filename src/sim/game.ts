@@ -9,6 +9,7 @@ import { route } from './chart'
 import { chartLanes, packetShips } from './lanes'
 import { deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
 import { governorsWrite } from './governors'
+import { spawnRumours, spreadRumours } from './rumours'
 import { arriveShips, departShips } from './ships'
 import { forgetOldEvents, governorChangedEvent, unrestEvent } from './events'
 import { newCharacter } from './characters'
@@ -44,6 +45,7 @@ export function newGame(seed: number): GameState {
     factions,
     mail: {},
     events: {},
+    rumours: [],
     beliefs: { [PLAYER]: { worlds: {}, ships: {} } },
   }
   openingSurvey(state)
@@ -105,6 +107,8 @@ export function advanceWeek(state: GameState): void {
   const ids = Object.keys(state.worlds).sort() as WorldId[]
   for (const id of ids) driftWorld(state, state.worlds[id])
   governorsWrite(state)
+  spawnRumours(state)
+  spreadRumours(state)
   departShips(state)
   pruneMail(state)
   observeCapital(state)

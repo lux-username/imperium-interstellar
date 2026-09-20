@@ -6,6 +6,7 @@ import { buildPlayerView } from './player'
 import { playerTraits } from './characters'
 import { clone, deserialize, serialize } from './save'
 import type { CharacterId, FactionId, WorldId } from './types'
+import { isRumour } from './view'
 import { line, runUntil } from './fixtures.test-helper'
 
 describe('report propagation', () => {
@@ -120,6 +121,7 @@ describe('a generated game', () => {
     for (const m of Object.values(s.mail)) {
       if (m.contents.kind !== 'report' || m.status.kind !== 'delivered') continue
       const r = m.contents.report
+      if (isRumour(r.channel)) continue // talk keeps no timetable
       expect(r.delivered, r.id).toBe(r.envelope.eta)
       checked++
     }

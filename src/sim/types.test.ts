@@ -106,6 +106,7 @@ function fixture(): GameState {
     factions: { [admin]: { id: admin, name: 'The Administration', kind: 'administration' } },
     mail: { ['m-1' as MailId]: { id: 'm-1' as MailId, contents: { kind: 'report', report }, status: { kind: 'aboard', ship: packet } } },
     events: {},
+    rumours: [],
     beliefs: { [player]: { worlds: {}, ships: {} }, [governor]: { worlds: {}, ships: {} } },
   }
 }
