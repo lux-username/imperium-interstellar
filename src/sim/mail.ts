@@ -146,13 +146,23 @@ function reportsAboard(state: GameState, ship: Ship): Set<string> {
 }
 
 /**
- * A ship about to jump from `from` to `to` takes everything at `from` whose
- * next leg is that jump. A hull someone sent on purpose also takes a *copy*
- * of every report lying at the port for the desk — the original waits for
- * its packet, the copy goes with the hull and is handed on at the next
- * friendly port — and takes outright whatever else has no way home.
+ * Whether a hull following `path` can get mail to `dest`: it will call at
+ * `dest` itself, or at some port on a lane network that reaches it.
  */
-export function loadMail(state: GameState, ship: Ship, from: WorldId, to: WorldId): void {
+function pathReaches(state: GameState, path: WorldId[], dest: WorldId): boolean {
+  return path.slice(1).some((w) => w === dest || route(state.lanes, w, dest) !== null)
+}
+
+/**
+ * A ship about to jump from `from` to `to` takes everything at `from` whose
+ * next leg is that jump. A hull someone sent on purpose — with `path` the
+ * run it is making — also takes a *copy* of every report lying at the port
+ * for the desk (the original waits for its packet) and takes outright
+ * whatever has no scheduled way home; but only when its run calls at the
+ * destination or at a port on lanes that reach it. A hull bound the wrong
+ * way leaves the letters where they are.
+ */
+export function loadMail(state: GameState, ship: Ship, from: WorldId, to: WorldId, path: WorldId[] = [from, to]): void {
   const ids = Object.keys(state.mail).sort() as MailId[]
   const carrying = ship.role === 'packet' ? null : reportsAboard(state, ship)
   for (const id of ids) {
@@ -165,7 +175,7 @@ export function loadMail(state: GameState, ship: Ship, from: WorldId, to: WorldI
       ship.mailbag.push(mail.id)
       continue
     }
-    if (!carrying || dest === null || dest === from) continue
+    if (!carrying || dest === null || dest === from || !pathReaches(state, path, dest)) continue
     if (hop === null) {
       // Stranded: nothing scheduled will ever take it, so this hull does.
       mail.status = { kind: 'aboard', ship: ship.id }

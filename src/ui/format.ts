@@ -81,7 +81,8 @@ export function unrestWord(n: number): string {
 
 /** An order as the desk would write it. */
 export function orderText(view: PlayerView, order: Order): string {
-  const then = 'then' in order && order.then?.kind === 'world' ? `, then ${worldName(view, order.then.world)}` : ''
+  const target = order.kind === 'move' ? order.to : order.kind === 'patrol' || order.kind === 'scout' ? order.world : null
+  const then = 'then' in order && order.then?.kind === 'world' && order.then.world !== target ? `, then ${worldName(view, order.then.world)}` : ''
   switch (order.kind) {
     case 'hold':
       return 'hold position'

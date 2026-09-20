@@ -257,6 +257,28 @@ button.small {
   padding: 0.1rem 0.4rem;
 }
 
+.modal .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+.modal .chips button.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.modal small.courier {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--accent);
+}
+
+.modal small.courier select {
+  width: auto;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

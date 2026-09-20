@@ -10,7 +10,7 @@ import { chartLanes, packetShips } from './lanes'
 import { deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
 import { governorsWrite } from './governors'
 import { spawnRumours, spreadRumours } from './rumours'
-import { arriveShips, departShips } from './ships'
+import { arriveShips, departShips, shipRoute } from './ships'
 import { forgetOldEvents, governorChangedEvent, unrestEvent, unrestIsNews } from './events'
 import { newCharacter } from './characters'
 import { createRng, roll } from './rng'
@@ -186,4 +186,28 @@ export function orderShip(state: GameState, ship: ShipId, order: Order, address?
   const seen = state.beliefs[state.player]?.ships[ship]
   const to = address ?? seen?.ship.at ?? state.capital
   return postDispatch(state, { kind: 'ship', ship }, to, { kind: 'order', ship, order, ...(standing ? { standing } : {}) })
+}
+
+/**
+ * Hand a piece of mail to a hull in port at the capital and send the hull
+ * to the mail's address, then home. The envelope is re-routed along the
+ * hull's own run, so it is picked up on departure and handed over — to the
+ * recipient, or to the port to hold for them — on arrival. This is how
+ * orders reach a world no packet calls at. Returns false if the hull is not
+ * here or cannot get there.
+ */
+export function sendByCourier(state: GameState, courier: ShipId, mail: Mail): boolean {
+  const hull = state.ships[courier]
+  const env = mail.contents.kind === 'dispatch' ? mail.contents.dispatch.envelope : mail.contents.report.envelope
+  const dest = env.destination.kind === 'world' ? env.destination.world : null
+  if (!hull || !dest || hull.location.kind !== 'world' || hull.location.world !== state.capital) return false
+  if (mail.status.kind !== 'awaiting_carrier' || mail.status.at !== state.capital) return false
+  const path = shipRoute(state, hull, state.capital, dest)
+  if (!path) return false
+  env.route = path
+  env.eta = state.week + path.length // sails next week, one jump a week
+  // The run is an order like any other, so it shows on the desk's books; in port here, it is read at once.
+  const run: Order = { kind: 'move', to: dest, then: { kind: 'world', world: state.capital } }
+  postDispatch(state, { kind: 'ship', ship: courier }, state.capital, { kind: 'order', ship: courier, order: run })
+  return true
 }

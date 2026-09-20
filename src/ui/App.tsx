@@ -6,7 +6,7 @@
  * contain it.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { advanceWeek, newGame, orderShip, requestReport } from '../sim/game'
+import { advanceWeek, newGame, orderShip, requestReport, sendByCourier } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { clone, deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
@@ -172,7 +172,12 @@ export function App() {
         <OrdersDialog
           view={view}
           draft={orders}
-          onSubmit={(ship: ShipId, order: Order, address: WorldId, standing: Partial<StandingOrders>) => mutate((s) => void orderShip(s, ship, order, address, standing))}
+          onSubmit={(ship: ShipId, order: Order, address: WorldId, standing: Partial<StandingOrders>, courier: ShipId | null) =>
+            mutate((s) => {
+              const mail = orderShip(s, ship, order, address, standing)
+              if (courier) sendByCourier(s, courier, mail)
+            })
+          }
           onClose={() => setOrders(null)}
         />
       )}

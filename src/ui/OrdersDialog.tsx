@@ -7,7 +7,7 @@
  * by default wherever the desk last saw the ship.
  */
 import { useMemo, useState } from 'react'
-import { expectedArrival, route, type Order, type PlayerView, type Posture, type ShipId, type StandingOrders, type WorldId } from '../sim/view'
+import { expectedArrival, hexRoute, route, type Order, type PlayerView, type Posture, type ShipId, type StandingOrders, type WorldId } from '../sim/view'
 import { hexLabel } from '../sim/hex'
 import { ago, lastOrderSent, orderText, weekLabel, worldName } from './format'
 
@@ -19,7 +19,7 @@ export interface OrdersDraft {
 interface Props {
   view: PlayerView
   draft: OrdersDraft
-  onSubmit: (ship: ShipId, order: Order, address: WorldId, standing: Partial<StandingOrders>) => void
+  onSubmit: (ship: ShipId, order: Order, address: WorldId, standing: Partial<StandingOrders>, courier: ShipId | null) => void
   onClose: () => void
 }
 
@@ -48,6 +48,8 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const [posture, setPosture] = useState<Posture>('favourable')
   const [afterwards, setAfterwards] = useState<'return' | 'stay'>('return')
   const [rally, setRally] = useState<WorldId>(view.capital)
+  const [courier, setCourier] = useState<ShipId | ''>('')
+  const [byCourier, setByCourier] = useState(false)
 
   const setShip = (id: ShipId | '') => {
     setShipState(id)
@@ -64,6 +66,27 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const landsAt = address === view.capital ? view.week : path ? expectedArrival(lanes, path, view.week + 1) : null
   const readAtOnce = address === view.capital && seen?.ship.at === view.capital && seen.observed === view.week
 
+  // Where the hull is due, from the orders the desk sent it: write to where she will be, not where she was.
+  const prior = ship ? lastOrderSent(view, ship) : null
+  const priorOrder = prior?.payload.kind === 'order' ? prior.payload.order : null
+  const dueAt = priorOrder && 'to' in priorOrder ? priorOrder.to : priorOrder && 'world' in priorOrder ? priorOrder.world : null
+  const rendezvous = priorOrder && 'then' in priorOrder && priorOrder.then?.kind === 'world' ? priorOrder.then.world : null
+  const addressChips: { label: string; world: WorldId }[] = []
+  if (seen) addressChips.push({ label: 'last known', world: seen.ship.at })
+  if (dueAt && dueAt !== seen?.ship.at) addressChips.push({ label: 'its destination', world: dueAt })
+  if (rendezvous && rendezvous !== dueAt && rendezvous !== seen?.ship.at) addressChips.push({ label: 'its rendezvous', world: rendezvous })
+
+  // A courier in port here could carry the orders itself: needed where no packet goes, worth it where it would land sooner.
+  const couriers = view.roster.filter((r) => {
+    const s = view.known.ships[r.id]
+    return r.id !== ship && s?.ship.at === view.capital && s.observed === view.week && !lastOrderSent(view, r.id)
+  })
+  const chosenCourier = couriers.find((c) => c.id === courier) ?? couriers.find((c) => c.role === 'courier') ?? couriers[0] ?? null
+  const courierPath = chosenCourier && address !== view.capital ? hexRoute(view.chart, view.capital, address, chosenCourier.jump) : null
+  const courierLands = courierPath ? view.week + courierPath.length : null
+  const courierOffered = couriers.length > 0 && address !== view.capital && (landsAt === null || (courierLands !== null && courierLands < landsAt - 1))
+  const useCourier = courierOffered && (byCourier || landsAt === null) && chosenCourier !== null && courierPath !== null
+
   const then = afterwards === 'return' ? { kind: 'world' as const, world: rally } : null
   const order: Order | null = !destination
     ? null
@@ -73,9 +96,11 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
         ? { kind: 'scout', world: destination, then, lookedOn: null }
         : { kind: 'patrol', world: destination, weeks, posture, then, began: null }
 
+  const deliverable = readAtOnce || landsAt !== null || useCourier
+
   const submit = () => {
-    if (!ship || !order) return
-    onSubmit(ship, order, address, { onContact: posture, rally: afterwards === 'return' ? rally : null })
+    if (!ship || !order || !deliverable) return
+    onSubmit(ship, order, address, { onContact: posture, rally: afterwards === 'return' ? rally : null }, useCourier && chosenCourier ? chosenCourier.id : null)
     onClose()
   }
 
@@ -123,11 +148,43 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
           >
             {worldOptions}
           </select>
+          {addressChips.length > 1 && (
+            <span className="chips">
+              {addressChips.map((c) => (
+                <button
+                  key={c.label}
+                  type="button"
+                  className={address === c.world ? 'small on' : 'small'}
+                  onClick={() => {
+                    setAddress(c.world)
+                    setAddressEdited(true)
+                  }}
+                >
+                  {c.label}: {worldName(view, c.world)}
+                </button>
+              ))}
+            </span>
+          )}
           <small className="muted">
             {readAtOnce && 'In port here: read at once.'}
-            {!readAtOnce && landsAt !== null && `Should land ${weekLabel(landsAt)} and wait there for the hull.`}
-            {!readAtOnce && landsAt === null && 'No packet goes there; the order cannot be delivered.'}
+            {!readAtOnce && landsAt !== null && `By packet, should land ${weekLabel(landsAt)} and wait there for the hull.`}
+            {!readAtOnce && landsAt === null && !courierOffered && 'No packet goes there, and no hull is in port to carry it.'}
+            {!readAtOnce && landsAt === null && courierOffered && 'No packet goes there.'}
           </small>
+          {courierOffered && chosenCourier && courierLands !== null && (
+            <small className="courier">
+              {landsAt !== null && <input type="checkbox" checked={byCourier} onChange={(e) => setByCourier(e.target.checked)} />}{' '}
+              Dispatch{' '}
+              <select value={chosenCourier.id} onChange={(e) => setCourier(e.target.value as ShipId)}>
+                {couriers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.role})
+                  </option>
+                ))}
+              </select>{' '}
+              to carry these orders, landing {weekLabel(courierLands)}, then return.
+            </small>
+          )}
         </label>
 
         <label className="field">
@@ -183,7 +240,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
         )}
 
         <div className="buttons">
-          <button type="button" className="primary" disabled={!ship || !order || landsAt === null} onClick={submit}>
+          <button type="button" className="primary" disabled={!ship || !order || !deliverable} onClick={submit}>
             Send orders
           </button>
           <button type="button" onClick={onClose}>

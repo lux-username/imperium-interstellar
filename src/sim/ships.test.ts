@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { advanceWeek, newGame, orderShip } from './game'
+import { advanceWeek, newGame, orderShip, sendByCourier } from './game'
 import { postDispatch } from './mail'
 import { governorLetter } from './governors'
 import { buildPlayerView } from './player'
@@ -178,6 +178,60 @@ describe('ordered hulls', () => {
     const view = buildPlayerView(s)
     expect(view.inbox.filter((r) => r.id === reportId)).toHaveLength(1)
     expect(view.inbox.find((r) => r.id === reportId)?.delivered).toBe(deliveredAt)
+  })
+
+  it('a hull takes stranded letters only when its run reaches lanes that lead to their destination', () => {
+    const s = fleet()
+    for (const w of Object.values(s.worlds)) w.profile.population = 0
+    // A second off-lane world W beyond Z, reachable only by hex.
+    const W = 'w-w' as WorldId
+    s.worlds[W] = { ...s.worlds[Z], id: W, name: 'Dub', hex: { col: 7, row: 5 }, governor: null, actingGovernor: null }
+    const stranded = governorLetter(s, s.worlds[Z], [])!
+    // Hull at Z bound further out to W: the letters stay on the dock.
+    patrol(s).location = { kind: 'world', world: Z }
+    patrol(s).order = { kind: 'move', to: W, then: null }
+    advanceWeek(s)
+    expect(stranded.status).toEqual({ kind: 'awaiting_carrier', at: Z })
+    expect(patrol(s).location).toEqual({ kind: 'transit', from: Z, to: W, arrives: 2 })
+    // Back at Z later, bound for home through Y (on the chart): taken.
+    patrol(s).location = { kind: 'world', world: Z }
+    patrol(s).order = { kind: 'move', to: C, then: null }
+    advanceWeek(s)
+    expect(stranded.status).toEqual({ kind: 'aboard', ship: 's-patrol' })
+  })
+
+  it('orders for a hull at an off-lane world go by courier: routed along its run, handed to the port, read when the hull calls', () => {
+    const s = fleet()
+    for (const w of Object.values(s.worlds)) w.profile.population = 0
+    // The patrol craft is lying at Z, off the lanes, holding. A courier is in port at the capital.
+    patrol(s).location = { kind: 'world', world: Z }
+    patrol(s).order = { kind: 'hold' }
+    const courierId = 's-courier' as ShipId
+    s.ships[courierId] = { ...patrol(s), id: courierId, name: 'Swift', role: 'courier', strength: 0, location: { kind: 'world', world: C }, commander: null, order: null, mailbag: [] }
+    const order = orderShip(s, 's-patrol' as ShipId, { kind: 'move', to: C, then: null }, Z)
+    expect(order.contents.kind === 'dispatch' && order.contents.dispatch.envelope.eta).toBeNull() // no packet goes to Z
+    expect(sendByCourier(s, courierId, order)).toBe(true)
+    expect(order.contents.kind === 'dispatch' && order.contents.dispatch.envelope.route).toEqual([C, Y, Z])
+    expect(order.contents.kind === 'dispatch' && order.contents.dispatch.envelope.eta).toBe(3) // sails week 1, two jumps
+    advanceWeek(s) // week 1: the courier sails with it
+    expect(order.status).toEqual({ kind: 'aboard', ship: courierId })
+    advanceWeek(s) // week 2: through Y without setting it down (no lane from Y reaches Z)
+    expect(order.status).toEqual({ kind: 'aboard', ship: courierId })
+    advanceWeek(s) // week 3: lands at Z, hands over
+    expect(order.status).toEqual({ kind: 'delivered', week: 3 })
+    expect(patrol(s).order).toEqual({ kind: 'move', to: C, then: null })
+    // The courier goes home.
+    runUntil(s, (g) => g.ships[courierId].location.kind === 'world' && (g.ships[courierId].location as { world: WorldId }).world === C, 10)
+    expect(s.ships[courierId].order?.kind).toBe('hold')
+    // A hull that isn't there yet: the port holds the orders until it calls.
+    const later = orderShip(s, 's-patrol' as ShipId, { kind: 'hold' }, Z)
+    s.ships[courierId].order = null
+    patrol(s).location = { kind: 'world', world: Y }
+    patrol(s).order = { kind: 'move', to: Z, then: null }
+    patrol(s).standing.rally = null // and stay there
+    expect(sendByCourier(s, courierId, later)).toBe(true)
+    runUntil(s, () => later.status.kind === 'delivered', 12)
+    expect(later.status.kind).toBe('delivered')
   })
 
   it('a ship with nowhere to go holds and waits', () => {

@@ -7,8 +7,7 @@
  * jump off-lane to any world within its jump rating — that is what makes
  * scouts and warships worth having. Fuel risk is Phase 1b.
  */
-import { hexDistance } from './hex'
-import { laneBetween, nextDeparture, route } from './chart'
+import { hexRoute, laneBetween, nextDeparture, route } from './chart'
 import { hullArrivedEvent, hullDepartedEvent } from './events'
 import { loadMail, snapshotWorld, unloadMail, writeReport } from './mail'
 import type { Address, GameState, Ship, ShipId, WorldId } from './types'
@@ -25,23 +24,7 @@ import type { Order } from './orders'
 export function shipRoute(state: GameState, ship: Ship, from: WorldId, to: WorldId): WorldId[] | null {
   const charted = route(state.lanes, from, to)
   if (charted || ship.role === 'packet') return charted
-  const ids = Object.keys(state.worlds).sort() as WorldId[]
-  const prev = new Map<WorldId, WorldId | null>([[from, null]])
-  const queue: WorldId[] = [from]
-  while (queue.length > 0) {
-    const cur = queue.shift() as WorldId
-    for (const next of ids) {
-      if (prev.has(next) || hexDistance(state.worlds[cur].hex, state.worlds[next].hex) > ship.jump) continue
-      prev.set(next, cur)
-      if (next === to) {
-        const path: WorldId[] = []
-        for (let w: WorldId | null = to; w !== null; w = prev.get(w) ?? null) path.unshift(w)
-        return path
-      }
-      queue.push(next)
-    }
-  }
-  return null
+  return hexRoute(state.worlds, from, to, ship.jump)
 }
 
 // ---------------------------------------------------------------------------
@@ -185,7 +168,7 @@ export function departShips(state: GameState): void {
     const lane = laneBetween(state.lanes, from, to)
     // Packets keep the lane's timetable; anything else sails as soon as it can.
     if (ship.role === 'packet' && lane && nextDeparture(lane, from, state.week) !== state.week) continue
-    loadMail(state, ship, from, to)
+    loadMail(state, ship, from, to, path)
     hullDepartedEvent(state, from, ship)
     ship.location = { kind: 'transit', from, to, arrives: state.week + 1 }
   }

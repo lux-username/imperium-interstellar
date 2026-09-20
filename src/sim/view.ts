@@ -31,7 +31,7 @@ import type {
 
 // Timetable arithmetic over the public chart, so the UI can tell the player
 // when a letter should land using the same sums the sim uses.
-export { expectedArrival, route } from './chart'
+export { expectedArrival, hexRoute, route } from './chart'
 
 // The public-knowledge primitives the UI needs, re-exported so it never has
 // a reason to reach into types.ts.

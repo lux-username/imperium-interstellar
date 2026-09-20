@@ -141,3 +141,11 @@ Because a rumour that placed a hull on the map was knowledge the player had not 
 ## 2026-09-20 — Chose one orders dialog over per-world forms
 
 Because orders have the same six parts whichever way you arrive at them — hull, address, destination, task, disposition, afterwards — and a form on each dossier could not offer the address or the rendezvous. The dialog opens from a world with the destination filled in, or from a ship with the hull filled in; disposition and rally point ride with the dispatch as standing orders so the desk's intent and the hull's standing orders cannot disagree.
+
+## 2026-09-20 — Chose "the courier is the mail" over nested orders
+
+Because the Royal Navy never needed nested orders: the Admiralty wrote to a station, the station to a port, and a sloop sent "with orders for Captain X" was simply carrying a letter to a place where it would wait. So orders stay dispatches; where no packet goes, or a hull would land sooner, the dialog dispatches a hull in port to carry the letter and return, and the letter's envelope is routed along that hull's run so the ordinary loading and delivery rules apply. The dialog also offers the addresses the history used — last known port, destination, rendezvous — since a cruising hull is reached by writing to where she is due. A nested `carry` payload would have been a second delivery mechanism and a first step toward a scripting language (Pillar 3).
+
+## 2026-09-20 — Chose to load stranded mail only where the hull's run reaches its destination
+
+Because a hull leaving the capital taking every stranded letter regardless of direction sent orders for off-lane worlds off the wrong way, to ride around forever. A hull now takes stranded mail, and copies of waiting reports, only when its planned run calls at the destination or at a port on a lane network that reaches it. "Going to" is read as the whole run, not the next jump, so a hull that will pass a connected port later still takes the letters.
