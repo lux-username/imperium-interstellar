@@ -1,0 +1,51 @@
+import type { Culture } from './culture'
+
+export const japanese: Culture = {
+  name: 'Japanese',
+  group: 'East Asian',
+  order: 'family-given',
+  pattern: { m: '{family} {given}', f: '{family} {given}' },
+  notes: "Meiji. Most women's names were two syllables (Haru, Kiyo, Tome); the -ko ending was still an upper-class marker, so it appears at that rate. Men's names keep the numbered-son and -kichi/-suke/-zō endings of the period.",
+  given: {
+    m: [
+      'Tarō', 'Jirō', 'Saburō', 'Shirō', 'Gorō', 'Ichirō', 'Kiyoshi', 'Isamu', 'Minoru', 'Shigeru',
+      'Tadashi', 'Hiroshi', 'Masao', 'Yoshio', 'Kazuo', 'Akira', 'Susumu', 'Osamu', 'Tsuneo', 'Katsuji',
+      'Kenkichi', 'Tomekichi', 'Senkichi', 'Kamekichi', 'Umekichi', 'Rikichi', 'Yonekichi', 'Torakichi', 'Kumakichi', 'Sakichi',
+      'Kihachi', 'Yasuke', 'Gonbei', 'Heibei', 'Denbei', 'Kichibei', 'Yohei', 'Sanpei', 'Shinpei', 'Ryōhei',
+      'Gennosuke', 'Shinnosuke', 'Kinnosuke', 'Ryūnosuke', 'Tatsunosuke', 'Eisuke', 'Keisuke', 'Daisuke', 'Kōsuke', 'Shunsuke',
+      'Yasuo', 'Tetsuo', 'Noboru', 'Mamoru', 'Takashi', 'Tsutomu', 'Masaru', 'Makoto', 'Satoru', 'Michio',
+      'Hideo', 'Yukio', 'Fumio', 'Toshio', 'Haruo', 'Sadao', 'Teruo', 'Kunio', 'Chikara', 'Yoshitaka',
+      'Tomozō', 'Kanezō', 'Kumazō', 'Shōzō', 'Seizō', 'Kenzō', 'Manzō', 'Kinzō', 'Yoshimatsu', 'Tokumatsu',
+    ],
+    f: [
+      'Haru', 'Kiyo', 'Tome', 'Ume', 'Kiku', 'Matsu', 'Take', 'Fumi', 'Tsuru', 'Kame',
+      'Toki', 'Sato', 'Ito', 'Yoshi', 'Hana', 'Yone', 'Rin', 'Sen', 'Chiyo', 'Tama',
+      'Tsune', 'Shizu', 'Hisa', 'Masa', 'Mitsu', 'Tomi', 'Fuji', 'Shige', 'Nobu', 'Aki',
+      'Kane', 'Sue', 'Koto', 'Iku', 'Kuni', 'Tae', 'Setsu', 'Teru', 'Tomo', 'Yuki',
+      'Fusa', 'Mine', 'Moto', 'Naka', 'Riku', 'Saki', 'Some', 'Taki', 'Toyo', 'Waka',
+      'Yae', 'Yasu', 'Ei', 'Kin', 'Gin', 'Kimi', 'Sada', 'Nao', 'Tsuya', 'Hide',
+      'Ai', 'Kono', 'Tatsu', 'Shina', 'Katsu', 'Tora', 'Sadako', 'Haruko', 'Fumiko', 'Kikuko',
+      'Nobuko', 'Teruko', 'Yoshiko', 'Masako', 'Kazuko', 'Toshiko', 'Sumiko', 'Hideko', 'Shizuko', 'Michiko',
+    ],
+  },
+  family: [
+    'Satō', 'Suzuki', 'Takahashi', 'Tanaka', 'Watanabe', 'Itō', 'Yamamoto', 'Nakamura', 'Kobayashi', 'Katō',
+    'Yoshida', 'Yamada', 'Sasaki', 'Yamaguchi', 'Matsumoto', 'Inoue', 'Kimura', 'Hayashi', 'Shimizu', 'Yamazaki',
+    'Mori', 'Abe', 'Ikeda', 'Hashimoto', 'Yamashita', 'Ishikawa', 'Nakajima', 'Maeda', 'Fujita', 'Ogawa',
+    'Gotō', 'Okada', 'Hasegawa', 'Murakami', 'Kondō', 'Ishii', 'Saitō', 'Sakamoto', 'Endō', 'Aoki',
+    'Fujii', 'Nishimura', 'Fukuda', 'Ōta', 'Miura', 'Fujiwara', 'Okamoto', 'Matsuda', 'Nakagawa', 'Nakano',
+    'Harada', 'Ono', 'Tamura', 'Takeuchi', 'Kaneko', 'Wada', 'Nakayama', 'Ishida', 'Ueda', 'Morita',
+    'Hara', 'Shibata', 'Sakai', 'Kudō', 'Yokoyama', 'Miyazaki', 'Miyamoto', 'Uchida', 'Takagi', 'Andō',
+    'Taniguchi', 'Ōno', 'Maruyama', 'Imai', 'Takada', 'Fujimoto', 'Takeda', 'Murata', 'Ueno', 'Sugiyama',
+    'Masuda', 'Sugawara', 'Hirano', 'Kojima', 'Ōtsuka', 'Chiba', 'Kubo', 'Matsui', 'Iwasaki', 'Sakurai',
+  ],
+  places: [
+    'Tokyo', 'Kyoto', 'Osaka', 'Nagoya', 'Yokohama', 'Kobe', 'Nagasaki', 'Hakodate', 'Niigata', 'Sendai',
+    'Kanazawa', 'Hiroshima', 'Kagoshima', 'Kumamoto', 'Fukuoka', 'Hakata', 'Sakai', 'Nara', 'Ōtsu', 'Himeji',
+    'Okayama', 'Matsue', 'Tottori', 'Wakayama', 'Ise', 'Shizuoka', 'Kōfu', 'Nagano', 'Matsumoto', 'Takayama',
+    'Toyama', 'Fukui', 'Aizu', 'Morioka', 'Akita', 'Yamagata', 'Hirosaki', 'Sapporo', 'Kōchi', 'Matsuyama',
+    'Tokushima', 'Takamatsu', 'Hagi', 'Shimonoseki', 'Saga', 'Karatsu', 'Hirado', 'Fuji', 'Hakone', 'Nikkō',
+    'Biwa', 'Seto', 'Shinano', 'Tone', 'Kiso', 'Sumida', 'Yodo', 'Kii', 'Izu', 'Sado',
+    'Tsushima', 'Satsuma', 'Chōshū', 'Tosa', 'Echigo', 'Musashi', 'Mino', 'Owari', 'Mikawa', 'Suruga',
+  ],
+}

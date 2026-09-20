@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const han: Culture = {
+  name: 'Han',
+  group: 'East Asian',
+  order: 'family-given',
+  pattern: { m: '{family} {given}', f: '{family} {given}' },
+  notes: "Late Qing, in pinyin. Women's given names below the gentry were rarely written down; the pool follows the two-character pattern that surviving records show.",
+  given: {
+    m: [
+      'Hongzhang', 'Guofan', 'Zongtang', 'Zhidong', 'Youwei', 'Qichao', 'Shouchang', 'Wenzhong', 'Guoqing', 'Deming',
+      'Jinrong', 'Bingwen', 'Chengzhi', 'Rulin', 'Tingjun', 'Xiangrong', 'Zhenhua', 'Yongkang', 'Shouren', 'Guangzu',
+      'Weiren', 'Fuxing', 'Baozhen', 'Shaoji', 'Dazhao', 'Zhengming', 'Jingxian', 'Kunlun', 'Mingyuan', 'Shiqi',
+      'Zhaolin', 'Enfu', 'Peiyuan', 'Shaoxiang', 'Yuanhong', 'Tingfang', 'Runzhi', 'Boyan', 'Zhongyi', 'Renjie',
+      'Yulin', 'Chunfu', 'Shangkun', 'Qingyun', 'Hanzhang', 'Xueliang', 'Jiaxiang', 'Ziyu', 'Weizhong', 'Guobao',
+      'Zhenbang', 'Delin', 'Hongyi', 'Fangzhou', 'Shixian', 'Jizhong', 'Wenbin', 'Kaiyuan', 'Yiqing', 'Ruizhi',
+      'Zhengang', 'Baoshan', 'Chengen', 'Guangting', 'Jinglun', 'Liangfu', 'Maolin', 'Peixun', 'Shanqing', 'Tingyu',
+      'Weixin', 'Xianzhi', 'Yaoting', 'Zhaoming', 'Bingheng', 'Chuncheng', 'Daoyuan', 'Fengchun', 'Guorui', 'Haichao',
+    ],
+    f: [
+      'Xiuying', 'Guiying', 'Yulan', 'Cuilan', 'Meiying', 'Shulan', 'Xiulan', 'Fengying', 'Yuzhen', 'Suzhen',
+      'Guilan', 'Lanying', 'Yuying', 'Xiuzhen', 'Shuzhen', 'Cuihua', 'Yuhua', 'Meihua', 'Fengzhen', 'Shufen',
+      'Xiufen', 'Guizhen', 'Jinfeng', 'Yulian', 'Sulan', 'Zhenzhu', 'Bijun', 'Wanyi', 'Qingzhao', 'Jingyi',
+      'Peiying', 'Ruizhen', 'Shuqing', 'Xiangyun', 'Yuexiu', 'Zhilan', 'Ailian', 'Chunmei', 'Dongmei', 'Fanglan',
+      'Guihua', 'Huifang', 'Lanfang', 'Manli', 'Ningxiang', 'Peilan', 'Qiuju', 'Ruyi', 'Shuhua', 'Wanrong',
+      'Xuemei', 'Yanhong', 'Zhaodi', 'Baoqin', 'Chunlan', 'Deyi', 'Fenglan', 'Guiqin', 'Hongmei', 'Jiayi',
+      'Lihua', 'Miaoyu', 'Qiuyue', 'Runzhen', 'Shuying', 'Wenlan', 'Xinyi', 'Yuanjun', 'Zhenying', 'Aiqing',
+      'Chunxiang', 'Fengxian', 'Huizhen', 'Jinying', 'Lanxiang', 'Meilan', 'Peizhen', 'Shuxian', 'Wenxiu', 'Xiuqin',
+    ],
+  },
+  family: [
+    'Wang', 'Li', 'Zhang', 'Liu', 'Chen', 'Yang', 'Huang', 'Zhao', 'Wu', 'Zhou',
+    'Xu', 'Sun', 'Ma', 'Zhu', 'Hu', 'Guo', 'He', 'Lin', 'Gao', 'Luo',
+    'Zheng', 'Liang', 'Xie', 'Song', 'Tang', 'Han', 'Feng', 'Deng', 'Cao', 'Peng',
+    'Zeng', 'Xiao', 'Tian', 'Dong', 'Pan', 'Yuan', 'Cai', 'Jiang', 'Yu', 'Du',
+    'Ye', 'Cheng', 'Wei', 'Su', 'Lu', 'Ding', 'Ren', 'Shen', 'Yao', 'Qin',
+    'Jin', 'Fan', 'Fu', 'Zhong', 'Shi', 'Long', 'Duan', 'Hou', 'Bai', 'Kong',
+    'Yan', 'Qiu', 'Gu', 'Meng', 'Fang', 'Lei', 'Qian', 'Ruan', 'Wan', 'Ni',
+    'Ge', 'Jia', 'Ouyang', 'Sima', 'Zhuge', 'Situ', 'Xia', 'Mo', 'Nie', 'Tan',
+  ],
+  places: [
+    'Beijing', 'Nanjing', 'Suzhou', 'Hangzhou', 'Yangzhou', 'Guangzhou', 'Fuzhou', 'Xiamen', 'Ningbo', 'Shanghai',
+    'Tianjin', 'Jinan', 'Kaifeng', 'Luoyang', "Xi'an", 'Chengdu', 'Chongqing', 'Wuchang', 'Hankou', 'Changsha',
+    'Nanchang', 'Guilin', 'Kunming', 'Guiyang', 'Lanzhou', 'Taiyuan', 'Baoding', 'Chengde', 'Shenyang', 'Anqing',
+    'Hefei', 'Wuhu', 'Zhenjiang', 'Wuxi', 'Shaoxing', 'Wenzhou', 'Quanzhou', 'Shantou', 'Foshan', 'Zhaoqing',
+    'Datong', 'Xuzhou', 'Yantai', 'Weihai', 'Jingdezhen', 'Jiujiang', 'Yichang', 'Chaozhou', 'Huangshan', 'Taishan',
+    'Emei', 'Wutai', 'Lushan', 'Tianshan', 'Yangtze', 'Huanghe', 'Huai', 'Xiang', 'Zhujiang', 'Dongting',
+    'Poyang', 'Taihu', 'Shandong', 'Shanxi', 'Sichuan', 'Hunan', 'Hubei', 'Jiangnan', 'Lingnan', 'Guanzhong',
+  ],
+}
