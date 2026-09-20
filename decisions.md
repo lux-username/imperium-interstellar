@@ -37,6 +37,19 @@ Because Vitest 3's config types do not recognise Vite 8, so `tsc -b` failed on `
 ## 2026-09-19 — Chose a two-file truth/view split over a lint rule or a single types file
 
 Because the belief model is meant to be enforced by structure: `src/sim/types.ts` holds ground truth and `src/sim/view.ts` holds everything the player may see (reports, snapshots, dispatches, `PlayerView`), re-exporting the few shared primitives so the UI never has a reason to import `types.ts`. A report carries its own `WorldSnapshot`/`ShipSnapshot`, never the `World`/`Ship` record, so stale or coloured reports are real objects rather than copies of the truth. The split is visible in the import graph and greppable; a lint rule was rejected because it would fight the one sanctioned exception (the dev-only god view, #9) and is enforcement of a habit the code layout already makes obvious. Mail in transit is one ground-truth `Mail` wrapper around either a report or a dispatch, so issue #4 propagates both directions with one mechanism. The player's view is derived from `GameState.beliefs[player]` rather than stored, so it cannot drift from the reports that justify it (issue #1).
+
 ## 2026-09-19 — Chose "The Governor's Term" as the first campaign, with a loyal and a rogue ending
 
 Because a single fixed seat with a fixed term gives Phase 1 a clear win/lose loop (serve out the term vs. be recalled), and the rogue ending — stack the seats with loyalists, declare, survive the Empire's expedition — makes appointments matter from the first week rather than being a Phase 2 afterthought. Five threat sources (Warlord, pirates, planetary governors, unrest, the Council) were chosen because each is answered only by sending hulls and people, never by direct control. See `spec.md` → *First campaign*.
+
+## 2026-09-20 — Chose independence as a loyalty switch over a loyalist threshold
+
+Because a threshold ("N seats held by loyalists") would give the player a number to read that the world would never give them, and would make the rogue path a bar to clear rather than a gamble. With a switch, the declaration is simply news, and each seat reacts on receipt by loyalty and temperament — so the rogue path is won or lost by appointments made months earlier, judged only through conversations and reports. Self-loyal seats sitting out until a winner is evident adds a neutral allegiance state to the model.
+
+## 2026-09-20 — Chose recall as a same-tick arrival over a warning letter
+
+Because a letter saying "you are recalled" is faster-than-ship information about the Empire's intent: the Council's decision would reach the player before the Council's ship could. Making the successor's arrival the recall itself, resolved in the tick it happens, keeps Pillar 1 intact and makes rumour of Council mood the only early-warning system — which in turn makes rumour fidelity the rogue path's difficulty dial.
+
+## 2026-09-20 — Chose written impressions over direct trait reads for officer conversations
+
+Because a direct read ("loyalty: self") is omniscience about a person, which Pillar 2 forbids; an impression — a boast, an evasion, a slip — has to be interpreted, and a self-loyal officer has every reason to present as loyal. Direct reads are kept as a fallback if the cast grows too large for impressions to be tractable.
