@@ -27,7 +27,7 @@ Every fact below is obtained by **running the command, never by recall**. If you
 | Fact | Command |
 |---|---|
 | Test status | `npm test` |
-| Test count | `npm test 2>&1 \| grep -E '^\s+Tests'` |
+| Test count | `NO_COLOR=1 npm test 2>&1 \| grep -E '^\s+Tests'` |
 | Typecheck status | `npm run typecheck` |
 | Version | `node -p "require('./package.json').version"` |
 | Sim modules | `ls src/sim/*.ts \| grep -v test` |
