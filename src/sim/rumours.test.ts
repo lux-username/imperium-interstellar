@@ -4,7 +4,7 @@ import { recordEvent } from './events'
 import { advanceWeek, newGame } from './game'
 import { buildPlayerView } from './player'
 import { spawnRumours, spreadRumours, THE_DOCKS } from './rumours'
-import type { WorldId } from './types'
+import type { ShipId, WorldId } from './types'
 import { line } from './fixtures.test-helper'
 
 const Y = 'w-y' as WorldId
@@ -56,8 +56,9 @@ describe('rumour', () => {
     expect(heard.snapshot.kind === 'event' && heard.snapshot.event.kind).toBe('unrest_rose')
     expect(heard.delivered).toBe(s.week)
     expect(view.inbox.some((r) => r.id === heard.id)).toBe(false)
-    // The rumour's week is stamped on the event as told; the official picture of Y is untouched by it.
+    // Talk is not knowledge: the belief map is untouched by it.
     expect(view.known.worlds[Y]?.channel ?? 'official').toBe('official')
+    expect(Object.values(view.known.ships).every((sighting) => !view.rumours.some((r) => r.id === sighting.report))).toBe(true)
     // It took at least the two hops to get here.
     expect(weeks).toBeGreaterThanOrEqual(2)
     // Talk heard at the capital is not re-heard.
@@ -84,6 +85,22 @@ describe('rumour', () => {
     expect(movedWeek).toBeGreaterThan(0)
     expect(movedWorld).toBeGreaterThan(0)
     expect(movedWorld).toBeLessThan(movedWeek)
+  })
+
+  it('a rumour of a hull puts nothing on the map', () => {
+    const s = line()
+    s.week = 1
+    const ship = s.ships['s-xy' as ShipId]
+    const e = recordEvent(s, Y, { kind: 'hull_arrived', valence: 'bad', severity: 2, ship })
+    const before = JSON.stringify(s.beliefs[s.player].ships)
+    s.rumours.push({ event: { ...e }, origin: Y, born: 1, heard: { [Y]: 0, ['w-x' as WorldId]: 1 } })
+    for (let i = 0; i < 20; i++) advanceWeek(s)
+    // The rumour reached the desk (X is a lane away), but the ship sightings are exactly what the desk saw for itself.
+    const view = buildPlayerView(s)
+    expect(view.rumours.some((r) => r.snapshot.kind === 'event' && r.snapshot.event.ship?.id === ship.id)).toBe(true)
+    const rumourIds = new Set(view.rumours.map((r) => r.id))
+    for (const sighting of Object.values(view.known.ships)) expect(rumourIds.has(sighting.report)).toBe(false)
+    expect(before).toBeDefined()
   })
 
   it('in a generated game the docks tell the desk of worlds no official letter has come from', () => {

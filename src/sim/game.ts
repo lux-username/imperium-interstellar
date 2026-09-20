@@ -11,12 +11,12 @@ import { deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './ma
 import { governorsWrite } from './governors'
 import { spawnRumours, spreadRumours } from './rumours'
 import { arriveShips, departShips } from './ships'
-import { forgetOldEvents, governorChangedEvent, unrestEvent } from './events'
+import { forgetOldEvents, governorChangedEvent, unrestEvent, unrestIsNews } from './events'
 import { newCharacter } from './characters'
 import { createRng, roll } from './rng'
 import { generateWorlds, ADMINISTRATION, PLAYER } from './generate'
 import { startingFleet } from './fleet'
-import type { CharacterId, GameState, Mail, ShipId, World, WorldId } from './types'
+import type { CharacterId, GameState, Mail, ShipId, StandingOrders, World, WorldId } from './types'
 import type { Order } from './orders'
 import type { Report, ReportId } from './view'
 
@@ -123,13 +123,11 @@ export function advanceWeek(state: GameState): void {
 export function driftWorld(state: GameState, world: World, record = true): void {
   if (world.profile.population === 0) return
   const r = roll(state.rng)
-  if (r >= 11 && world.unrest < 10) {
-    world.unrest += 1
-    if (record) unrestEvent(state, world.id, world.unrest, true)
-  } else if (r <= (world.garrison >= 3 ? 4 : 3) && world.unrest > 0) {
-    world.unrest -= 1
-    if (record) unrestEvent(state, world.id, world.unrest, false)
-  }
+  const before = world.unrest
+  if (r >= 11 && world.unrest < 10) world.unrest += 1
+  else if (r <= (world.garrison >= 3 ? 4 : 3) && world.unrest > 0) world.unrest -= 1
+  // A point either way within the same mood is not news; a change of mood, or either end of the scale, is.
+  if (record && unrestIsNews(state, world.id, before, world.unrest)) unrestEvent(state, world.id, world.unrest, world.unrest > before)
   if (world.id === state.capital) return
   if (roll(state.rng) === 2 && roll(state.rng) >= 9) replaceGovernor(state, world, record)
 }
@@ -179,13 +177,13 @@ export function requestReport(state: GameState, world: WorldId, governor: Charac
 }
 
 /**
- * Give a ship an order. The dispatch is addressed to where the desk last
- * saw the hull — the capital if it has never been seen elsewhere — and is
- * held there until the ship turns up. A ship in port at the capital reads it
- * at once.
+ * Give a ship an order. The dispatch goes to `address` — by default where
+ * the desk last saw the hull, the capital if nowhere else — and is held
+ * there until the ship turns up. A ship in port at the capital reads it at
+ * once. New standing orders may ride along.
  */
-export function orderShip(state: GameState, ship: ShipId, order: Order): Mail {
+export function orderShip(state: GameState, ship: ShipId, order: Order, address?: WorldId, standing?: Partial<StandingOrders>): Mail {
   const seen = state.beliefs[state.player]?.ships[ship]
-  const address = seen?.ship.at ?? state.capital
-  return postDispatch(state, { kind: 'ship', ship }, address, { kind: 'order', ship, order })
+  const to = address ?? seen?.ship.at ?? state.capital
+  return postDispatch(state, { kind: 'ship', ship }, to, { kind: 'order', ship, order, ...(standing ? { standing } : {}) })
 }

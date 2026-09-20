@@ -135,6 +135,19 @@ export function Dossier({ view, world, onRequest, onOrder, onShowReport }: Props
         </>
       )}
 
+      {history.length > 0 && (
+        <>
+          <h4>Reports received</h4>
+          <ul className="history">
+            {history.map((r) => r.snapshot.kind === 'world' && (
+              <li key={r.id}>
+                <span className="muted">obs. {weekLabel(r.observed)}, arrived {weekLabel(r.delivered ?? 0)}, {r.observerName}:</span>{' '}
+                {r.events.length > 0 ? r.events.map(eventText).join(' ') : `unrest ${r.snapshot.world.unrest}, garrison ${r.snapshot.world.garrison}, Governor ${r.snapshot.world.governorName ?? '—'}`}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {talk.length > 0 && (
         <>
           <h4>What the docks say</h4>
@@ -145,20 +158,6 @@ export function Dossier({ view, world, onRequest, onOrder, onShowReport }: Props
                 <button type="button" className="link" onClick={() => onShowReport(r.id)}>
                   show
                 </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {history.length > 0 && (
-        <>
-          <h4>Reports received</h4>
-          <ul className="history">
-            {history.map((r) => r.snapshot.kind === 'world' && (
-              <li key={r.id}>
-                <span className="muted">obs. {weekLabel(r.observed)}, arrived {weekLabel(r.delivered ?? 0)}, {r.observerName}:</span>{' '}
-                {r.events.length > 0 ? r.events.map(eventText).join(' ') : `unrest ${r.snapshot.world.unrest}, garrison ${r.snapshot.world.garrison}, Governor ${r.snapshot.world.governorName ?? '—'}`}
               </li>
             ))}
           </ul>

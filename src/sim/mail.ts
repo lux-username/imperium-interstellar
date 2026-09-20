@@ -285,11 +285,8 @@ export function learn(state: GameState, reader: CharacterId, report: Report): vo
     sight(report.snapshot.ship)
     return
   }
-  if (report.snapshot.kind === 'event') {
-    // A rumour of a hull is still a sighting, and the dossier can see by the report which pile it came from.
-    if (report.snapshot.event.ship) sight(report.snapshot.event.ship)
-    return
-  }
+  // Talk is not knowledge: a rumour goes in the rumours pile and nowhere else, so the map never rests on it.
+  if (report.snapshot.kind === 'event') return
   const world = report.snapshot.world
   const known = belief.worlds[world.id]
   if (!known || report.observed >= known.observed) belief.worlds[world.id] = report
@@ -307,6 +304,9 @@ function receiveDispatch(state: GameState, dispatch: Dispatch, at: WorldId): voi
   if (payload.kind === 'letter' && recipient.kind === 'character' && at !== state.capital) dispatchReceivedEvent(state, at)
   if (payload.kind === 'order' && recipient.kind === 'ship') {
     const ship = state.ships[recipient.ship]
-    if (ship) ship.order = JSON.parse(JSON.stringify(payload.order)) as Order
+    if (ship) {
+      ship.order = JSON.parse(JSON.stringify(payload.order)) as Order
+      if (payload.standing) ship.standing = { ...ship.standing, ...payload.standing }
+    }
   }
 }

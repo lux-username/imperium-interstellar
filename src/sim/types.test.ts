@@ -95,7 +95,7 @@ function fixture(): GameState {
         location: { kind: 'transit', from: outpost, to: capital, arrives: 4 },
         commander: null,
         order: { kind: 'courier', route: [capital, outpost], then: null, repeat: true, leg: 0 },
-        standing: { rally: null },
+        standing: { rally: null, onContact: 'favourable' },
         mailbag: ['m-1' as MailId],
       },
     },

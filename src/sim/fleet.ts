@@ -57,7 +57,7 @@ export function newShip(id: ShipId, name: string, cls: HullClass, faction: Facti
     location: { kind: 'world', world: at },
     commander: commander.id,
     order: null,
-    standing: { rally: at },
+    standing: { rally: at, onContact: 'favourable' },
     mailbag: [],
   }
 }

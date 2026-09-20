@@ -8,7 +8,7 @@
  * JSON unchanged.
  */
 import type { Hex } from './hex'
-import type { Order } from './orders'
+import type { Order, Posture } from './orders'
 import type { Rng } from './rng'
 import type { Rumour } from './rumours'
 import type { Belief, Dispatch, Event, Report } from './view'
@@ -118,10 +118,12 @@ export type ShipRole = 'packet' | 'courier' | 'scout' | 'patrol' | 'escort' | 't
 /** Hulls the desk can give orders to; the rest run themselves. */
 export const COMMANDABLE_ROLES: readonly ShipRole[] = ['courier', 'scout', 'patrol', 'escort', 'transport']
 
-/** What a ship does when its order runs out or something unexpected happens. Phase 1b adds contact posture and a damage threshold. */
+/** What a ship does when its order runs out or something unexpected happens. Phase 1b adds a damage threshold. */
 export interface StandingOrders {
   /** Where to go when there is nothing else to do. Null: hold wherever the last order ended. */
   rally: WorldId | null
+  /** Disposition on meeting a hostile. Read by combat in Phase 1b; set by the desk now. */
+  onContact: Posture
 }
 
 export interface Ship {

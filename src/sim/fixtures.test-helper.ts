@@ -42,8 +42,8 @@ export function line(): GameState {
       [xy]: { id: xy, ends: [X, Y], jumpDistance: 1, schedule: { interval: 4, phase: 1 } },
     },
     ships: {
-      [pcx]: { id: pcx, name: 'P1', role: 'packet', faction: admin, jump: 1, strength: 0, location: { kind: 'world', world: C }, commander: null, order: { kind: 'courier', route: [C, X], then: null, repeat: true, leg: 1 }, standing: { rally: null }, mailbag: [] },
-      [pxy]: { id: pxy, name: 'P2', role: 'packet', faction: admin, jump: 1, strength: 0, location: { kind: 'world', world: X }, commander: null, order: { kind: 'courier', route: [X, Y], then: null, repeat: true, leg: 1 }, standing: { rally: null }, mailbag: [] },
+      [pcx]: { id: pcx, name: 'P1', role: 'packet', faction: admin, jump: 1, strength: 0, location: { kind: 'world', world: C }, commander: null, order: { kind: 'courier', route: [C, X], then: null, repeat: true, leg: 1 }, standing: { rally: null, onContact: 'favourable' }, mailbag: [] },
+      [pxy]: { id: pxy, name: 'P2', role: 'packet', faction: admin, jump: 1, strength: 0, location: { kind: 'world', world: X }, commander: null, order: { kind: 'courier', route: [X, Y], then: null, repeat: true, leg: 1 }, standing: { rally: null, onContact: 'favourable' }, mailbag: [] },
     },
     characters: {
       [player]: { id: player, name: 'Gov', faction: admin, post: { kind: 'governor', world: C }, traits: playerTraits() },

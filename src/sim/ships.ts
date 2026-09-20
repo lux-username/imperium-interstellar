@@ -109,17 +109,23 @@ function orderDestination(order: Order | null): WorldId | null {
 // ---------------------------------------------------------------------------
 // Commanders' reports
 
+/** A port where a hull of this faction can lie safely and hand mail to the packets. Phase 1b adds hostile worlds. */
+export function friendlyPort(state: GameState, ship: Ship, at: WorldId): boolean {
+  const world = state.worlds[at]
+  return world !== undefined && world.faction === ship.faction && route(state.lanes, at, state.capital) !== null
+}
+
 /**
- * A commander writes home on reaching the world their order was about, and
- * again when a patrol there ends: what the world looks like from orbit and
- * what is in port. At a charted port the letter goes by packet; off the
- * lanes it rides with the ship until it finds a port with a lane home.
+ * A commander writes home: what the world looks like from orbit and what is
+ * in port. At a friendly port on the lanes the letter goes by the next
+ * packet; off the lanes it rides with the ship until it finds a port with
+ * a lane home.
  */
 export function commanderReport(state: GameState, ship: Ship, at: WorldId): void {
   if (!ship.commander || at === state.capital) return
   const world = state.worlds[at]
   const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world))
-  if (route(state.lanes, at, state.capital) === null) {
+  if (!friendlyPort(state, ship, at)) {
     mail.status = { kind: 'aboard', ship: ship.id }
     ship.mailbag.push(mail.id)
   }
@@ -145,18 +151,17 @@ export function arriveShips(state: GameState): void {
   }
 }
 
+/**
+ * Landing: a commander at any friendly port on the lanes writes home by
+ * the next packet, so the desk can follow a hull from port to port. Off the
+ * lanes they write only where the order was taking them, and carry it.
+ */
 function onArrival(state: GameState, ship: Ship, at: WorldId): void {
   const order = ship.order
-  if (!order) return
-  if (order.kind === 'patrol' && order.world === at && order.began === null) {
-    order.began = state.week
-    commanderReport(state, ship, at)
-  } else if (order.kind === 'scout' && order.world === at && order.lookedOn === null) {
-    order.lookedOn = state.week
-    commanderReport(state, ship, at)
-  } else if (order.kind === 'move' && orderDestination(order) === at) {
-    commanderReport(state, ship, at)
-  }
+  if (order?.kind === 'patrol' && order.world === at && order.began === null) order.began = state.week
+  if (order?.kind === 'scout' && order.world === at && order.lookedOn === null) order.lookedOn = state.week
+  if (!ship.commander || at === state.capital) return
+  if (friendlyPort(state, ship, at) || orderDestination(order) === at) commanderReport(state, ship, at)
 }
 
 /** Ships in port decide whether this is a departure week; those that go take the mail and jump. */

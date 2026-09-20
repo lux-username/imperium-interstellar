@@ -22,6 +22,7 @@ import type {
   ReportId,
   ShipId,
   ShipRole,
+  StandingOrders,
   StarportClass,
   Week,
   WorldId,
@@ -49,6 +50,7 @@ export type {
   ReportId,
   ShipId,
   ShipRole,
+  StandingOrders,
   StarportClass,
   Week,
   WorldId,
@@ -179,7 +181,8 @@ export type Recipient =
   | { kind: 'ship'; ship: ShipId }
 
 export type DispatchPayload =
-  | { kind: 'order'; ship: ShipId; order: Order }
+  /** New orders for a hull, and optionally new standing orders to go with them. */
+  | { kind: 'order'; ship: ShipId; order: Order; standing?: Partial<StandingOrders> }
   | { kind: 'appointment'; character: CharacterId; post: Post }
   | { kind: 'letter'; text: string }
 

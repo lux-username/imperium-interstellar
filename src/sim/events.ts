@@ -60,9 +60,42 @@ export function forgetOldEvents(state: GameState): void {
 // ---------------------------------------------------------------------------
 // The events the week emits
 
-/** Unrest moved a step. Rising unrest is bad news that gets worse as it climbs; falling is good. */
+/** The three moods a world can be in, as far as anyone writes home about. */
+export type UnrestBand = 'content' | 'neutral' | 'hostile'
+
+export function unrestBand(level: number): UnrestBand {
+  return level <= 1 ? 'content' : level <= 5 ? 'neutral' : 'hostile'
+}
+
+/**
+ * Whether a step in unrest is news. A world drifting a point within its
+ * mood is not; crossing from one mood to another is, and so is reaching
+ * either end of the scale — settled at last, or in open revolt.
+ */
+export function unrestCrossed(before: number, after: number): boolean {
+  if (before === after) return false
+  if (unrestBand(before) !== unrestBand(after)) return true
+  return after === 0 || after === 10
+}
+
+/**
+ * Whether this particular step is news here and now. A change of mood
+ * always is. Reaching an end of the scale is news once: a world settling
+ * to nothing, drifting to one and settling again is not two pieces of news,
+ * so an extreme already reported as the last unrest event is not repeated.
+ */
+export function unrestIsNews(state: GameState, at: WorldId, before: number, after: number): boolean {
+  if (!unrestCrossed(before, after)) return false
+  if (unrestBand(before) !== unrestBand(after)) return true
+  const last = eventsAt(state, at, state.week - EVENT_MEMORY, state.week)
+    .filter((e) => e.kind === 'unrest_rose' || e.kind === 'unrest_fell')
+    .pop()
+  return last?.level !== after
+}
+
+/** Unrest crossed a threshold. Rising is bad news that gets worse as it climbs; falling is good. */
 export function unrestEvent(state: GameState, at: WorldId, level: number, rose: boolean): Event {
-  const severity = rose ? (level >= 8 ? 3 : level >= 6 ? 2 : 1) : 1
+  const severity = rose ? (level >= 10 ? 3 : unrestBand(level) === 'hostile' ? 2 : 1) : 1
   return recordEvent(state, at, { kind: rose ? 'unrest_rose' : 'unrest_fell', valence: rose ? 'bad' : 'good', severity, level })
 }
 

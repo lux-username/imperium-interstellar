@@ -29,7 +29,7 @@ function fleet(): GameState {
     location: { kind: 'world', world: C },
     commander: cmdr,
     order: null,
-    standing: { rally: C },
+    standing: { rally: C, onContact: 'favourable' },
     mailbag: [],
   }
   const govZ = 'c-z' as CharacterId
@@ -53,17 +53,17 @@ describe('ordered hulls', () => {
     expect(patrol(s).location).toEqual({ kind: 'transit', from: X, to: Y, arrives: 3 })
     advanceWeek(s)
     expect(at(s)).toBe(Y)
-    const arrival = Object.values(s.mail).find((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-cmdr')
-    expect(arrival).toBeDefined()
-    expect(arrival?.contents.kind === 'report' && arrival.contents.report.observedAt).toBe(Y)
-    expect(arrival?.contents.kind === 'report' && arrival.contents.report.channel).toBe('official')
+    // The commander wrote from X on the way through and again on reaching Y; both go by packet.
+    const letters = () => Object.values(s.mail).filter((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-cmdr').map((m) => (m.contents.kind === 'report' ? m.contents.report : null)!)
+    expect(letters().map((r) => r.observedAt)).toEqual([X, Y])
+    expect(letters().every((r) => r.channel === 'official')).toBe(true)
+    expect(patrol(s).mailbag).toEqual([]) // handed to the port, not carried
     // Two weeks on station, a closing report, then home to the rally point.
     advanceWeek(s)
     expect(at(s)).toBe(Y)
     advanceWeek(s)
     expect(patrol(s).location.kind).toBe('transit')
-    const reports = Object.values(s.mail).filter((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-cmdr')
-    expect(reports).toHaveLength(2)
+    expect(letters().map((r) => r.observedAt)).toEqual([X, Y, Y])
     runUntil(s, (g) => at(g) === C && patrol(g).order?.kind === 'hold', 20)
     expect(at(s)).toBe(C)
   })
@@ -91,7 +91,7 @@ describe('ordered hulls', () => {
     advanceWeek(s)
     expect(patrol(s).location.kind).toBe('transit')
     expect(stranded.status.kind).toBe('aboard')
-    const own = Object.values(s.mail).find((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-cmdr')!
+    const own = Object.values(s.mail).find((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-cmdr' && m.contents.report.observedAt === Z)!
     expect(own.status.kind).toBe('aboard')
     expect(own.contents.kind === 'report' && own.contents.report.observed).toBe(arrived)
     // Set down at Y, re-routed, and both land on the desk by packet.
@@ -138,6 +138,21 @@ describe('ordered hulls', () => {
     // The desk's last word of it is still "in port here": nothing has reported it since.
     expect(buildPlayerView(s).known.ships[ship].ship.at).toBe(s.capital)
     expect(buildPlayerView(s).outgoing[0].payload.kind).toBe('order')
+  })
+
+  it('an order can be addressed elsewhere than the last sighting, and carry new standing orders', () => {
+    const s = fleet()
+    // The desk believes the hull is at C but sends the order to Y, where it is heading.
+    patrol(s).order = { kind: 'move', to: Y, then: null }
+    const mail = orderShip(s, 's-patrol' as ShipId, { kind: 'patrol', world: Y, weeks: 1, posture: 'always', then: null, began: null }, Y, { onContact: 'never', rally: X })
+    expect(mail.status.kind).toBe('awaiting_carrier')
+    expect(mail.contents.kind === 'dispatch' && mail.contents.dispatch.envelope.destination).toEqual({ kind: 'world', world: Y })
+    runUntil(s, () => mail.status.kind === 'delivered', 20)
+    expect(patrol(s).order?.kind).toBe('patrol')
+    expect(patrol(s).standing).toEqual({ rally: X, onContact: 'never' })
+    // After the patrol the hull heads for its new rally point.
+    runUntil(s, (g) => at(g) === X && patrol(g).order?.kind === 'hold', 30)
+    expect(at(s)).toBe(X)
   })
 
   it('a ship with nowhere to go holds and waits', () => {
