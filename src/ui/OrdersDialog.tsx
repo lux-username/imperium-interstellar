@@ -55,6 +55,11 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   }
 
   const seen = ship ? view.known.ships[ship] : null
+  const seenText = (id: ShipId) => {
+    const s = view.known.ships[id]
+    if (!s) return 'never seen'
+    return `last known location: ${worldName(view, s.ship.at)}, ${s.observed === view.week ? 'seen this week' : ago(view.week, s.observed)}`
+  }
   const path = route(lanes, view.capital, address)
   const landsAt = address === view.capital ? view.week : path ? expectedArrival(lanes, path, view.week + 1) : null
   const readAtOnce = address === view.capital && seen?.ship.at === view.capital && seen.observed === view.week
@@ -89,19 +94,16 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
           <span>Hull</span>
           <select value={ship} onChange={(e) => setShip(e.target.value as ShipId | '')}>
             <option value="">— choose a ship —</option>
-            {view.roster.map((r) => {
-              const s = view.known.ships[r.id]
-              return (
-                <option key={r.id} value={r.id}>
-                  {r.name} ({r.role}) — {s ? `${worldName(view, s.ship.at)}, ${ago(view.week, s.observed)}` : 'unseen'}
-                  {lastOrderSent(view, r.id) ? ' · has orders' : ''}
-                </option>
-              )
-            })}
+            {view.roster.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name} ({r.role}) — {seenText(r.id)}
+                {lastOrderSent(view, r.id) ? ' · has orders' : ''}
+              </option>
+            ))}
           </select>
           {ship && (
             <small className="muted">
-              {seen ? `Last seen at ${worldName(view, seen.ship.at)}, ${ago(view.week, seen.observed)}.` : 'Never seen.'}{' '}
+              {seen ? `Last known location: ${worldName(view, seen.ship.at)} (${seen.observed === view.week ? 'seen this week' : ago(view.week, seen.observed)}).` : 'Never seen.'}{' '}
               {(() => {
                 const prior = lastOrderSent(view, ship)
                 return prior && prior.payload.kind === 'order' ? `Standing orders sent ${weekLabel(prior.envelope.sent)}: ${orderText(view, prior.payload.order)}.` : 'No orders sent.'

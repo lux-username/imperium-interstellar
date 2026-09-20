@@ -155,6 +155,31 @@ describe('ordered hulls', () => {
     expect(at(s)).toBe(X)
   })
 
+  it('a hull leaving a port the other way takes a copy of every letter waiting there; the desk reads each letter once', () => {
+    const s = fleet()
+    for (const w of Object.values(s.worlds)) w.profile.population = 0
+    advanceWeek(s) // week 1: the C–X packet has just left X; the next leaves on week 3
+    const original = governorLetter(s, s.worlds[X], [])!
+    const reportId = original.contents.kind === 'report' ? original.contents.report.id : ''
+    // A hull at X leaves for Y — away from the capital — with a copy, while the original waits for its packet.
+    patrol(s).location = { kind: 'world', world: X }
+    patrol(s).order = { kind: 'move', to: Y, then: null }
+    advanceWeek(s) // week 2
+    const copies = Object.values(s.mail).filter((m) => m.contents.kind === 'report' && m.contents.report.id === reportId)
+    expect(copies).toHaveLength(2)
+    expect(original.status).toEqual({ kind: 'awaiting_carrier', at: X })
+    expect(patrol(s).mailbag).toHaveLength(1)
+    // The original lands first by packet; the copy, set down at Y, comes home later and is thrown away.
+    runUntil(s, () => original.status.kind === 'delivered', 10)
+    const deliveredAt = s.week
+    const copy = copies.find((m) => m.id !== original.id)!
+    runUntil(s, () => s.mail[copy.id] === undefined, 30)
+    expect(s.mail[copy.id]).toBeUndefined()
+    const view = buildPlayerView(s)
+    expect(view.inbox.filter((r) => r.id === reportId)).toHaveLength(1)
+    expect(view.inbox.find((r) => r.id === reportId)?.delivered).toBe(deliveredAt)
+  })
+
   it('a ship with nowhere to go holds and waits', () => {
     const s = fleet()
     patrol(s).jump = 1

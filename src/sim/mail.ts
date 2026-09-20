@@ -135,23 +135,62 @@ function envelopeOf(mail: Mail): Envelope {
 /** Letters a port holds for the newest few; older ones nobody has collected are thrown out. */
 export const MAILBAG_CAP = 6
 
+/** The report ids already in a ship's hold, so it never carries two copies of one letter. */
+function reportsAboard(state: GameState, ship: Ship): Set<string> {
+  const ids = new Set<string>()
+  for (const id of ship.mailbag) {
+    const m = state.mail[id]
+    if (m?.contents.kind === 'report') ids.add(m.contents.report.id)
+  }
+  return ids
+}
+
 /**
  * A ship about to jump from `from` to `to` takes everything at `from` whose
- * next leg is that jump. A hull someone sent on purpose also takes whatever
- * has been lying at an off-lane port with no way home, and finds it a route
- * from wherever it lands next.
+ * next leg is that jump. A hull someone sent on purpose also takes a *copy*
+ * of every report lying at the port for the desk — the original waits for
+ * its packet, the copy goes with the hull and is handed on at the next
+ * friendly port — and takes outright whatever else has no way home.
  */
 export function loadMail(state: GameState, ship: Ship, from: WorldId, to: WorldId): void {
   const ids = Object.keys(state.mail).sort() as MailId[]
+  const carrying = ship.role === 'packet' ? null : reportsAboard(state, ship)
   for (const id of ids) {
     const mail = state.mail[id]
     if (mail.status.kind !== 'awaiting_carrier' || mail.status.at !== from) continue
+    const dest = destinationWorld(mail)
     const hop = nextHop(mail, from)
-    const stranded = hop === null && ship.role !== 'packet' && destinationWorld(mail) !== null && destinationWorld(mail) !== from
-    if (hop !== to && !stranded) continue
-    mail.status = { kind: 'aboard', ship: ship.id }
-    ship.mailbag.push(mail.id)
+    if (hop === to) {
+      mail.status = { kind: 'aboard', ship: ship.id }
+      ship.mailbag.push(mail.id)
+      continue
+    }
+    if (!carrying || dest === null || dest === from) continue
+    if (hop === null) {
+      // Stranded: nothing scheduled will ever take it, so this hull does.
+      mail.status = { kind: 'aboard', ship: ship.id }
+      ship.mailbag.push(mail.id)
+    } else if (mail.contents.kind === 'report' && dest === state.capital && mail.contents.report.observer !== ship.commander) {
+      // A copy for the hull; the port keeps the original for the packet.
+      if (carrying.has(mail.contents.report.id)) continue
+      const copy: Mail = {
+        id: mint<MailId>(state, 'm'),
+        contents: { kind: 'report', report: JSON.parse(JSON.stringify(mail.contents.report)) as Report },
+        status: { kind: 'aboard', ship: ship.id },
+      }
+      state.mail[copy.id] = copy
+      ship.mailbag.push(copy.id)
+      carrying.add(mail.contents.report.id)
+    }
   }
+}
+
+/** Whether a report with this id has already reached a reader somewhere. */
+function alreadyDelivered(state: GameState, reportId: string): boolean {
+  for (const m of Object.values(state.mail)) {
+    if (m.contents.kind === 'report' && m.contents.report.id === reportId && m.status.kind === 'delivered') return true
+  }
+  return false
 }
 
 /**
@@ -243,6 +282,11 @@ export function deliver(state: GameState, mail: Mail, at: WorldId): void {
       return
     }
     const report = mail.contents.report
+    // A second copy of a letter already read is thrown away, whichever copy came first.
+    if (alreadyDelivered(state, report.id)) {
+      delete state.mail[mail.id]
+      return
+    }
     report.delivered = state.week
     mail.status = { kind: 'delivered', week: state.week }
     learn(state, reader, report)
