@@ -27,6 +27,10 @@ import type {
   WorldProfile,
 } from './types'
 
+// Timetable arithmetic over the public chart, so the UI can tell the player
+// when a letter should land using the same sums the sim uses.
+export { expectedArrival, route } from './chart'
+
 // The public-knowledge primitives the UI needs, re-exported so it never has
 // a reason to reach into types.ts.
 export type {
@@ -51,17 +55,6 @@ export type {
 // ---------------------------------------------------------------------------
 // Snapshots: an entity as it appeared to someone, somewhere, once.
 
-export interface WorldSnapshot {
-  id: WorldId
-  name: string
-  hex: Hex
-  profile: WorldProfile
-  faction: FactionId
-  governor: CharacterId | null
-  unrest: number
-  garrison: number
-}
-
 export interface ShipSnapshot {
   id: ShipId
   name: string
@@ -70,6 +63,21 @@ export interface ShipSnapshot {
   /** The world it was seen at. A ship in jump is seen by nobody. */
   at: WorldId
   commander: CharacterId | null
+}
+
+export interface WorldSnapshot {
+  id: WorldId
+  name: string
+  hex: Hex
+  profile: WorldProfile
+  faction: FactionId
+  governor: CharacterId | null
+  /** As the observer knew it; carried in the snapshot so the desk learns a new name only when a report says so. */
+  governorName: string | null
+  unrest: number
+  garrison: number
+  /** Hulls in port when the observation was made. One report carries the world and its traffic together. */
+  ships: ShipSnapshot[]
 }
 
 export type Snapshot =
@@ -96,6 +104,7 @@ export interface Envelope {
 export interface Report {
   id: ReportId
   observer: CharacterId
+  observerName: string
   /** Where the observation was made. Can differ from `envelope.origin` when a ship saw something and posted it from its next port. */
   observedAt: WorldId
   observed: Week
@@ -128,11 +137,25 @@ export interface Dispatch {
 // ---------------------------------------------------------------------------
 // Belief: what one person knows, which is only what has been delivered to them.
 
+/** The newest word of a ship: where and when it was seen, and by which report. */
+export interface Sighting {
+  ship: ShipSnapshot
+  observed: Week
+  report: ReportId
+}
+
 export interface Belief {
   /** Newest delivered report about each world. */
   worlds: Record<WorldId, Report>
-  /** Newest delivered report about each ship. */
-  ships: Record<ShipId, Report>
+  /** Newest sighting of each ship, drawn from world reports (hulls in port) and any report about the ship itself. */
+  ships: Record<ShipId, Sighting>
+}
+
+/** A world's entry on the star chart: where it is and what it is called. Public, like the lanes. */
+export interface ChartEntry {
+  id: WorldId
+  name: string
+  hex: Hex
 }
 
 /**
@@ -144,9 +167,11 @@ export interface PlayerView {
   capital: WorldId
   /** The lane chart is public knowledge and never stale. */
   lanes: Lane[]
+  /** Every world's name and position. What is *happening* there is only in `known`. */
+  chart: Record<WorldId, ChartEntry>
   known: Belief
-  /** Reports that reached the desk this week, newest first. */
+  /** Everything that has reached the desk, newest arrival first. This week's news is whatever has `delivered === week`. */
   inbox: Report[]
-  /** Dispatches the player has sent, whose fate is unknown until a report says otherwise. */
+  /** Dispatches the player has sent, newest first. Their fate is unknown until a report says otherwise. */
   outgoing: Dispatch[]
 }

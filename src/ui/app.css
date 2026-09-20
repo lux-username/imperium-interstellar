@@ -6,8 +6,14 @@
   --ink: #d6dae3;
   --muted: #7d8494;
   --accent: #e0b04f;
+  --fresh: #6fcf97;
+  --aging: #e0b04f;
+  --stale: #c97b4a;
+  --ancient: #5a6070;
+  --warn: #e06c6c;
+  --truth: #7fb3ff;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 * {
@@ -19,6 +25,53 @@ body {
   background: var(--bg);
   color: var(--ink);
 }
+
+button {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 0.3rem 0.7rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--muted);
+}
+
+button.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+button.primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  font-weight: bold;
+}
+
+input[type="text"] {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 0.3rem 0.5rem;
+  font: inherit;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.empty {
+  color: var(--muted);
+}
+
+/* ---- shell ---- */
 
 .shell {
   display: flex;
@@ -43,48 +96,388 @@ body {
 }
 
 .topbar .week {
+  font-weight: bold;
+}
+
+.topbar .controls {
   margin-left: auto;
-  color: var(--muted);
-}
-
-.topbar button {
-  background: var(--accent);
-  color: var(--bg);
-  border: 0;
-  padding: 0.4rem 0.9rem;
-  font: inherit;
-  cursor: pointer;
-}
-
-.topbar button:disabled {
-  opacity: 0.4;
-  cursor: default;
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
 }
 
 .panes {
   display: grid;
-  grid-template-columns: minmax(20rem, 1fr) 2fr;
+  grid-template-columns: minmax(22rem, 1fr) minmax(24rem, 1.4fr) minmax(20rem, 1fr);
   flex: 1;
   min-height: 0;
 }
 
 .pane {
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   overflow: auto;
+  min-width: 0;
 }
 
 .pane + .pane {
   border-left: 1px solid var(--line);
 }
 
-.pane h2 {
-  font-size: 0.8rem;
-  margin: 0 0 0.75rem;
+.pane.centre {
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.tabs button {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+}
+
+/* ---- inbox / outgoing ---- */
+
+.toolbar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
   color: var(--muted);
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.toolbar .sort button {
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+}
+
+.toolbar .count {
+  color: var(--accent);
+}
+
+ul.reports,
+ul.outgoing {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.reports li,
+ul.outgoing li {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+
+ul.reports li.open {
+  padding-bottom: 0.6rem;
+  background: var(--panel);
+}
+
+ul.reports .from {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+ul.reports li:hover,
+ul.outgoing li:hover {
+  background: var(--panel);
+}
+
+ul.reports li.new {
+  border-left: 2px solid var(--accent);
+}
+
+ul.reports li.flash {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+button.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.line1 {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.line1 .subject {
+  font-weight: bold;
+}
+
+.line1 .arrived {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.line1 .kind {
+  color: var(--accent);
+}
+
+.line2 {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 0.15rem;
+}
+
+.line3 {
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+}
+
+/* ---- map ---- */
+
+svg.map {
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 8rem);
+  display: block;
+}
+
+.map .grid polygon {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.map .hexlabel {
+  fill: var(--line);
+  font-size: 7px;
+  text-anchor: middle;
+}
+
+.map .lanes line {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+
+.map .lanes line.slow {
+  stroke-dasharray: 4 3;
+}
+
+.map .world circle {
+  stroke-width: 2;
+  fill: var(--bg);
+}
+
+.map .world.fresh circle {
+  stroke: var(--fresh);
+}
+.map .world.aging circle {
+  stroke: var(--aging);
+}
+.map .world.stale circle {
+  stroke: var(--stale);
+}
+.map .world.ancient circle {
+  stroke: var(--ancient);
+}
+.map .world.capital circle {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+.map .world.capital .port {
+  fill: var(--bg);
+}
+.map .world.trouble circle {
+  fill: #3a1a1a;
+}
+
+.map .world .port {
+  fill: var(--ink);
+  font-size: 9px;
+  font-weight: bold;
+  text-anchor: middle;
+}
+
+.map .world .name {
+  fill: var(--ink);
+  font-size: 8px;
+  text-anchor: middle;
+}
+
+.map .world .age {
+  fill: var(--muted);
+  font-size: 7px;
+  text-anchor: middle;
+}
+
+.map .world.fresh .age {
+  fill: var(--fresh);
+}
+.map .world.aging .age {
+  fill: var(--aging);
+}
+.map .world.stale .age {
+  fill: var(--stale);
+}
+
+.map .world .halo {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.map .world .ships polygon {
+  fill: var(--ink);
+}
+
+.map .overlay .truth {
+  fill: var(--truth);
+  font-size: 8px;
+  font-weight: bold;
+}
+
+.map .overlay polygon {
+  fill: var(--truth);
+}
+
+.map .overlay .transit polygon {
+  fill: none;
+  stroke: var(--truth);
+  stroke-width: 1;
+}
+
+.legend {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.legend .fresh {
+  color: var(--fresh);
+}
+.legend .aging {
+  color: var(--aging);
+}
+.legend .stale {
+  color: var(--stale);
+}
+.legend .ancient {
+  color: var(--ancient);
+}
+
+/* ---- dossier ---- */
+
+.dossier h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+.dossier h4 {
+  margin: 1rem 0 0.25rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.dossier .tag {
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 0 0.3rem;
+}
+
+.dossier .asof {
+  color: var(--accent);
+  margin: 0.25rem 0 0.75rem;
+}
+
+.dossier dl {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 0.3rem 0.5rem;
+  margin: 0;
+}
+
+.dossier dt {
+  color: var(--muted);
+}
+
+.dossier dd {
+  margin: 0;
+}
+
+.dossier .actions {
+  margin-top: 1rem;
+}
+
+.dossier .actions button {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dossier ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+}
+
+.dossier ul.pending {
+  list-style: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.dossier ul.history li {
+  font-size: 0.8rem;
+  margin-bottom: 0.15rem;
+}
+
+/* ---- god view ---- */
+
+.godview {
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--truth);
+  color: var(--truth);
+  font-size: 0.8rem;
+}
+
+.godview h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
 
-.empty {
+.godview table {
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.godview td,
+.godview th {
+  padding: 0.15rem 0.6rem 0.15rem 0;
+  text-align: left;
+}
+
+.godview td.diff {
+  color: var(--warn);
+  font-weight: bold;
+}
+
+.godview .mailstats {
   color: var(--muted);
 }

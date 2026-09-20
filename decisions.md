@@ -53,3 +53,31 @@ Because a letter saying "you are recalled" is faster-than-ship information about
 ## 2026-09-20 — Chose written impressions over direct trait reads for officer conversations
 
 Because a direct read ("loyalty: self") is omniscience about a person, which Pillar 2 forbids; an impression — a boast, an evasion, a slip — has to be interpreted, and a self-loyal officer has every reason to present as loyal. Direct reads are kept as a fallback if the cast grows too large for impressions to be tractable.
+
+## 2026-09-20 — Chose a B-heavy starport table over the rules-default spread
+
+Because the default spread (about 8% A, 19% B) gave a 39-world subsector three real ports and a capital with one reachable neighbour: no chart, no packets, no game. The table in `generate.ts` now yields roughly 42% A/B, which produces 15–25 lanes and a capital cluster of ~20 worlds while still leaving a third of worlds off-lane. Tune, don't revert.
+
+## 2026-09-20 — Chose to sail between-week dispatches with the following week, and to pre-run week 0's sailings
+
+Because the player acts *after* seeing a week's events, by which time that week's packets have gone. A dispatch posted at week W is postmarked W+1 and its ETA is computed from there. `newGame()` ends week 0 with that week's sailings made so every packet is where its timetable says; otherwise the first leg of every lane broke its own promise. The alternative — letting the player's mail catch the current week — would quietly make the desk faster than the ships.
+
+## 2026-09-20 — Chose to carry names inside snapshots rather than expose a character roster
+
+Because a public `Record<CharacterId, name>` built from truth leaks a governor's replacement the moment it happens. `WorldSnapshot.governorName` and `Report.observerName` are what the observer knew when they wrote; the desk learns a new name only when a report says so. Same principle as the rest of the view: nothing reaches the UI that didn't travel by hull.
+
+## 2026-09-20 — Chose office delivery for letters to governors
+
+Because the player addresses "the governor of X" by the name they believe holds the seat, and that belief can be months stale. A letter to a world's governor is opened by whoever holds the seal there now, and the office replies. The stricter alternative (hold the letter until the named person turns up — forever, if they're gone) is more literal but leaves the player with silence and no way to learn why.
+
+## 2026-09-20 — Chose to split chart arithmetic into `chart.ts` and export it through `view.ts`
+
+Because routing and packet timetables are public knowledge — a printed schedule — and the UI should show the player the *same* ETA sums the sim uses, so a promise in the dossier is the sim's own promise. Keeping it in `lanes.ts` would have dragged generation code into the UI's import graph.
+
+## 2026-09-20 — Chose one report per governor letter, with hulls in port inside the world snapshot
+
+Because a governor writing home sends one letter, and the playtest showed the alternative for what it was: three "Packet 85 in port" messages riding alongside every status report, tripling the inbox with news nobody wanted. `WorldSnapshot.ships` carries the hulls seen in port at the time of observation; `Belief.ships` is a *sighting* (ship, week, source report) derived from those. Reports *about* a ship (a commander's own after-action report, Phase 1) remain possible as a separate snapshot kind — they are a different thing, written by a different person. The opening survey lists no ships: a survey describes worlds, not traffic.
+
+## 2026-09-20 — Chose to make every belief traceable to a specific report, and to link it in the UI
+
+Because the player's picture is a stack of claims made by particular people at particular times, and "who told me that, and when?" is the question the whole design turns on once reports can be late, wrong or self-serving. A sighting stores the id of the report that made it; the dossier links each hull and its own "as of" line to that report, which opens and scrolls into view in the inbox. Sightings the desk made directly have no message and say so. This cost nothing in the model — the id was already there — and sets the pattern for Phase 1, where a report's *observer* will matter as much as its content.

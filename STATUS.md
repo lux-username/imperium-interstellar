@@ -1,31 +1,32 @@
-> Generated 2026-09-20 by /end-session at commit cc74f17.
+> Generated 2026-09-20 by /end-session at commit 1284948.
 
 # STATUS
 
 ## Where things stand
 
-Two sessions ran in parallel on 2026-09-20. **Session 2 (code)** landed the core data model (`#1`, PR #10): ground truth in `src/sim/types.ts`, everything the player may see in `src/sim/view.ts`, Phase 0 order kinds in `src/sim/orders.ts`; all entities are plain id-keyed data so `GameState` round-trips through JSON, and a report carries its own snapshot so the UI structurally cannot read ground truth. **Session 3 (design)** wrote the first campaign into `spec.md`: **"The Governor's Term"** — premise, week-1 crisis, loyal and rogue paths, five endings, five threats (Warlord, pirates, planetary governors, unrest, the Council), tribute and the envoy's monthly visit with a per-topic report, model consequences, and four open questions — plus a rumour-propagation rule in the information model and officer conversations under Characters. The UI is still the empty two-pane shell.
+**Phase 0 is done and accepted.** The user played the prototype and called it functional — good enough to build Phase 1 on (`#16`, closed). Branch `worktree-phase0-prototype` holds the whole of it as **PR #15** (ready for review; closes `#2`–`#9` on merge). `npm run dev` gives a generated subsector, a last-known map with age badges, an inbox of governor reports stamped observed / sent / arrived, a dossier per world where every claim links to the report it rests on, and one action: write to a governor for a report and wait for the reply.
 
-Current thinking: the next code step is unchanged — `#2` (subsector generation), then `#3` (lanes and packet schedules) and `#4` (mail propagation through the single `Mail` wrapper); `PlayerView` stays derived, built by `#5` from `GameState.beliefs[player]` each week. The campaign adds three constraints to keep in mind when `#11` fleshes out the Phase 1 stubs (posted there as a comment): `Faction` allegiance needs a neutral state, pirate ships need a per-ship knowledge record from day one, and `Report` wants a fidelity field so rumours are reports rather than a second type.
+Playtest feedback shaped the last four commits: the inbox opens as compact expandable rows; a governor's letter is *one* report with hulls in port inside it, not a message per sighting; sightings in the dossier link to their source report; report text no longer repeats the starport class. The bigger piece of feedback — governors should write only when something matters, filtered by loyalty and boldness — is the first Phase 1 design item (`#20`).
+
+Current thinking: **merge PR #15, pull `main`, remove the worktree.** Then create the Phase 1 milestone and assign `#11`, `#13`, `#18`–`#21`. `#20` deserves a design conversation before code: it decides what a Character's traits actually *do* in the first place they'll be felt, and it is the same shape as the Council's reported-vs-rumoured judgement one level up, so one mechanism might serve both.
 
 ## Derived facts
 
 | Fact | Value |
 |---|---|
-| Test status | 15 passed (15) |
+| Test status | 43 passed (43) |
 | Typecheck | ok |
 | Version | 0.0.1 |
-| Sim modules | `hex.ts`, `orders.ts`, `rng.ts`, `types.ts`, `view.ts` |
+| Sim modules | `chart.ts`, `game.ts`, `generate.ts`, `hex.ts`, `lanes.ts`, `mail.ts`, `names.ts`, `orders.ts`, `player.ts`, `rng.ts`, `save.ts`, `types.ts`, `view.ts` |
 | Order types implemented | `courier`, `hold`, `move` |
-| Open issues | 10 (#2–#9, #11, #13) |
-| HEAD | cc74f17 — Spec: pirate havens, prizes, bonus pay (branch `worktree-spec-first-campaign`, rebased on `main` at 32599d9) |
+| Open issues | 14 (#2–#9 close when PR #15 merges; #11, #13, #18–#21) |
+| HEAD | 1284948 — Inbox: drop starport from report text (branch `worktree-phase0-prototype`, on `main` at 74fdb90) |
 
 ## Active milestone
 
-[Phase 0 — Belief map](https://github.com/lux-username/imperium-interstellar/milestone/1) — 8 open / 1 closed.
+[Phase 0 — Belief map](https://github.com/lux-username/imperium-interstellar/milestone/1) — 8 open / 2 closed; the 8 close when PR #15 merges, completing the milestone.
 
 ## Blockers / open questions
 
-- None blocking. The design branch `worktree-spec-first-campaign` (docs only: `spec.md`, `decisions.md`, this file, journal) is pushed and needs merging into `main`.
-- Four campaign design questions remain — starting scale, aid amounts, parade threshold, agents vs. rumour — recorded in `spec.md → First campaign → Open questions` and tracked as `#13`. They gate Phase 1 generation, not Phase 0.
-- No Phase 1 milestone exists yet; `#11` and `#13` are waiting to be assigned to it.
+- **PR #15 needs merging** (the user merges; the session cannot push to `main`). After merge: `git pull`, `git worktree remove .claude/worktrees/phase0-prototype`, delete the branch.
+- No Phase 1 milestone exists yet; `#11`, `#13`, `#18`–`#21` are waiting for it.
