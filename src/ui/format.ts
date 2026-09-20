@@ -27,10 +27,6 @@ export function subjectWorld(report: Report): WorldId {
   return report.snapshot.kind === 'world' ? report.snapshot.world.id : report.snapshot.ship.at
 }
 
-export function subjectName(report: Report): string {
-  return report.snapshot.kind === 'world' ? report.snapshot.world.name : report.snapshot.ship.name
-}
-
 /** Freshness bucket for colouring: how old is what we know. */
 export function freshness(week: Week, observed: Week): 'fresh' | 'aging' | 'stale' | 'ancient' {
   const n = week - observed

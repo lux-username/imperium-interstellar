@@ -170,9 +170,19 @@ ul.outgoing {
 
 ul.reports li,
 ul.outgoing li {
-  padding: 0.5rem 0.5rem;
+  padding: 0.35rem 0.5rem;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
+}
+
+ul.reports li.open {
+  padding-bottom: 0.6rem;
+  background: var(--panel);
+}
+
+ul.reports .from {
+  color: var(--muted);
+  font-size: 0.8rem;
 }
 
 ul.reports li:hover,
