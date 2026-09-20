@@ -1,0 +1,52 @@
+import type { Culture } from './culture'
+
+export const german: Culture = {
+  name: 'North German',
+  group: 'European',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: 'Prussia, Hanover, Mecklenburg and the Hanseatic coast in the decades around unification. Low German surnames (-sen, -ke, Hinrich) beside the Pietist given names of the Mark (Traugott, Fürchtegott) and a few Junker names, none of the most famous.',
+  given: {
+    m: [
+      'Wilhelm', 'Friedrich', 'Karl', 'Heinrich', 'Johann', 'Otto', 'Hermann', 'Ernst', 'Georg', 'August',
+      'Paul', 'Franz', 'Max', 'Walter', 'Hans', 'Fritz', 'Kurt', 'Erich', 'Werner', 'Rudolf',
+      'Gustav', 'Albert', 'Alfred', 'Arthur', 'Bernhard', 'Bruno', 'Christian', 'Conrad', 'Detlef', 'Dietrich',
+      'Eberhard', 'Eduard', 'Emil', 'Erwin', 'Ewald', 'Ferdinand', 'Gerhard', 'Gottfried', 'Gottlieb', 'Günther',
+      'Hartwig', 'Heinz', 'Helmut', 'Hinrich', 'Hugo', 'Jürgen', 'Klaus', 'Konrad', 'Ludwig', 'Lothar',
+      'Manfred', 'Martin', 'Moritz', 'Nikolaus', 'Oskar', 'Peter', 'Reinhold', 'Richard', 'Robert', 'Siegfried',
+      'Theodor', 'Ulrich', 'Volker', 'Waldemar', 'Wolfgang', 'Adalbert', 'Alwin', 'Arnold', 'Bertold', 'Claus',
+      'Eckhard', 'Egon', 'Ehrenfried', 'Gebhard', 'Hasso', 'Joachim', 'Karsten', 'Leberecht', 'Traugott', 'Fürchtegott',
+    ],
+    f: [
+      'Anna', 'Maria', 'Marie', 'Emma', 'Martha', 'Frieda', 'Bertha', 'Auguste', 'Wilhelmine', 'Johanna',
+      'Louise', 'Luise', 'Margarethe', 'Elisabeth', 'Hedwig', 'Ida', 'Klara', 'Minna', 'Meta', 'Gertrud',
+      'Helene', 'Agnes', 'Charlotte', 'Dorothea', 'Friederike', 'Henriette', 'Karoline', 'Mathilde', 'Pauline', 'Sophie',
+      'Therese', 'Amalie', 'Antonie', 'Bettina', 'Christiane', 'Elise', 'Emilie', 'Ernestine', 'Franziska', 'Hanna',
+      'Hulda', 'Ilse', 'Irmgard', 'Käthe', 'Katharina', 'Lina', 'Lotte', 'Magdalene', 'Margarete', 'Adelheid',
+      'Alma', 'Alwine', 'Cäcilie', 'Dora', 'Edith', 'Elfriede', 'Ella', 'Erna', 'Gesine', 'Grete',
+      'Hilde', 'Hildegard', 'Imke', 'Julie', 'Leni', 'Liese', 'Lucie', 'Marga', 'Ottilie', 'Rosa',
+      'Selma', 'Thekla', 'Ulrike', 'Ursula', 'Wiebke', 'Wilma', 'Adele', 'Agathe', 'Elsbeth', 'Hertha',
+    ],
+  },
+  family: [
+    'Müller', 'Schmidt', 'Schneider', 'Fischer', 'Meyer', 'Weber', 'Wagner', 'Becker', 'Schulz', 'Hoffmann',
+    'Schäfer', 'Koch', 'Bauer', 'Richter', 'Klein', 'Wolf', 'Schröder', 'Neumann', 'Schwarz', 'Zimmermann',
+    'Braun', 'Krüger', 'Hartmann', 'Lange', 'Werner', 'Krause', 'Lehmann', 'Köhler', 'Herrmann', 'König',
+    'Walter', 'Peters', 'Möller', 'Petersen', 'Hansen', 'Jansen', 'Carstens', 'Claussen', 'Hinrichs', 'Jürgens',
+    'Lüders', 'Ahrens', 'Behrens', 'Bock', 'Bremer', 'Brinkmann', 'Buschmann', 'Dierks', 'Eggers', 'Engelke',
+    'Focke', 'Gerken', 'Harms', 'Heitmann', 'Holst', 'Jacobs', 'Kock', 'Kröger', 'Lemke', 'Lorenz',
+    'Lüdemann', 'Mahnke', 'Meier', 'Nolte', 'Ohlsen', 'Paulsen', 'Plambeck', 'Reimers', 'Rohde', 'Sievers',
+    'Stoltenberg', 'Tietjen', 'Voß', 'Wiese', 'Wilken', 'Zander', 'von Bülow', 'von Arnim', 'von Kleist', 'von Tresckow',
+    'von Puttkamer', 'von Zieten', 'von Wedel', 'von Alvensleben', 'von der Goltz', 'von Below',
+  ],
+  places: [
+    'Berlin', 'Hamburg', 'Bremen', 'Lübeck', 'Hannover', 'Kiel', 'Rostock', 'Stettin', 'Danzig', 'Königsberg',
+    'Magdeburg', 'Potsdam', 'Brandenburg', 'Halle', 'Leipzig', 'Dresden', 'Braunschweig', 'Göttingen', 'Hildesheim', 'Celle',
+    'Lüneburg', 'Oldenburg', 'Osnabrück', 'Münster', 'Bielefeld', 'Kassel', 'Schwerin', 'Wismar', 'Stralsund', 'Greifswald',
+    'Stargard', 'Kolberg', 'Posen', 'Bromberg', 'Thorn', 'Elbing', 'Memel', 'Tilsit', 'Breslau', 'Dortmund',
+    'Essen', 'Düsseldorf', 'Köln', 'Aachen', 'Emden', 'Wilhelmshaven', 'Flensburg', 'Husum', 'Cuxhaven', 'Stade',
+    'Uelzen', 'Wittenberg', 'Dessau', 'Quedlinburg', 'Wernigerode', 'Harz', 'Elbe', 'Weser', 'Oder', 'Havel',
+    'Spree', 'Ems', 'Rhein', 'Aller', 'Leine', 'Rügen', 'Usedom', 'Helgoland', 'Holstein', 'Mecklenburg',
+    'Pommern', 'Ostpreußen', 'Westfalen', 'Altmark', 'Uckermark', 'Eifel',
+  ],
+}
