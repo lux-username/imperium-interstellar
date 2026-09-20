@@ -113,3 +113,15 @@ Because the delegation, the successor, the expedition, aid, and rumour in both d
 ## 2026-09-20 — Chose colour for allegiance and the badge for age on the map
 
 Because Phase 1 needs colour for who holds a world and the user did not want age as marker opacity: age stays exactly the coloured "as of N weeks ago" badge above each marker and nothing else. Lane line style is dropped as a channel; the schedule reads in the dossier and on hover (#21).
+
+## 2026-09-20 — Chose to make a letter from the desk an event the governor answers, not a direct call
+
+Because `mail.ts` delivering a letter and then calling into `governors.ts` for the reply would have made the two modules import each other, and because "the desk wrote to me" is exactly the kind of thing the event model exists for. A `dispatch_received` event is recorded on delivery; `governorsWrite()` sees it that week and forces a letter with everything since the last one the governor will admit to — same timing as before, one mechanism, and the forced report is coloured like any other.
+
+## 2026-09-20 — Chose to have sent hulls carry stranded off-lane mail and re-route it at the next charted port
+
+Because the spec already says an observation leaves on "whatever ship happens to go", and a warship calling at an off-lane world and leaving its governor's letters on the dock would be absurd. A packet takes only mail whose next leg is its jump; any other hull also takes what has no way home. On landing, mail that is off its planned route is given a new route from there, or stays aboard if there is still no lane home. This also answers #19 for off-lane worlds: their mail now has a way out, and ports keep only the newest six letters nobody has collected.
+
+## 2026-09-20 — Chose commander letters at the ordered world and at patrol end, not at every port
+
+Because the playtest that produced #20 was about inbox noise, and a hull transiting three worlds would otherwise write three letters saying nothing. A commander writes on reaching the world their order was about, and again when a patrol there ends. Waypoints are silent. The hull's arrival is still an event at each port, so a governor there may mention it and the docks may talk.

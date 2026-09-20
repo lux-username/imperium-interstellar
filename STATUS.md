@@ -1,31 +1,31 @@
-> Generated 2026-09-20 by /end-session at commit 4238d3e.
+> Generated 2026-09-20 by /end-session at commit 205d9d3.
 
 # STATUS
 
 ## Where things stand
 
-**Phase 0 is merged and closed** (PR #15, milestone 1 at 10/10). **Session 5 (design)** set up Phase 1: three milestones — [1a Hulls and people](https://github.com/lux-username/imperium-interstellar/milestone/2), [1b Trouble](https://github.com/lux-username/imperium-interstellar/milestone/3), [1c The Empire](https://github.com/lux-username/imperium-interstellar/milestone/4) — each ending in a playtest issue, and 19 new issues (`#22`–`#40`) filed against them. The design conversation resolved `#13`'s four open questions and settled the load-bearing calls for Phase 1, all now in `spec.md`: **events** are the unit of news; every report names its **channel** (`official` / `agent` / `merchant` / `docks`) and there is no fidelity number; rumours get their **own inbox pile**; Council **standing** is a hidden 0–20 with placeholder numbers and stated invariants (caught lying −5 vs honest failure −1; rumour never moves standing, only rumoured truth); starting scale and aid doubled; the parade is Warlord-captured-and-pleased-at-term-end; the map gives colour to allegiance and keeps age as the badge only; the **Warlord** gets a tracked belief state and scouts; **agents** are accurate on-site observers with a per-world traffic log, and **scout ships** are tiny hulls that excel at escaping. Rationale in `decisions.md` (eight entries dated 2026-09-20). No code changed this session.
+**Phase 1a is built and awaiting playtest.** Session 6 implemented every code issue in the 1a milestone on branch `worktree-phase1a`, open as **draft PR #42** (stacked on the docs PR #41; closes `#18 #19 #20 #22 #23 #24 #25 #26` on merge). The sim now has: `Event` records as the unit of news; `Report.channel` and the events a letter mentions; character traits (loyalty, initiative, competence, ambition); hull roles scout/patrol/escort/transport with `patrol` and `scout` orders that carry their own progress (courier leg index included); charted-first routing with off-lane jumps within jump rating for hulls the desk sends; commanders' letters on reaching the ordered world and at the end of a patrol; hulls carrying stranded off-lane mail home; a 14-hull starting fleet with rolled commanders; governors who write on events through a 2d6 disclosure roll shaded by severity, self-loyalty and initiative, with 8–12-week "all quiet" letters and self-serving governors shading unrest down; rumours that spawn from events at ports, hop one lane a week, degrade a little, and arrive as `merchant`/`docks` reports. The UI has Rumours and Fleet tabs, an order form in every dossier, orders in Outgoing, and a "what the docks say" section per world. Checked end to end in a browser: a scout ordered from the dossier sailed, looked, and its commander's letter landed in the inbox. Save format is v2 (old autosaves are discarded).
 
-Current thinking: the next code step is **1a**, in this order — `#22` Event primitive, `#23` `Report.channel`, then `#11` (reshaped per its latest comment) with `#18`/`#19`, then `#24` warships and scouts, `#20` selective governors, `#25` rumour, `#26` the rumours pane, and the `#27` playtest. Officer conversation stays Phase 2 unless the 1b playtest shows appointments feel blind.
+Current thinking: the user plays 1a (`#27`) before 1b starts; the question is whether a subordinate feels like a person through letters alone. Two things to watch in that playtest: whether subject lines built from events read well at inbox width, and whether rumours arrive at a rate that feels like texture rather than noise. `#11` moved to 1b for its remainder (Faction fields, escort/blockade/transport orders, the agent post, contact posture). After the playtest, 1b begins with `#28` world states and `#29` pirates.
 
 ## Derived facts
 
 | Fact | Value |
 |---|---|
-| Test status | 43 passed (43) |
+| Test status | 66 passed (66) |
 | Typecheck | ok |
 | Version | 0.0.1 |
-| Sim modules | `chart.ts`, `game.ts`, `generate.ts`, `hex.ts`, `lanes.ts`, `mail.ts`, `names.ts`, `orders.ts`, `player.ts`, `rng.ts`, `save.ts`, `types.ts`, `view.ts` |
-| Order types implemented | `courier`, `hold`, `move` |
-| Open issues | 24 (`#11`, `#18`–`#40` less `#13`) |
-| HEAD | 4238d3e — Spec: Phase 1 design (branch `worktree-phase1-milestones`, on `main` at aa3a898) |
+| Sim modules | `characters.ts`, `chart.ts`, `events.ts`, `fleet.ts`, `game.ts`, `generate.ts`, `governors.ts`, `hex.ts`, `lanes.ts`, `mail.ts`, `names.ts`, `orders.ts`, `player.ts`, `rng.ts`, `rumours.ts`, `save.ts`, `ships.ts`, `types.ts`, `view.ts` |
+| Order types implemented | `courier`, `hold`, `move`, `patrol`, `scout` |
+| Open issues | 24 (`#11`, `#18`–`#40` less `#13`; eight of them close with PR #42) |
+| HEAD | 205d9d3 — Spec: record 1a's neutral valence, commander letters, off-lane jumps and carried mail (branch `worktree-phase1a`, on `worktree-phase1-milestones` 2fbc8e5, on `main` aa3a898) |
 
 ## Active milestone
 
-[Phase 1a — Hulls and people](https://github.com/lux-username/imperium-interstellar/milestone/2) — 10 open / 1 closed. Then 1b (8 open), 1c (6 open).
+[Phase 1a — Hulls and people](https://github.com/lux-username/imperium-interstellar/milestone/2) — 9 open / 1 closed; 8 close when PR #42 merges, leaving `#27` (playtest).
 
 ## Blockers / open questions
 
-- **This branch needs merging** (docs only: `spec.md`, `decisions.md`, this file, journal). PR opened by the session; the user merges. After merge: `git pull`, `git worktree remove .claude/worktrees/phase1-milestones`, delete the branch.
-- The user's local `main` was 9 commits behind `origin/main` at session start (PR #15's merge); `git pull` fast-forwards it. `.claude/worktrees/phase0-prototype` can be removed.
-- No open design questions. Standing numbers and starting scale are placeholders tuned by the 1b/1c playtests against the invariants in `spec.md → Council standing`.
+- **PR #41 (docs) then PR #42 (1a code) need merging**, in that order; the user merges. PR #42 is a draft until #41 is in. After both: `git pull`, remove worktrees `.claude/worktrees/phase0-prototype` and `.claude/worktrees/phase1-milestones`, delete the branches.
+- `#27` playtest is the gate for 1b.
+- No open design questions.
