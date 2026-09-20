@@ -5,6 +5,7 @@
  * the sim uses. Every jump takes one week whatever its length, so the
  * shortest route is the one with the fewest jumps.
  */
+import { hexDistance, type Hex } from './hex'
 import type { Lane, LaneId, Week, WorldId } from './types'
 
 export function laneId(a: WorldId, b: WorldId): LaneId {
@@ -82,4 +83,31 @@ export function expectedArrival(lanes: Record<LaneId, Lane>, path: WorldId[], we
     t = nextDeparture(lane, path[i], t) + 1
   }
   return t
+}
+
+/**
+ * Fewest-jumps path hex to hex for a hull that may leave the lanes: any
+ * two worlds within `jump` parsecs are one jump apart. Positions are
+ * public, so the desk can plan a courier's run with the same sums the sim
+ * uses. Null if the hull cannot get there.
+ */
+export function hexRoute(positions: Record<WorldId, { hex: Hex }>, from: WorldId, to: WorldId, jump: number): WorldId[] | null {
+  if (from === to) return [from]
+  const ids = Object.keys(positions).sort() as WorldId[]
+  const prev = new Map<WorldId, WorldId | null>([[from, null]])
+  const queue: WorldId[] = [from]
+  while (queue.length > 0) {
+    const cur = queue.shift() as WorldId
+    for (const next of ids) {
+      if (prev.has(next) || hexDistance(positions[cur].hex, positions[next].hex) > jump) continue
+      prev.set(next, cur)
+      if (next === to) {
+        const path: WorldId[] = []
+        for (let w: WorldId | null = to; w !== null; w = prev.get(w) ?? null) path.unshift(w)
+        return path
+      }
+      queue.push(next)
+    }
+  }
+  return null
 }

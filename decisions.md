@@ -113,3 +113,43 @@ Because the delegation, the successor, the expedition, aid, and rumour in both d
 ## 2026-09-20 — Chose colour for allegiance and the badge for age on the map
 
 Because Phase 1 needs colour for who holds a world and the user did not want age as marker opacity: age stays exactly the coloured "as of N weeks ago" badge above each marker and nothing else. Lane line style is dropped as a channel; the schedule reads in the dossier and on hover (#21).
+
+## 2026-09-20 — Chose to make a letter from the desk an event the governor answers, not a direct call
+
+Because `mail.ts` delivering a letter and then calling into `governors.ts` for the reply would have made the two modules import each other, and because "the desk wrote to me" is exactly the kind of thing the event model exists for. A `dispatch_received` event is recorded on delivery; `governorsWrite()` sees it that week and forces a letter with everything since the last one the governor will admit to — same timing as before, one mechanism, and the forced report is coloured like any other.
+
+## 2026-09-20 — Chose to have sent hulls carry stranded off-lane mail and re-route it at the next charted port
+
+Because the spec already says an observation leaves on "whatever ship happens to go", and a warship calling at an off-lane world and leaving its governor's letters on the dock would be absurd. A packet takes only mail whose next leg is its jump; any other hull also takes what has no way home. On landing, mail that is off its planned route is given a new route from there, or stays aboard if there is still no lane home. This also answers #19 for off-lane worlds: their mail now has a way out, and ports keep only the newest six letters nobody has collected.
+
+## 2026-09-20 — Chose commander letters at the ordered world and at patrol end, not at every port
+
+Because the playtest that produced #20 was about inbox noise, and a hull transiting three worlds would otherwise write three letters saying nothing. A commander writes on reaching the world their order was about, and again when a patrol there ends. Waypoints are silent. The hull's arrival is still an event at each port, so a governor there may mention it and the docks may talk.
+
+## 2026-09-20 — Chose unrest thresholds over per-step events, with extremes reported once per visit
+
+Because the 1a preview showed governors and the docks narrating every point of drift, which the user called too many letters. Unrest is news when a world changes mood (content 0–1, neutral 2–5, hostile 6–10) or reaches 0 or 10; since most worlds flicker between 0 and 1, "reached the bottom" fires only if the last unrest event at that world did not already say so — derived from the event log, not new state. Twenty weeks of a fresh game now bring about one letter a week from ~20 connected governors instead of two or three.
+
+## 2026-09-20 — Chose commander letters from every friendly port over only at the ordered world
+
+Supersedes the earlier same-day decision to write only at the destination. Because the user wants to follow a hull port to port, and a letter by the next packet costs the hull nothing; the noise concern is answered by the unrest threshold rule instead. Off the lanes the old rule stands: write where the order was taking them, carry it to a port with a lane home.
+
+## 2026-09-20 — Chose to keep rumour out of belief entirely
+
+Because a rumour that placed a hull on the map was knowledge the player had not earned. Talk goes in the rumours pile, the dossier shows it beneath the official reports, and nothing on the map rests on it. `learn()` ignores event snapshots.
+
+## 2026-09-20 — Chose one orders dialog over per-world forms
+
+Because orders have the same six parts whichever way you arrive at them — hull, address, destination, task, disposition, afterwards — and a form on each dossier could not offer the address or the rendezvous. The dialog opens from a world with the destination filled in, or from a ship with the hull filled in; disposition and rally point ride with the dispatch as standing orders so the desk's intent and the hull's standing orders cannot disagree.
+
+## 2026-09-20 — Chose "the courier is the mail" over nested orders
+
+Because the Royal Navy never needed nested orders: the Admiralty wrote to a station, the station to a port, and a sloop sent "with orders for Captain X" was simply carrying a letter to a place where it would wait. So orders stay dispatches; where no packet goes, or a hull would land sooner, the dialog dispatches a hull in port to carry the letter and return, and the letter's envelope is routed along that hull's run so the ordinary loading and delivery rules apply. The dialog also offers the addresses the history used — last known port, destination, rendezvous — since a cruising hull is reached by writing to where she is due. A nested `carry` payload would have been a second delivery mechanism and a first step toward a scripting language (Pillar 3).
+
+## 2026-09-20 — Chose to load stranded mail only where the hull's run reaches its destination
+
+Because a hull leaving the capital taking every stranded letter regardless of direction sent orders for off-lane worlds off the wrong way, to ride around forever. A hull now takes stranded mail, and copies of waiting reports, only when its planned run calls at the destination or at a port on a lane network that reaches it. "Going to" is read as the whole run, not the next jump, so a hull that will pass a connected port later still takes the letters.
+
+## 2026-09-20 — Chose that captured couriers and packets destroy their mail
+
+Supersedes the same-day note that a captured packet would feed its dispatches to the captor's belief state. Because it is simpler, and because it is what a packet crew would do — the Post Office packets carried their mail in weighted bags to be sunk if taken. So capture is pure loss: nothing is read, nothing arrives, and the desk hears of it only through a report of the capture. Reading captured dispatches can return if the Warlord's belief state ever needs the feed.

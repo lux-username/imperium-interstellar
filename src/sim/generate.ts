@@ -8,7 +8,8 @@
  * before it — but the tables, thresholds and modifiers here are ours to tune.
  */
 import { allHexes, hexDistance, hexLabel, SUBSECTOR_COLS, SUBSECTOR_ROWS, type Hex } from './hex'
-import { personName, worldName } from './names'
+import { newCharacter, playerTraits } from './characters'
+import { worldName } from './names'
 import { createRng, nextInt, roll, type Rng } from './rng'
 import type {
   Character,
@@ -145,6 +146,7 @@ export function generateWorlds(rng: Rng): Generated {
       actingGovernor: null,
       unrest: 0,
       garrison: 0,
+      lastLetter: nextInt(rng, -7, 0),
     }
     worlds[id] = world
     list.push(world)
@@ -167,6 +169,7 @@ export function generateWorlds(rng: Rng): Generated {
       actingGovernor: null,
       unrest: 0,
       garrison: 0,
+      lastLetter: nextInt(rng, -7, 0),
     }
     worlds[id] = world
     list.push(world)
@@ -175,7 +178,7 @@ export function generateWorlds(rng: Rng): Generated {
   const capital = chooseCapital(list)
 
   // Every populated world has an appointed governor; the player holds the capital.
-  characters[PLAYER] = { id: PLAYER, name: 'The Subsector Governor', faction: ADMINISTRATION, post: { kind: 'governor', world: capital.id } }
+  characters[PLAYER] = { id: PLAYER, name: 'The Subsector Governor', faction: ADMINISTRATION, post: { kind: 'governor', world: capital.id }, traits: playerTraits() }
   capital.governor = PLAYER
   capital.actingGovernor = PLAYER
   for (const world of list) {
@@ -189,7 +192,7 @@ export function generateWorlds(rng: Rng): Generated {
     }
     if (world.profile.population === 0) continue
     const id = `c-gov-${hexLabel(world.hex)}` as CharacterId
-    characters[id] = { id, name: personName(rng), faction: ADMINISTRATION, post: { kind: 'governor', world: world.id } }
+    characters[id] = newCharacter(rng, id, ADMINISTRATION, { kind: 'governor', world: world.id })
     world.governor = id
     world.actingGovernor = id
   }

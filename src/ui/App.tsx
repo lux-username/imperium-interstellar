@@ -6,13 +6,15 @@
  * contain it.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { advanceWeek, newGame, requestReport } from '../sim/game'
+import { advanceWeek, newGame, orderShip, requestReport, sendByCourier } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { clone, deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
-import type { CharacterId, ReportId, WorldId } from '../sim/view'
+import type { CharacterId, Order, ReportId, ShipId, StandingOrders, WorldId } from '../sim/view'
 import { Dossier } from './Dossier'
+import { Fleet } from './Fleet'
 import { Inbox } from './Inbox'
+import { OrdersDialog, type OrdersDraft } from './OrdersDialog'
 import { Map } from './Map'
 import type { Overlay } from './geometry'
 import { Outgoing } from './Outgoing'
@@ -34,8 +36,9 @@ type GodModule = typeof import('./dev')
 export function App() {
   const [state, setState] = useState<GameState>(initialState)
   const [selected, setSelected] = useState<WorldId | null>(null)
-  const [tab, setTab] = useState<'inbox' | 'outgoing'>('inbox')
+  const [tab, setTab] = useState<'inbox' | 'rumours' | 'fleet' | 'outgoing'>('inbox')
   const [focus, setFocus] = useState<{ id: ReportId; nonce: number } | null>(null)
+  const [orders, setOrders] = useState<OrdersDraft | null>(null)
   const [seedText, setSeedText] = useState('')
   const [god, setGod] = useState(false)
   const [godModule, setGodModule] = useState<GodModule | null>(null)
@@ -92,7 +95,7 @@ export function App() {
   }
 
   const showReport = (id: ReportId) => {
-    setTab('inbox')
+    setTab(view.rumours.some((r) => r.id === id) ? 'rumours' : 'inbox')
     setFocus({ id, nonce: Date.now() })
   }
 
@@ -132,11 +135,20 @@ export function App() {
             <button type="button" className={tab === 'inbox' ? 'on' : ''} onClick={() => setTab('inbox')}>
               Inbox
             </button>
+            <button type="button" className={tab === 'rumours' ? 'on' : ''} onClick={() => setTab('rumours')}>
+              Rumours{view.rumours.some((r) => r.delivered === view.week) ? ' •' : ''}
+            </button>
+            <button type="button" className={tab === 'fleet' ? 'on' : ''} onClick={() => setTab('fleet')}>
+              Fleet ({view.roster.length})
+            </button>
             <button type="button" className={tab === 'outgoing' ? 'on' : ''} onClick={() => setTab('outgoing')}>
               Outgoing ({view.outgoing.length})
             </button>
           </div>
-          {tab === 'inbox' ? <Inbox view={view} onSelect={setSelected} focus={focus} /> : <Outgoing view={view} onSelect={setSelected} />}
+          {tab === 'inbox' && <Inbox view={view} pile="inbox" onSelect={setSelected} focus={focus} />}
+          {tab === 'rumours' && <Inbox view={view} pile="rumours" onSelect={setSelected} focus={focus} />}
+          {tab === 'fleet' && <Fleet view={view} onSelect={setSelected} onShowReport={showReport} onOrders={(ship) => setOrders({ ship })} />}
+          {tab === 'outgoing' && <Outgoing view={view} onSelect={setSelected} />}
         </section>
         <section className="pane centre">
           <Map view={view} selected={selected} onSelect={setSelected} overlay={overlay} />
@@ -150,11 +162,25 @@ export function App() {
             view={view}
             world={selected}
             onRequest={(world, governor: CharacterId) => mutate((s) => void requestReport(s, world, governor))}
+            onOrders={(world) => setOrders({ destination: world })}
             onShowReport={showReport}
           />
           {import.meta.env.DEV && god && godModule && <godModule.GodView state={state} view={view} world={selected} />}
         </section>
       </main>
+      {orders && (
+        <OrdersDialog
+          view={view}
+          draft={orders}
+          onSubmit={(ship: ShipId, order: Order, address: WorldId, standing: Partial<StandingOrders>, courier: ShipId | null) =>
+            mutate((s) => {
+              const mail = orderShip(s, ship, order, address, standing)
+              if (courier) sendByCourier(s, courier, mail)
+            })
+          }
+          onClose={() => setOrders(null)}
+        />
+      )}
     </div>
   )
 }

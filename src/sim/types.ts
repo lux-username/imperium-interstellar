@@ -8,9 +8,10 @@
  * JSON unchanged.
  */
 import type { Hex } from './hex'
-import type { Order } from './orders'
+import type { Order, Posture } from './orders'
 import type { Rng } from './rng'
-import type { Belief, Dispatch, Report } from './view'
+import type { Rumour } from './rumours'
+import type { Belief, Dispatch, Event, Report } from './view'
 
 // ---------------------------------------------------------------------------
 // Identity and time
@@ -28,6 +29,7 @@ export type FactionId = Id<'faction'>
 export type ReportId = Id<'report'>
 export type DispatchId = Id<'dispatch'>
 export type MailId = Id<'mail'>
+export type EventId = Id<'event'>
 
 /** Weeks since the game began; week 0 is the opening turn. Every jump takes one. */
 export type Week = number
@@ -82,6 +84,8 @@ export interface World {
   unrest: number
   /** Abstract strength of the garrison. */
   garrison: number
+  /** When the governor's office last wrote to the desk. Drives the "all quiet" letter. */
+  lastLetter: Week
 }
 
 /** When packets leave each end of a lane. */
@@ -103,10 +107,24 @@ export interface Lane {
 
 // ---------------------------------------------------------------------------
 // Ships, characters, factions
-//
-// Phase 0 needs only enough of these to move mail. Phase 1 fills them out.
 
-export type ShipRole = 'packet' | 'courier' | 'warship' | 'merchant'
+/**
+ * What a hull is for. Packets run the lanes on schedule; scouts are tiny
+ * two-person hulls that look and run; patrol craft, escorts and transports
+ * are the warships the desk commands.
+ */
+export type ShipRole = 'packet' | 'courier' | 'scout' | 'patrol' | 'escort' | 'transport' | 'merchant'
+
+/** Hulls the desk can give orders to; the rest run themselves. */
+export const COMMANDABLE_ROLES: readonly ShipRole[] = ['courier', 'scout', 'patrol', 'escort', 'transport']
+
+/** What a ship does when its order runs out or something unexpected happens. Phase 1b adds a damage threshold. */
+export interface StandingOrders {
+  /** Where to go when there is nothing else to do. Null: hold wherever the last order ended. */
+  rally: WorldId | null
+  /** Disposition on meeting a hostile. Read by combat in Phase 1b; set by the desk now. */
+  onContact: Posture
+}
 
 export interface Ship {
   id: ShipId
@@ -115,10 +133,13 @@ export interface Ship {
   faction: FactionId
   /** Jump rating: the most parsecs one jump can cover. */
   jump: number
+  /** Abstract fighting strength. Zero for hulls that only run. */
+  strength: number
   location: Location
   commander: CharacterId | null
   /** What the ship is doing. Null means holding where it is. */
   order: Order | null
+  standing: StandingOrders
   /** Mail in the hold, by MailId. */
   mailbag: MailId[]
 }
@@ -128,11 +149,29 @@ export type Post =
   | { kind: 'commander'; ship: ShipId }
   | { kind: 'unassigned' }
 
+/** Whose interest a person serves when it comes to it. Corruption is loyalty to self. */
+export type Loyalty = 'player' | 'empire' | 'self'
+
+/**
+ * What a person is like. The player never reads these directly; they show
+ * in what the person writes, does and leaves out.
+ */
+export interface Traits {
+  loyalty: Loyalty
+  /** −2 cautious … +2 bold. A modifier wherever nerve matters. */
+  initiative: number
+  /** −2 … +2 modifiers on the three kinds of work. */
+  competence: { administrative: number; naval: number; diplomatic: number }
+  /** 0 content … 3 hungry. */
+  ambition: number
+}
+
 export interface Character {
   id: CharacterId
   name: string
   faction: FactionId
   post: Post
+  traits: Traits
 }
 
 export type FactionKind = 'empire' | 'administration' | 'rival' | 'pirates' | 'rebels'
@@ -189,6 +228,10 @@ export interface GameState {
   characters: Record<CharacterId, Character>
   factions: Record<FactionId, Faction>
   mail: Record<MailId, Mail>
+  /** What has happened, by week and world: the unit of news. Forgotten after EVENT_MEMORY weeks (see ./events.ts). */
+  events: Record<EventId, Event>
+  /** Talk in transit along the lanes (see ./rumours.ts). */
+  rumours: Rumour[]
   /**
    * What each acting character knows, built only from reports delivered to
    * them. The player's view is derived from `beliefs[player]` rather than

@@ -1,4 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
+import { playerTraits } from './characters'
 import { createRng } from './rng'
 import type {
   CharacterId,
@@ -25,6 +26,7 @@ function fixture(): GameState {
   const lane = 'l-1' as LaneId
   const report: Report = {
     id: 'r-1' as ReportId,
+    channel: 'official',
     observer: governor,
     observerName: 'Governor of Outpost',
     observedAt: outpost,
@@ -44,6 +46,7 @@ function fixture(): GameState {
         ships: [],
       },
     },
+    events: [],
     envelope: { origin: outpost, destination: { kind: 'world', world: capital }, sent: 3, route: [outpost, capital], eta: 4 },
     delivered: null,
   }
@@ -65,6 +68,7 @@ function fixture(): GameState {
         actingGovernor: player,
         unrest: 0,
         garrison: 4,
+        lastLetter: 0,
       },
       [outpost]: {
         id: outpost,
@@ -76,6 +80,7 @@ function fixture(): GameState {
         actingGovernor: governor,
         unrest: 1,
         garrison: 1,
+        lastLetter: 0,
       },
     },
     lanes: { [lane]: { id: lane, ends: [capital, outpost], jumpDistance: 2, schedule: { interval: 2, phase: 1 } } },
@@ -86,18 +91,22 @@ function fixture(): GameState {
         role: 'packet',
         faction: admin,
         jump: 2,
+        strength: 0,
         location: { kind: 'transit', from: outpost, to: capital, arrives: 4 },
         commander: null,
-        order: { kind: 'courier', route: [capital, outpost], then: null, repeat: true },
+        order: { kind: 'courier', route: [capital, outpost], then: null, repeat: true, leg: 0 },
+        standing: { rally: null, onContact: 'favourable' },
         mailbag: ['m-1' as MailId],
       },
     },
     characters: {
-      [player]: { id: player, name: 'The Governor-General', faction: admin, post: { kind: 'governor', world: capital } },
-      [governor]: { id: governor, name: 'Governor of Outpost', faction: admin, post: { kind: 'governor', world: outpost } },
+      [player]: { id: player, name: 'The Governor-General', faction: admin, post: { kind: 'governor', world: capital }, traits: playerTraits() },
+      [governor]: { id: governor, name: 'Governor of Outpost', faction: admin, post: { kind: 'governor', world: outpost }, traits: playerTraits() },
     },
     factions: { [admin]: { id: admin, name: 'The Administration', kind: 'administration' } },
     mail: { ['m-1' as MailId]: { id: 'm-1' as MailId, contents: { kind: 'report', report }, status: { kind: 'aboard', ship: packet } } },
+    events: {},
+    rumours: [],
     beliefs: { [player]: { worlds: {}, ships: {} }, [governor]: { worlds: {}, ships: {} } },
   }
 }

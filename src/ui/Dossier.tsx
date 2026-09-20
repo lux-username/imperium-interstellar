@@ -5,12 +5,14 @@
  */
 import { hexLabel } from '../sim/hex'
 import { expectedArrival, route, type CharacterId, type PlayerView, type ReportId, type WorldId } from '../sim/view'
-import { ago, profileString, unrestWord, weekLabel, worldName } from './format'
+import { ago, eventText, profileString, unrestWord, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
   world: WorldId | null
   onRequest: (world: WorldId, governor: CharacterId) => void
+  /** Open the orders dialog with this world as the destination. */
+  onOrders: (world: WorldId) => void
   /** Show the report a claim rests on. */
   onShowReport: (id: ReportId) => void
 }
@@ -20,7 +22,7 @@ function isDeskObservation(id: ReportId): boolean {
   return id.startsWith('r-desk-') || id.startsWith('r-survey-')
 }
 
-export function Dossier({ view, world, onRequest, onShowReport }: Props) {
+export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Props) {
   if (!world) return <p className="empty">Select a world on the map or a report in the inbox.</p>
   const entry = view.chart[world]
   const report = view.known.worlds[world]
@@ -35,6 +37,7 @@ export function Dossier({ view, world, onRequest, onShowReport }: Props) {
     .filter((s) => s.ship.at === world)
     .sort((a, b) => b.observed - a.observed || (a.ship.name < b.ship.name ? -1 : 1))
   const history = view.inbox.filter((r) => r.snapshot.kind === 'world' && r.snapshot.world.id === world)
+  const talk = view.rumours.filter((r) => r.snapshot.kind === 'event' && r.snapshot.event.at === world)
   const pending = view.outgoing.filter((d) => d.envelope.destination.kind === 'world' && d.envelope.destination.world === world)
 
   return (
@@ -110,6 +113,14 @@ export function Dossier({ view, world, onRequest, onShowReport }: Props) {
         </div>
       )}
 
+      {!isCapital && (
+        <div className="actions">
+          <button type="button" onClick={() => onOrders(world)}>
+            Send a hull here…
+          </button>
+        </div>
+      )}
+
       {shipsHere.length > 0 && (
         <>
           <h4>Hulls last seen here</h4>
@@ -136,7 +147,26 @@ export function Dossier({ view, world, onRequest, onShowReport }: Props) {
           <ul className="history">
             {history.map((r) => r.snapshot.kind === 'world' && (
               <li key={r.id}>
-                <span className="muted">obs. {weekLabel(r.observed)}, arrived {weekLabel(r.delivered ?? 0)}:</span> unrest {r.snapshot.world.unrest}, garrison {r.snapshot.world.garrison}, Governor {r.snapshot.world.governorName ?? '—'}
+                <span className="muted">obs. {weekLabel(r.observed)}, arrived {weekLabel(r.delivered ?? 0)}, {r.observerName}:</span>{' '}
+                {r.events.length > 0 ? r.events.map(eventText).join(' ') : `unrest ${r.snapshot.world.unrest}, garrison ${r.snapshot.world.garrison}, Governor ${r.snapshot.world.governorName ?? '—'}`}{' '}
+                <button type="button" className="link" onClick={() => onShowReport(r.id)}>
+                  show
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {talk.length > 0 && (
+        <>
+          <h4>What the docks say</h4>
+          <ul className="history">
+            {talk.map((r) => r.snapshot.kind === 'event' && (
+              <li key={r.id}>
+                <span className="muted">around {weekLabel(r.observed)}, heard {weekLabel(r.delivered ?? 0)}:</span> {eventText(r.snapshot.event)}{' '}
+                <button type="button" className="link" onClick={() => onShowReport(r.id)}>
+                  show
+                </button>
               </li>
             ))}
           </ul>

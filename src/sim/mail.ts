@@ -7,9 +7,11 @@
  * for the next hull along the next leg. The arithmetic the whole game rests
  * on is: arrival = written + waiting + one week per jump.
  */
-import type { CharacterId, DispatchId, GameState, Mail, MailId, ReportId, Ship, ShipId, Week, World, WorldId } from './types'
-import type { Dispatch, DispatchPayload, Envelope, Recipient, Report, ShipSnapshot, Snapshot } from './view'
-import { expectedArrival, laneBetween, nextDeparture, route } from './chart'
+import type { CharacterId, DispatchId, GameState, Mail, MailId, ReportId, Ship, Week, World, WorldId } from './types'
+import type { Order } from './orders'
+import type { Channel, Dispatch, DispatchPayload, Envelope, Event, Recipient, Report, ShipSnapshot, Snapshot } from './view'
+import { expectedArrival, route } from './chart'
+import { dispatchReceivedEvent } from './events'
 
 // ---------------------------------------------------------------------------
 // Minting
@@ -62,19 +64,28 @@ export function shipsAt(state: GameState, world: WorldId): Ship[] {
 // ---------------------------------------------------------------------------
 // Writing
 
+export interface Writing {
+  channel?: Channel
+  /** The events the writer chose to mention. */
+  events?: Event[]
+  observerName?: string
+}
+
 /**
  * An observer at `at` writes a report of `snapshot` addressed to the
  * capital and hands it to the port. Returns the mail. If `at` is the capital
  * itself the report is delivered on the spot.
  */
-export function writeReport(state: GameState, observer: CharacterId, at: WorldId, snapshot: Snapshot): Mail {
+export function writeReport(state: GameState, observer: CharacterId, at: WorldId, snapshot: Snapshot, writing: Writing = {}): Mail {
   const report: Report = {
     id: mint<ReportId>(state, 'r'),
+    channel: writing.channel ?? 'official',
     observer,
-    observerName: state.characters[observer]?.name ?? 'Unknown',
+    observerName: writing.observerName ?? state.characters[observer]?.name ?? 'Unknown',
     observedAt: at,
     observed: state.week,
     snapshot,
+    events: writing.events ?? [],
     envelope: envelope(state, at, state.capital, state.week),
     delivered: null,
   }
@@ -82,13 +93,6 @@ export function writeReport(state: GameState, observer: CharacterId, at: WorldId
   state.mail[mail.id] = mail
   if (at === state.capital) deliver(state, mail, at)
   return mail
-}
-
-/** A governor writes home: one report of their world, hulls in port included. */
-export function governorReport(state: GameState, world: World): Mail | null {
-  const governor = world.actingGovernor
-  if (!governor) return null
-  return writeReport(state, governor, world.id, snapshotWorld(state, world))
 }
 
 /** The player at the capital writes a dispatch to someone at `to` and hands it to the port. */
@@ -124,24 +128,121 @@ function destinationWorld(mail: Mail): WorldId | null {
   return env.destination.kind === 'world' ? env.destination.world : null
 }
 
-/** A ship about to jump from `from` to `to` takes everything at `from` whose next leg is that jump. */
-export function loadMail(state: GameState, ship: Ship, from: WorldId, to: WorldId): void {
-  for (const mail of Object.values(state.mail)) {
+function envelopeOf(mail: Mail): Envelope {
+  return mail.contents.kind === 'report' ? mail.contents.report.envelope : mail.contents.dispatch.envelope
+}
+
+/** Letters a port holds for the newest few; older ones nobody has collected are thrown out. */
+export const MAILBAG_CAP = 6
+
+/** The report ids already in a ship's hold, so it never carries two copies of one letter. */
+function reportsAboard(state: GameState, ship: Ship): Set<string> {
+  const ids = new Set<string>()
+  for (const id of ship.mailbag) {
+    const m = state.mail[id]
+    if (m?.contents.kind === 'report') ids.add(m.contents.report.id)
+  }
+  return ids
+}
+
+/**
+ * Whether a hull following `path` can get mail to `dest`: it will call at
+ * `dest` itself, or at some port on a lane network that reaches it.
+ */
+function pathReaches(state: GameState, path: WorldId[], dest: WorldId): boolean {
+  return path.slice(1).some((w) => w === dest || route(state.lanes, w, dest) !== null)
+}
+
+/**
+ * A ship about to jump from `from` to `to` takes everything at `from` whose
+ * next leg is that jump. A hull someone sent on purpose — with `path` the
+ * run it is making — also takes a *copy* of every report lying at the port
+ * for the desk (the original waits for its packet) and takes outright
+ * whatever has no scheduled way home; but only when its run calls at the
+ * destination or at a port on lanes that reach it. A hull bound the wrong
+ * way leaves the letters where they are.
+ */
+export function loadMail(state: GameState, ship: Ship, from: WorldId, to: WorldId, path: WorldId[] = [from, to]): void {
+  const ids = Object.keys(state.mail).sort() as MailId[]
+  const carrying = ship.role === 'packet' ? null : reportsAboard(state, ship)
+  for (const id of ids) {
+    const mail = state.mail[id]
     if (mail.status.kind !== 'awaiting_carrier' || mail.status.at !== from) continue
-    if (nextHop(mail, from) !== to) continue
-    mail.status = { kind: 'aboard', ship: ship.id }
-    ship.mailbag.push(mail.id)
+    const dest = destinationWorld(mail)
+    const hop = nextHop(mail, from)
+    if (hop === to) {
+      mail.status = { kind: 'aboard', ship: ship.id }
+      ship.mailbag.push(mail.id)
+      continue
+    }
+    if (!carrying || dest === null || dest === from || !pathReaches(state, path, dest)) continue
+    if (hop === null) {
+      // Stranded: nothing scheduled will ever take it, so this hull does.
+      mail.status = { kind: 'aboard', ship: ship.id }
+      ship.mailbag.push(mail.id)
+    } else if (mail.contents.kind === 'report' && dest === state.capital && mail.contents.report.observer !== ship.commander) {
+      // A copy for the hull; the port keeps the original for the packet.
+      if (carrying.has(mail.contents.report.id)) continue
+      const copy: Mail = {
+        id: mint<MailId>(state, 'm'),
+        contents: { kind: 'report', report: JSON.parse(JSON.stringify(mail.contents.report)) as Report },
+        status: { kind: 'aboard', ship: ship.id },
+      }
+      state.mail[copy.id] = copy
+      ship.mailbag.push(copy.id)
+      carrying.add(mail.contents.report.id)
+    }
   }
 }
 
-/** A ship has arrived at `at`: everything aboard comes off and is delivered, held, or set down for the next leg. */
+/** Whether a report with this id has already reached a reader somewhere. */
+function alreadyDelivered(state: GameState, reportId: string): boolean {
+  for (const m of Object.values(state.mail)) {
+    if (m.contents.kind === 'report' && m.contents.report.id === reportId && m.status.kind === 'delivered') return true
+  }
+  return false
+}
+
+/**
+ * A ship has arrived at `at`: everything aboard comes off and is delivered
+ * or set down for the next leg. Mail that got here off its planned route is
+ * re-routed from here; if no lane leads on from here it stays aboard.
+ */
 export function unloadMail(state: GameState, ship: Ship, at: WorldId): void {
   const bag = ship.mailbag
   ship.mailbag = []
   for (const id of bag) {
     const mail = state.mail[id]
-    if (destinationWorld(mail) === at) deliver(state, mail, at)
-    else mail.status = { kind: 'awaiting_carrier', at }
+    const dest = destinationWorld(mail)
+    if (dest === at) {
+      deliver(state, mail, at)
+      continue
+    }
+    const env = envelopeOf(mail)
+    if (!env.route.includes(at) && dest !== null) {
+      const path = route(state.lanes, at, dest)
+      if (!path) {
+        ship.mailbag.push(id)
+        continue
+      }
+      env.route = path
+      env.eta ??= expectedArrival(state.lanes, path, state.week)
+    }
+    mail.status = { kind: 'awaiting_carrier', at }
+  }
+}
+
+/** Ports throw out reports nobody has collected beyond the newest few. The capital keeps everything: that is the desk's outgoing tray. */
+export function pruneMail(state: GameState): void {
+  const waiting: Record<string, Mail[]> = {}
+  for (const mail of Object.values(state.mail)) {
+    if (mail.status.kind !== 'awaiting_carrier' || mail.status.at === state.capital || mail.contents.kind !== 'report') continue
+    ;(waiting[mail.status.at] ??= []).push(mail)
+  }
+  for (const pile of Object.values(waiting)) {
+    if (pile.length <= MAILBAG_CAP) continue
+    pile.sort((a, b) => envelopeOf(b).sent - envelopeOf(a).sent || (a.id < b.id ? 1 : -1))
+    for (const mail of pile.slice(MAILBAG_CAP)) delete state.mail[mail.id]
   }
 }
 
@@ -191,6 +292,11 @@ export function deliver(state: GameState, mail: Mail, at: WorldId): void {
       return
     }
     const report = mail.contents.report
+    // A second copy of a letter already read is thrown away, whichever copy came first.
+    if (alreadyDelivered(state, report.id)) {
+      delete state.mail[mail.id]
+      return
+    }
     report.delivered = state.week
     mail.status = { kind: 'delivered', week: state.week }
     learn(state, reader, report)
@@ -233,60 +339,28 @@ export function learn(state: GameState, reader: CharacterId, report: Report): vo
     sight(report.snapshot.ship)
     return
   }
+  // Talk is not knowledge: a rumour goes in the rumours pile and nowhere else, so the map never rests on it.
+  if (report.snapshot.kind === 'event') return
   const world = report.snapshot.world
   const known = belief.worlds[world.id]
   if (!known || report.observed >= known.observed) belief.worlds[world.id] = report
   for (const ship of world.ships) sight(ship)
 }
 
-/** What a recipient does on reading a dispatch. Phase 0: a letter to a governor prompts a fresh report home. */
-function receiveDispatch(state: GameState, dispatch: Dispatch, at: WorldId): void {
-  if (dispatch.payload.kind === 'letter' && dispatch.recipient.kind === 'character') {
-    const world = state.worlds[at]
-    if (world && world.actingGovernor) governorReport(state, world)
-  }
-  // Orders and appointments are Phase 1: acknowledged by delivery, acted on by nobody yet.
-}
-
-// ---------------------------------------------------------------------------
-// Ship movement along lanes
-
 /**
- * Ships that have landed this week. Cargo comes off before anything departs,
- * so a packet that turns straight around can carry on what just arrived.
+ * What a recipient does on reading a dispatch. A letter to a governor's
+ * office is recorded as an event, and the governor answers it when they
+ * write this week (see ./governors.ts); an order to a ship replaces what
+ * it was doing, from the beginning. Appointments are Phase 1b.
  */
-export function arriveShips(state: GameState): void {
-  for (const ship of Object.values(state.ships)) {
-    if (ship.location.kind !== 'transit' || ship.location.arrives > state.week) continue
-    const at = ship.location.to
-    ship.location = { kind: 'world', world: at }
-    unloadMail(state, ship, at)
-  }
-}
-
-/** Where a courier goes next, or null to stay. */
-function courierNext(ship: Ship, at: WorldId): WorldId | null {
-  if (!ship.order || ship.order.kind !== 'courier') return null
-  const { route: path, repeat } = ship.order
-  const i = path.indexOf(at)
-  if (i < 0) return path[0] ?? null
-  if (i + 1 < path.length) return path[i + 1]
-  return repeat ? path[0] : null
-}
-
-/** Ships in port decide whether this is a departure week; those that go take the mail and jump. */
-export function departShips(state: GameState): void {
-  const ids = Object.keys(state.ships).sort() as ShipId[]
-  for (const id of ids) {
-    const ship = state.ships[id]
-    if (ship.location.kind !== 'world') continue
-    const from = ship.location.world
-    const to = courierNext(ship, from)
-    if (!to || to === from) continue
-    const lane = laneBetween(state.lanes, from, to)
-    // Packets keep the lane's timetable; anything else sails as soon as it can.
-    if (ship.role === 'packet' && lane && nextDeparture(lane, from, state.week) !== state.week) continue
-    loadMail(state, ship, from, to)
-    ship.location = { kind: 'transit', from, to, arrives: state.week + 1 }
+function receiveDispatch(state: GameState, dispatch: Dispatch, at: WorldId): void {
+  const { payload, recipient } = dispatch
+  if (payload.kind === 'letter' && recipient.kind === 'character' && at !== state.capital) dispatchReceivedEvent(state, at)
+  if (payload.kind === 'order' && recipient.kind === 'ship') {
+    const ship = state.ships[recipient.ship]
+    if (ship) {
+      ship.order = JSON.parse(JSON.stringify(payload.order)) as Order
+      if (payload.standing) ship.standing = { ...ship.standing, ...payload.standing }
+    }
   }
 }

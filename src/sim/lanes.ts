@@ -132,9 +132,11 @@ export function packetShips(rng: Rng, lanes: Record<LaneId, Lane>): Record<ShipI
       role: 'packet',
       faction: ADMINISTRATION,
       jump: Math.max(2, lane.jumpDistance),
+      strength: 0,
       location: { kind: 'world', world: lane.ends[0] },
       commander: null,
-      order: { kind: 'courier', route: [lane.ends[0], lane.ends[1]], then: null, repeat: true },
+      order: { kind: 'courier', route: [lane.ends[0], lane.ends[1]], then: null, repeat: true, leg: 1 },
+      standing: { rally: null, onContact: 'favourable' },
       mailbag: [],
     }
   }

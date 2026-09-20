@@ -1,0 +1,114 @@
+/**
+ * What a governor chooses to tell the desk. A governor writes when
+ * something happened that they are willing to mention, and otherwise only
+ * now and then to say all is quiet — so silence is itself a signal. Good
+ * news always goes; bad news gets a disclosure roll shaded by who the
+ * governor is; and the letter itself is coloured by the same traits, so a
+ * self-serving governor's world always looks a little calmer than it is.
+ *
+ * The same shape holds one level up: the player's own monthly report to the
+ * Council is selective in exactly this way (Phase 1c).
+ */
+import { isBold, isCautious } from './characters'
+import { eventsAt } from './events'
+import { snapshotWorld, writeReport } from './mail'
+import { check, type Rng } from './rng'
+import type { Character, GameState, Mail, World, WorldId } from './types'
+import type { Event, Snapshot } from './view'
+
+/** Weeks between "all quiet" letters, staggered by hex so the mail does not all arrive at once. */
+export function quietInterval(world: World): number {
+  return 8 + ((world.hex.col * 3 + world.hex.row) % 5)
+}
+
+/** Bad news that reflects on the governor's own handling of their world. */
+function implicates(event: Event): boolean {
+  return event.kind === 'unrest_rose'
+}
+
+/** Bad news whose natural letter is a request for help. */
+function asksForHelp(event: Event): boolean {
+  return event.kind === 'unrest_rose'
+}
+
+/**
+ * Whether a governor mentions an event. Good news always; routine traffic
+ * never, except that a new governor introduces themselves. Bad news is a
+ * 2d6 roll against 8: worse news is harder to sit on, a self-serving
+ * governor sits on anything that implicates them, a bold one believes they
+ * can handle it, a cautious one writes early and asks for troops.
+ */
+export function discloses(rng: Rng, governor: Character, event: Event): boolean {
+  if (event.valence === 'good') return true
+  if (event.valence === 'neutral') return event.kind === 'governor_changed'
+  let dm = event.severity
+  if (governor.traits.loyalty === 'self' && implicates(event)) dm -= 3
+  if (asksForHelp(event)) {
+    if (isBold(governor)) dm -= 2
+    if (isCautious(governor)) dm += 1
+  }
+  return check(rng, 8, dm)
+}
+
+/** How much a governor shades their world's unrest downward in what they write. */
+function shading(governor: Character): number {
+  return governor.traits.loyalty === 'self' ? 2 : 0
+}
+
+/** A copy of the world as the governor describes it, not quite as it is. */
+export function colouredSnapshot(state: GameState, world: World, governor: Character): Snapshot {
+  const snapshot = snapshotWorld(state, world)
+  if (snapshot.kind === 'world') snapshot.world.unrest = Math.max(0, snapshot.world.unrest - shading(governor))
+  return snapshot
+}
+
+/** A copy of an event as the governor tells it. */
+function colouredEvent(event: Event, governor: Character): Event {
+  const copy = JSON.parse(JSON.stringify(event)) as Event
+  if (copy.level !== null && (copy.kind === 'unrest_rose' || copy.kind === 'unrest_fell')) copy.level = Math.max(0, copy.level - shading(governor))
+  return copy
+}
+
+/**
+ * The governor's letter home: how the world stands, in their telling, and
+ * the events since their last letter that they are willing to mention.
+ * Writing resets the quiet clock.
+ */
+export function governorLetter(state: GameState, world: World, mention: Event[]): Mail | null {
+  const id = world.actingGovernor
+  const governor = id ? state.characters[id] : null
+  if (!id || !governor) return null
+  const mail = writeReport(state, id, world.id, colouredSnapshot(state, world, governor), { events: mention.map((e) => colouredEvent(e, governor)) })
+  world.lastLetter = state.week
+  return mail
+}
+
+/** Everything since the last letter that this governor would mention. */
+export function eventsWorthMentioning(state: GameState, world: World, governor: Character): Event[] {
+  return eventsAt(state, world.id, world.lastLetter + 1, state.week).filter((e) => discloses(state.rng, governor, e))
+}
+
+/**
+ * Each week, every governor decides whether to write: yes if the desk
+ * wrote asking (a full report, everything since the last letter that they
+ * will admit to), yes if something happened this week that they will
+ * mention, yes if it has been long enough since the last letter, otherwise
+ * no. News buried this week stays buried unless the desk asks.
+ */
+export function governorsWrite(state: GameState): void {
+  const ids = Object.keys(state.worlds).sort() as WorldId[]
+  for (const id of ids) {
+    const world = state.worlds[id]
+    if (world.id === state.capital || !world.actingGovernor) continue
+    const governor = state.characters[world.actingGovernor]
+    if (!governor) continue
+    const thisWeek = eventsAt(state, world.id, state.week, state.week)
+    if (thisWeek.some((e) => e.kind === 'dispatch_received')) {
+      governorLetter(state, world, eventsWorthMentioning(state, world, governor))
+      continue
+    }
+    const mention = thisWeek.filter((e) => discloses(state.rng, governor, e))
+    if (mention.length > 0) governorLetter(state, world, mention)
+    else if (state.week - world.lastLetter >= quietInterval(world)) governorLetter(state, world, [])
+  }
+}

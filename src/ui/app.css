@@ -162,17 +162,25 @@ input[type="text"] {
 }
 
 ul.reports,
-ul.outgoing {
+ul.outgoing,
+ul.fleet {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 ul.reports li,
-ul.outgoing li {
+ul.outgoing li,
+ul.fleet li {
   padding: 0.35rem 0.5rem;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
+}
+
+ul.reports ul.events {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
 }
 
 ul.reports li.open {
@@ -186,7 +194,8 @@ ul.reports .from {
 }
 
 ul.reports li:hover,
-ul.outgoing li:hover {
+ul.outgoing li:hover,
+ul.fleet li:hover {
   background: var(--panel);
 }
 
@@ -239,6 +248,114 @@ button.link {
 .line3 {
   margin-top: 0.25rem;
   font-size: 0.85rem;
+}
+
+/* ---- orders dialog ---- */
+
+button.small {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+}
+
+.modal .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+.modal .chips button.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.modal small.courier {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--accent);
+}
+
+.modal small.courier select {
+  width: auto;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.modal {
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  padding: 1rem 1.25rem;
+  width: min(34rem, 92vw);
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.modal h3 {
+  margin: 0 0 0.75rem;
+}
+
+.modal .field {
+  display: block;
+  margin-bottom: 0.7rem;
+  border: 0;
+  padding: 0;
+}
+
+.modal .field > span,
+.modal .field > legend {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.2rem;
+  padding: 0;
+}
+
+.modal .field select {
+  width: 100%;
+}
+
+.modal .field small {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.modal fieldset.field label {
+  display: block;
+  font-size: 0.9rem;
+  margin: 0.15rem 0;
+}
+
+.modal fieldset.field input[type='number'] {
+  width: 3.2rem;
+}
+
+.modal fieldset.field select {
+  width: auto;
+  max-width: 60%;
+}
+
+.modal .summary {
+  border-left: 2px solid var(--accent);
+  padding-left: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.modal .buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
 }
 
 /* ---- map ---- */

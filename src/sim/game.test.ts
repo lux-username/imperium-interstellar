@@ -1,73 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { advanceWeek, newGame, requestReport } from './game'
 import { route } from './chart'
-import { departShips, governorReport } from './mail'
+import { governorLetter } from './governors'
 import { buildPlayerView } from './player'
-import { createRng } from './rng'
+import { playerTraits } from './characters'
 import { clone, deserialize, serialize } from './save'
-import type { CharacterId, FactionId, GameState, LaneId, ShipId, WorldId } from './types'
-
-/**
- * A hand-built chart: capital C — X — Y in a line. C–X packets turn straight
- * around (interval 2, phase 0); X–Y packets lie over a week at each end
- * (interval 4, phase 1). Governors at X and Y; nobody writes unless asked.
- */
-function line(): GameState {
-  const C = 'w-c' as WorldId
-  const X = 'w-x' as WorldId
-  const Y = 'w-y' as WorldId
-  const admin = 'f-admin' as FactionId
-  const player = 'c-player' as CharacterId
-  const govX = 'c-x' as CharacterId
-  const govY = 'c-y' as CharacterId
-  const profile = { starport: 'B' as const, size: 5, atmosphere: 6, hydrographics: 5, population: 5, government: 5, law: 5, tech: 9 }
-  const world = (id: WorldId, name: string, col: number, gov: CharacterId) => ({
-    id, name, hex: { col, row: 5 }, profile: { ...profile }, faction: admin, governor: gov, actingGovernor: gov, unrest: 0, garrison: 5,
-  })
-  const cx = 'l-c-x' as LaneId
-  const xy = 'l-x-y' as LaneId
-  const pcx = 's-cx' as ShipId
-  const pxy = 's-xy' as ShipId
-  const state: GameState = {
-    seed: 0,
-    week: 0,
-    rng: createRng(0),
-    nextId: 1,
-    capital: C,
-    player,
-    worlds: { [C]: world(C, 'Capital', 1, player), [X]: world(X, 'Exe', 2, govX), [Y]: world(Y, 'Wye', 3, govY) },
-    lanes: {
-      [cx]: { id: cx, ends: [C, X], jumpDistance: 1, schedule: { interval: 2, phase: 0 } },
-      [xy]: { id: xy, ends: [X, Y], jumpDistance: 1, schedule: { interval: 4, phase: 1 } },
-    },
-    ships: {
-      [pcx]: { id: pcx, name: 'P1', role: 'packet', faction: admin, jump: 1, location: { kind: 'world', world: C }, commander: null, order: { kind: 'courier', route: [C, X], then: null, repeat: true }, mailbag: [] },
-      [pxy]: { id: pxy, name: 'P2', role: 'packet', faction: admin, jump: 1, location: { kind: 'world', world: X }, commander: null, order: { kind: 'courier', route: [X, Y], then: null, repeat: true }, mailbag: [] },
-    },
-    characters: {
-      [player]: { id: player, name: 'Gov', faction: admin, post: { kind: 'governor', world: C } },
-      [govX]: { id: govX, name: 'Ex', faction: admin, post: { kind: 'governor', world: X } },
-      [govY]: { id: govY, name: 'Wy', faction: admin, post: { kind: 'governor', world: Y } },
-    },
-    factions: { [admin]: { id: admin, name: 'Admin', kind: 'administration' } },
-    mail: {},
-    beliefs: { [player]: { worlds: {}, ships: {} } },
-  }
-  departShips(state) // as newGame() does: week 0's sailings are already under way
-  return state
-}
-
-/** Run weeks until `until(state)` holds or `limit` weeks pass. */
-function runUntil(state: GameState, until: (s: GameState) => boolean, limit = 60): void {
-  while (!until(state) && state.week < limit) advanceWeek(state)
-}
+import type { CharacterId, FactionId, WorldId } from './types'
+import { isRumour } from './view'
+import { line, runUntil } from './fixtures.test-helper'
 
 describe('report propagation', () => {
   it('a report from the next world arrives after the wait for a packet plus one jump', () => {
     const s = line()
     // Make the schedule the only thing that writes: the line's hexes report on weeks where (w + col*3 + 5) % 4 == 0.
     // X has col 2 → weeks 1, 5, 9…; we write by hand at week 0 and read the first arrival instead.
-    const mail = governorReport(s, s.worlds['w-x' as WorldId])!
+    const mail = governorLetter(s, s.worlds['w-x' as WorldId], [])!
     const report = mail.contents.kind === 'report' ? mail.contents.report : null
     expect(report?.envelope.route).toEqual(['w-x', 'w-c'])
     // C–X packet leaves C on even weeks, X on odd weeks. Written week 0 at X: waits to week 1, lands week 2.
@@ -80,7 +27,7 @@ describe('report propagation', () => {
 
   it('a report two lanes out transships and arrives when the timetable says', () => {
     const s = line()
-    const mail = governorReport(s, s.worlds['w-y' as WorldId])!
+    const mail = governorLetter(s, s.worlds['w-y' as WorldId], [])!
     const report = mail.contents.kind === 'report' ? mail.contents.report : null
     expect(report?.envelope.route).toEqual(['w-y', 'w-x', 'w-c'])
     // X–Y packet leaves Y on weeks 3, 7, …; lands X week 4. C–X packet leaves X on odd weeks: 5. Lands C week 6.
@@ -92,11 +39,11 @@ describe('report propagation', () => {
   it('a newer observation wins over a later-delivered older one', () => {
     const s = line()
     const Y = 'w-y' as WorldId
-    const slow = governorReport(s, s.worlds[Y])! // observed week 0, arrives week 6
+    const slow = governorLetter(s, s.worlds[Y], [])! // observed week 0, arrives week 6
     advanceWeek(s) // week 1
     s.worlds[Y].unrest = 9
     // The player hears it directly this once, as if by a fast courier: learn a week-1 observation now.
-    const fresh = governorReport(s, s.worlds[Y])!
+    const fresh = governorLetter(s, s.worlds[Y], [])!
     const freshReport = fresh.contents.kind === 'report' ? fresh.contents.report : null
     expect(freshReport).not.toBeNull()
     runUntil(s, () => (slow.contents.kind === 'report' ? slow.contents.report.delivered !== null : false))
@@ -133,7 +80,7 @@ describe('dispatches', () => {
     const mail = requestReport(s, X, 'c-x' as CharacterId)
     // The governor the player wrote to is gone before the letter lands.
     s.characters['c-x' as CharacterId].post = { kind: 'unassigned' }
-    s.characters['c-x2' as CharacterId] = { id: 'c-x2' as CharacterId, name: 'New', faction: 'f-admin' as FactionId, post: { kind: 'governor', world: X } }
+    s.characters['c-x2' as CharacterId] = { id: 'c-x2' as CharacterId, name: 'New', faction: 'f-admin' as FactionId, post: { kind: 'governor', world: X }, traits: playerTraits() }
     s.worlds[X].governor = 'c-x2' as CharacterId
     s.worlds[X].actingGovernor = 'c-x2' as CharacterId
     runUntil(s, () => mail.status.kind !== 'awaiting_carrier' && mail.status.kind !== 'aboard')
@@ -174,6 +121,7 @@ describe('a generated game', () => {
     for (const m of Object.values(s.mail)) {
       if (m.contents.kind !== 'report' || m.status.kind !== 'delivered') continue
       const r = m.contents.report
+      if (isRumour(r.channel)) continue // talk keeps no timetable
       expect(r.delivered, r.id).toBe(r.envelope.eta)
       checked++
     }
@@ -233,7 +181,7 @@ describe('a generated game', () => {
     const s = newGame(4)
     advanceWeek(s)
     const view = buildPlayerView(s)
-    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'inbox', 'known', 'lanes', 'outgoing', 'week'])
+    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'inbox', 'known', 'lanes', 'outgoing', 'roster', 'rumours', 'week'])
     // The view is independent of the state it came from: mutating truth doesn't move it.
     const copy = clone(s)
     for (const w of Object.values(copy.worlds)) w.unrest = 10
