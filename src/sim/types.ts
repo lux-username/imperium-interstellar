@@ -83,6 +83,8 @@ export interface World {
   unrest: number
   /** Abstract strength of the garrison. */
   garrison: number
+  /** When the governor's office last wrote to the desk. Drives the "all quiet" letter. */
+  lastLetter: Week
 }
 
 /** When packets leave each end of a lane. */

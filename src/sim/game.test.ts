@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { advanceWeek, newGame, requestReport } from './game'
 import { route } from './chart'
-import { governorReport } from './mail'
+import { governorLetter } from './governors'
 import { buildPlayerView } from './player'
 import { playerTraits } from './characters'
 import { clone, deserialize, serialize } from './save'
@@ -13,7 +13,7 @@ describe('report propagation', () => {
     const s = line()
     // Make the schedule the only thing that writes: the line's hexes report on weeks where (w + col*3 + 5) % 4 == 0.
     // X has col 2 → weeks 1, 5, 9…; we write by hand at week 0 and read the first arrival instead.
-    const mail = governorReport(s, s.worlds['w-x' as WorldId])!
+    const mail = governorLetter(s, s.worlds['w-x' as WorldId], [])!
     const report = mail.contents.kind === 'report' ? mail.contents.report : null
     expect(report?.envelope.route).toEqual(['w-x', 'w-c'])
     // C–X packet leaves C on even weeks, X on odd weeks. Written week 0 at X: waits to week 1, lands week 2.
@@ -26,7 +26,7 @@ describe('report propagation', () => {
 
   it('a report two lanes out transships and arrives when the timetable says', () => {
     const s = line()
-    const mail = governorReport(s, s.worlds['w-y' as WorldId])!
+    const mail = governorLetter(s, s.worlds['w-y' as WorldId], [])!
     const report = mail.contents.kind === 'report' ? mail.contents.report : null
     expect(report?.envelope.route).toEqual(['w-y', 'w-x', 'w-c'])
     // X–Y packet leaves Y on weeks 3, 7, …; lands X week 4. C–X packet leaves X on odd weeks: 5. Lands C week 6.
@@ -38,11 +38,11 @@ describe('report propagation', () => {
   it('a newer observation wins over a later-delivered older one', () => {
     const s = line()
     const Y = 'w-y' as WorldId
-    const slow = governorReport(s, s.worlds[Y])! // observed week 0, arrives week 6
+    const slow = governorLetter(s, s.worlds[Y], [])! // observed week 0, arrives week 6
     advanceWeek(s) // week 1
     s.worlds[Y].unrest = 9
     // The player hears it directly this once, as if by a fast courier: learn a week-1 observation now.
-    const fresh = governorReport(s, s.worlds[Y])!
+    const fresh = governorLetter(s, s.worlds[Y], [])!
     const freshReport = fresh.contents.kind === 'report' ? fresh.contents.report : null
     expect(freshReport).not.toBeNull()
     runUntil(s, () => (slow.contents.kind === 'report' ? slow.contents.report.delivered !== null : false))

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { advanceWeek, newGame, orderShip } from './game'
-import { governorReport, postDispatch } from './mail'
+import { postDispatch } from './mail'
+import { governorLetter } from './governors'
 import { buildPlayerView } from './player'
 import { playerTraits } from './characters'
 import { shipRoute } from './ships'
@@ -81,7 +82,7 @@ describe('ordered hulls', () => {
   it('a scout at an off-lane world looks for a week, then carries its own letter and the port\'s stranded mail to the chart', () => {
     const s = fleet()
     // Zed's governor wrote long ago; nothing ever called.
-    const stranded = governorReport(s, s.worlds[Z])!
+    const stranded = governorLetter(s, s.worlds[Z], [])!
     expect(stranded.status).toEqual({ kind: 'awaiting_carrier', at: Z })
     patrol(s).order = { kind: 'scout', world: Z, then: null, lookedOn: null }
     runUntil(s, (g) => at(g) === Z, 10)

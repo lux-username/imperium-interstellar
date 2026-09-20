@@ -68,6 +68,7 @@ function fixture(): GameState {
         actingGovernor: player,
         unrest: 0,
         garrison: 4,
+        lastLetter: 0,
       },
       [outpost]: {
         id: outpost,
@@ -79,6 +80,7 @@ function fixture(): GameState {
         actingGovernor: governor,
         unrest: 1,
         garrison: 1,
+        lastLetter: 0,
       },
     },
     lanes: { [lane]: { id: lane, ends: [capital, outpost], jumpDistance: 2, schedule: { interval: 2, phase: 1 } } },

@@ -7,7 +7,8 @@
 import { hexLabel } from './hex'
 import { route } from './chart'
 import { chartLanes, packetShips } from './lanes'
-import { deliverHeld, governorReport, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
+import { deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
+import { governorsWrite } from './governors'
 import { arriveShips, departShips } from './ships'
 import { forgetOldEvents, governorChangedEvent, unrestEvent } from './events'
 import { newCharacter } from './characters'
@@ -20,9 +21,6 @@ import type { Report, ReportId } from './view'
 
 // ---------------------------------------------------------------------------
 // New game
-
-/** Weeks between a governor's routine reports home. Phase 1 makes this a governor order. */
-export const REPORT_INTERVAL = 4
 
 export function newGame(seed: number): GameState {
   const rng = createRng(seed)
@@ -105,20 +103,11 @@ export function advanceWeek(state: GameState): void {
   arriveShips(state)
   deliverHeld(state)
   const ids = Object.keys(state.worlds).sort() as WorldId[]
-  for (const id of ids) {
-    const world = state.worlds[id]
-    driftWorld(state, world)
-    if (id !== state.capital && reportsThisWeek(state, world)) governorReport(state, world)
-  }
+  for (const id of ids) driftWorld(state, state.worlds[id])
+  governorsWrite(state)
   departShips(state)
   pruneMail(state)
   observeCapital(state)
-}
-
-/** Governors write home on a fixed cycle, staggered by hex so the mail doesn't all arrive at once. */
-function reportsThisWeek(state: GameState, world: World): boolean {
-  if (!world.actingGovernor) return false
-  return (state.week + world.hex.col * 3 + world.hex.row) % REPORT_INTERVAL === 0
 }
 
 /**

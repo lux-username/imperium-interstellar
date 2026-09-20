@@ -146,6 +146,7 @@ export function generateWorlds(rng: Rng): Generated {
       actingGovernor: null,
       unrest: 0,
       garrison: 0,
+      lastLetter: nextInt(rng, -7, 0),
     }
     worlds[id] = world
     list.push(world)
@@ -168,6 +169,7 @@ export function generateWorlds(rng: Rng): Generated {
       actingGovernor: null,
       unrest: 0,
       garrison: 0,
+      lastLetter: nextInt(rng, -7, 0),
     }
     worlds[id] = world
     list.push(world)

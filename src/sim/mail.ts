@@ -95,13 +95,6 @@ export function writeReport(state: GameState, observer: CharacterId, at: WorldId
   return mail
 }
 
-/** A governor writes home: one report of their world, hulls in port included. */
-export function governorReport(state: GameState, world: World): Mail | null {
-  const governor = world.actingGovernor
-  if (!governor) return null
-  return writeReport(state, governor, world.id, snapshotWorld(state, world))
-}
-
 /** The player at the capital writes a dispatch to someone at `to` and hands it to the port. */
 export function postDispatch(state: GameState, recipient: Recipient, to: WorldId, payload: DispatchPayload): Mail {
   const dispatch: Dispatch = {
@@ -304,17 +297,14 @@ export function learn(state: GameState, reader: CharacterId, report: Report): vo
 }
 
 /**
- * What a recipient does on reading a dispatch. A letter to a governor
- * prompts a fresh report home; an order to a ship replaces what it was
- * doing, from the beginning. Appointments are Phase 1b.
+ * What a recipient does on reading a dispatch. A letter to a governor's
+ * office is recorded as an event, and the governor answers it when they
+ * write this week (see ./governors.ts); an order to a ship replaces what
+ * it was doing, from the beginning. Appointments are Phase 1b.
  */
 function receiveDispatch(state: GameState, dispatch: Dispatch, at: WorldId): void {
-  if (at !== state.capital) dispatchReceivedEvent(state, at)
   const { payload, recipient } = dispatch
-  if (payload.kind === 'letter' && recipient.kind === 'character') {
-    const world = state.worlds[at]
-    if (world && world.actingGovernor) governorReport(state, world)
-  }
+  if (payload.kind === 'letter' && recipient.kind === 'character' && at !== state.capital) dispatchReceivedEvent(state, at)
   if (payload.kind === 'order' && recipient.kind === 'ship') {
     const ship = state.ships[recipient.ship]
     if (ship) ship.order = JSON.parse(JSON.stringify(payload.order)) as Order
