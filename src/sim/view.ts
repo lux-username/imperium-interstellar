@@ -55,6 +55,16 @@ export type {
 // ---------------------------------------------------------------------------
 // Snapshots: an entity as it appeared to someone, somewhere, once.
 
+export interface ShipSnapshot {
+  id: ShipId
+  name: string
+  role: ShipRole
+  faction: FactionId
+  /** The world it was seen at. A ship in jump is seen by nobody. */
+  at: WorldId
+  commander: CharacterId | null
+}
+
 export interface WorldSnapshot {
   id: WorldId
   name: string
@@ -66,16 +76,8 @@ export interface WorldSnapshot {
   governorName: string | null
   unrest: number
   garrison: number
-}
-
-export interface ShipSnapshot {
-  id: ShipId
-  name: string
-  role: ShipRole
-  faction: FactionId
-  /** The world it was seen at. A ship in jump is seen by nobody. */
-  at: WorldId
-  commander: CharacterId | null
+  /** Hulls in port when the observation was made. One report carries the world and its traffic together. */
+  ships: ShipSnapshot[]
 }
 
 export type Snapshot =
@@ -135,11 +137,18 @@ export interface Dispatch {
 // ---------------------------------------------------------------------------
 // Belief: what one person knows, which is only what has been delivered to them.
 
+/** The newest word of a ship: where and when it was seen, and by which report. */
+export interface Sighting {
+  ship: ShipSnapshot
+  observed: Week
+  report: ReportId
+}
+
 export interface Belief {
   /** Newest delivered report about each world. */
   worlds: Record<WorldId, Report>
-  /** Newest delivered report about each ship. */
-  ships: Record<ShipId, Report>
+  /** Newest sighting of each ship, drawn from world reports (hulls in port) and any report about the ship itself. */
+  ships: Record<ShipId, Sighting>
 }
 
 /** A world's entry on the star chart: where it is and what it is called. Public, like the lanes. */

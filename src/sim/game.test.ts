@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { advanceWeek, newGame, requestReport } from './game'
 import { route } from './chart'
-import { departShips, governorReports } from './mail'
+import { departShips, governorReport } from './mail'
 import { buildPlayerView } from './player'
 import { createRng } from './rng'
 import { clone, deserialize, serialize } from './save'
@@ -67,7 +67,7 @@ describe('report propagation', () => {
     const s = line()
     // Make the schedule the only thing that writes: the line's hexes report on weeks where (w + col*3 + 5) % 4 == 0.
     // X has col 2 → weeks 1, 5, 9…; we write by hand at week 0 and read the first arrival instead.
-    const [mail] = governorReports(s, s.worlds['w-x' as WorldId])
+    const mail = governorReport(s, s.worlds['w-x' as WorldId])!
     const report = mail.contents.kind === 'report' ? mail.contents.report : null
     expect(report?.envelope.route).toEqual(['w-x', 'w-c'])
     // C–X packet leaves C on even weeks, X on odd weeks. Written week 0 at X: waits to week 1, lands week 2.
@@ -80,7 +80,7 @@ describe('report propagation', () => {
 
   it('a report two lanes out transships and arrives when the timetable says', () => {
     const s = line()
-    const [mail] = governorReports(s, s.worlds['w-y' as WorldId])
+    const mail = governorReport(s, s.worlds['w-y' as WorldId])!
     const report = mail.contents.kind === 'report' ? mail.contents.report : null
     expect(report?.envelope.route).toEqual(['w-y', 'w-x', 'w-c'])
     // X–Y packet leaves Y on weeks 3, 7, …; lands X week 4. C–X packet leaves X on odd weeks: 5. Lands C week 6.
@@ -92,11 +92,11 @@ describe('report propagation', () => {
   it('a newer observation wins over a later-delivered older one', () => {
     const s = line()
     const Y = 'w-y' as WorldId
-    const [slow] = governorReports(s, s.worlds[Y]) // observed week 0, arrives week 6
+    const slow = governorReport(s, s.worlds[Y])! // observed week 0, arrives week 6
     advanceWeek(s) // week 1
     s.worlds[Y].unrest = 9
     // The player hears it directly this once, as if by a fast courier: learn a week-1 observation now.
-    const [fresh] = governorReports(s, s.worlds[Y])
+    const fresh = governorReport(s, s.worlds[Y])!
     const freshReport = fresh.contents.kind === 'report' ? fresh.contents.report : null
     expect(freshReport).not.toBeNull()
     runUntil(s, () => (slow.contents.kind === 'report' ? slow.contents.report.delivered !== null : false))
@@ -178,6 +178,30 @@ describe('a generated game', () => {
       checked++
     }
     expect(checked).toBeGreaterThan(20)
+  })
+
+  it('learns where hulls are from world reports, one report per governor letter', () => {
+    const s = newGame(12)
+    for (let i = 0; i < 20; i++) advanceWeek(s)
+    const view = buildPlayerView(s)
+    // No report is about a ship on its own; every sighting cites a world report that listed the hull in port.
+    expect(view.inbox.every((r) => r.snapshot.kind === 'world')).toBe(true)
+    const sightings = Object.values(view.known.ships)
+    expect(sightings.length).toBeGreaterThan(3)
+    let fromMail = 0
+    for (const sighting of sightings) {
+      const source = view.inbox.find((r) => r.id === sighting.report)
+      if (!source) {
+        // Seen from the desk itself: the capital is observed directly, not by mail.
+        expect(sighting.report).toMatch(/^r-desk-/)
+        expect(sighting.ship.at).toBe(s.capital)
+        continue
+      }
+      fromMail++
+      expect(source.snapshot.kind === 'world' && source.snapshot.world.ships.some((sh) => sh.id === sighting.ship.id)).toBe(true)
+      expect(sighting.observed).toBe(source.observed)
+    }
+    expect(fromMail).toBeGreaterThan(0)
   })
 
   it('never gets mail out of an off-lane world', () => {

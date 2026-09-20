@@ -21,10 +21,7 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
 
   // Ships last seen at each world, from delivered reports.
   const shipsSeen: Record<string, number> = {}
-  for (const r of Object.values(view.known.ships)) {
-    if (r.snapshot.kind !== 'ship') continue
-    shipsSeen[r.snapshot.ship.at] = (shipsSeen[r.snapshot.ship.at] ?? 0) + 1
-  }
+  for (const s of Object.values(view.known.ships)) shipsSeen[s.ship.at] = (shipsSeen[s.ship.at] ?? 0) + 1
 
   return (
     <svg className="map" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Subsector map">

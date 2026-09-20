@@ -7,7 +7,7 @@
 import { hexLabel } from './hex'
 import { route } from './chart'
 import { chartLanes, packetShips } from './lanes'
-import { arriveShips, deliverHeld, departShips, governorReports, learn, postDispatch, shipsAt, snapshotShip, snapshotWorld } from './mail'
+import { arriveShips, deliverHeld, departShips, governorReport, learn, postDispatch, snapshotWorld } from './mail'
 import { personName } from './names'
 import { createRng, roll } from './rng'
 import { generateWorlds, PLAYER } from './generate'
@@ -61,13 +61,16 @@ function openingSurvey(state: GameState): void {
     if (id === state.capital) continue
     const path = route(state.lanes, id, state.capital)
     const age = path ? path.length * 2 + roll(state.rng) : 20 + roll(state.rng) * 4
+    // A survey describes the world, not the traffic: whatever hull is in port today wasn't there back then.
+    const snapshot = snapshotWorld(state, world)
+    if (snapshot.kind === 'world') snapshot.world.ships = []
     const report: Report = {
       id: `r-survey-${hexLabel(world.hex)}` as ReportId,
       observer: world.governor ?? PLAYER,
       observerName: world.governor ? state.characters[world.governor].name : 'Survey of the previous administration',
       observedAt: id,
       observed: -age,
-      snapshot: snapshotWorld(state, world),
+      snapshot,
       envelope: { origin: id, destination: { kind: 'world', world: state.capital }, sent: -age, route: path ?? [id], eta: 0 },
       delivered: 0,
     }
@@ -93,7 +96,7 @@ export function advanceWeek(state: GameState): void {
   for (const id of ids) {
     const world = state.worlds[id]
     driftWorld(state, world)
-    if (id !== state.capital && reportsThisWeek(state, world)) governorReports(state, world)
+    if (id !== state.capital && reportsThisWeek(state, world)) governorReport(state, world)
   }
   departShips(state)
   observeCapital(state)
@@ -136,18 +139,17 @@ function replaceGovernor(state: GameState, world: World): void {
  */
 function observeCapital(state: GameState): void {
   const capital = state.worlds[state.capital]
-  const stamp = (snapshot: Report['snapshot'], key: string): Report => ({
-    id: `r-desk-${state.week}-${key}` as ReportId,
+  const report: Report = {
+    id: `r-desk-${state.week}` as ReportId,
     observer: PLAYER,
     observerName: state.characters[PLAYER].name,
     observedAt: capital.id,
     observed: state.week,
-    snapshot,
+    snapshot: snapshotWorld(state, capital),
     envelope: { origin: capital.id, destination: { kind: 'world', world: capital.id }, sent: state.week, route: [capital.id], eta: state.week },
     delivered: state.week,
-  })
-  learn(state, PLAYER, stamp(snapshotWorld(state, capital), 'world'))
-  for (const ship of shipsAt(state, capital.id)) learn(state, PLAYER, stamp(snapshotShip(ship, capital.id), ship.id))
+  }
+  learn(state, PLAYER, report)
 }
 
 // ---------------------------------------------------------------------------

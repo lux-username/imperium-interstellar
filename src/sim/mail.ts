@@ -8,7 +8,7 @@
  * on is: arrival = written + waiting + one week per jump.
  */
 import type { CharacterId, DispatchId, GameState, Mail, MailId, ReportId, Ship, ShipId, Week, World, WorldId } from './types'
-import type { Dispatch, DispatchPayload, Envelope, Recipient, Report, Snapshot } from './view'
+import type { Dispatch, DispatchPayload, Envelope, Recipient, Report, ShipSnapshot, Snapshot } from './view'
 import { expectedArrival, laneBetween, nextDeparture, route } from './chart'
 
 // ---------------------------------------------------------------------------
@@ -39,15 +39,17 @@ function envelope(state: GameState, origin: WorldId, destination: WorldId, sent:
 // ---------------------------------------------------------------------------
 // Snapshots: what an observer at a world can see there.
 
+export function snapshotShip(ship: Ship, at: WorldId): ShipSnapshot {
+  const { id, name, role, faction, commander } = ship
+  return { id, name, role, faction, at, commander }
+}
+
+/** A world as seen from its own port this week: its state and every hull lying there. */
 export function snapshotWorld(state: GameState, world: World): Snapshot {
   const { id, name, hex, profile, faction, governor, unrest, garrison } = world
   const governorName = governor ? (state.characters[governor]?.name ?? null) : null
-  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, faction, governor, governorName, unrest, garrison } }
-}
-
-export function snapshotShip(ship: Ship, at: WorldId): Snapshot {
-  const { id, name, role, faction, commander } = ship
-  return { kind: 'ship', ship: { id, name, role, faction, at, commander } }
+  const ships = shipsAt(state, id).map((s) => snapshotShip(s, id))
+  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, faction, governor, governorName, unrest, garrison, ships } }
 }
 
 /** Ships in port at a world right now. */
@@ -82,13 +84,11 @@ export function writeReport(state: GameState, observer: CharacterId, at: WorldId
   return mail
 }
 
-/** Everything a governor puts in the bag when they write home: their world, and every hull in port. */
-export function governorReports(state: GameState, world: World): Mail[] {
+/** A governor writes home: one report of their world, hulls in port included. */
+export function governorReport(state: GameState, world: World): Mail | null {
   const governor = world.actingGovernor
-  if (!governor) return []
-  const out = [writeReport(state, governor, world.id, snapshotWorld(state, world))]
-  for (const ship of shipsAt(state, world.id)) out.push(writeReport(state, governor, world.id, snapshotShip(ship, world.id)))
-  return out
+  if (!governor) return null
+  return writeReport(state, governor, world.id, snapshotWorld(state, world))
 }
 
 /** The player at the capital writes a dispatch to someone at `to` and hands it to the port. */
@@ -219,20 +219,31 @@ export function deliverHeld(state: GameState): void {
   }
 }
 
-/** A report enters a reader's belief if it is newer than what they already know about its subject. */
+/**
+ * A report enters a reader's belief where it is newer than what they already
+ * know. A world report updates the world and every hull it lists in port.
+ */
 export function learn(state: GameState, reader: CharacterId, report: Report): void {
   const belief = (state.beliefs[reader] ??= { worlds: {}, ships: {} })
-  const table = report.snapshot.kind === 'world' ? belief.worlds : belief.ships
-  const key = report.snapshot.kind === 'world' ? report.snapshot.world.id : report.snapshot.ship.id
-  const known = (table as Record<string, Report>)[key]
-  if (!known || report.observed >= known.observed) (table as Record<string, Report>)[key] = report
+  const sight = (ship: ShipSnapshot) => {
+    const known = belief.ships[ship.id]
+    if (!known || report.observed >= known.observed) belief.ships[ship.id] = { ship, observed: report.observed, report: report.id }
+  }
+  if (report.snapshot.kind === 'ship') {
+    sight(report.snapshot.ship)
+    return
+  }
+  const world = report.snapshot.world
+  const known = belief.worlds[world.id]
+  if (!known || report.observed >= known.observed) belief.worlds[world.id] = report
+  for (const ship of world.ships) sight(ship)
 }
 
 /** What a recipient does on reading a dispatch. Phase 0: a letter to a governor prompts a fresh report home. */
 function receiveDispatch(state: GameState, dispatch: Dispatch, at: WorldId): void {
   if (dispatch.payload.kind === 'letter' && dispatch.recipient.kind === 'character') {
     const world = state.worlds[at]
-    if (world && world.actingGovernor) governorReports(state, world)
+    if (world && world.actingGovernor) governorReport(state, world)
   }
   // Orders and appointments are Phase 1: acknowledged by delivery, acted on by nobody yet.
 }

@@ -41,6 +41,7 @@ function fixture(): GameState {
         governorName: 'Governor of Outpost',
         unrest: 1,
         garrison: 1,
+        ships: [],
       },
     },
     envelope: { origin: outpost, destination: { kind: 'world', world: capital }, sent: 3, route: [outpost, capital], eta: 4 },

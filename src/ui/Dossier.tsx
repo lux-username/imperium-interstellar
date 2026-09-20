@@ -24,7 +24,9 @@ export function Dossier({ view, world, onRequest }: Props) {
   const eta = path ? expectedArrival(lanes, path, view.week + 1) : null
   const replyEta = path && eta !== null ? expectedArrival(lanes, [...path].reverse(), eta) : null
 
-  const shipsHere = Object.values(view.known.ships).filter((r) => r.snapshot.kind === 'ship' && r.snapshot.ship.at === world)
+  const shipsHere = Object.values(view.known.ships)
+    .filter((s) => s.ship.at === world)
+    .sort((a, b) => b.observed - a.observed || (a.ship.name < b.ship.name ? -1 : 1))
   const history = view.inbox.filter((r) => r.snapshot.kind === 'world' && r.snapshot.world.id === world)
   const pending = view.outgoing.filter((d) => d.envelope.destination.kind === 'world' && d.envelope.destination.world === world)
 
@@ -96,9 +98,9 @@ export function Dossier({ view, world, onRequest }: Props) {
         <>
           <h4>Hulls last seen here</h4>
           <ul className="ships">
-            {shipsHere.map((r) => r.snapshot.kind === 'ship' && (
-              <li key={r.id}>
-                {r.snapshot.ship.name} <span className="muted">({r.snapshot.ship.role}) — {ago(view.week, r.observed)}</span>
+            {shipsHere.map((s) => (
+              <li key={s.ship.id}>
+                {s.ship.name} <span className="muted">({s.ship.role}) — {ago(view.week, s.observed)}</span>
               </li>
             ))}
           </ul>

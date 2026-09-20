@@ -89,18 +89,20 @@ export function Inbox({ view, onSelect }: Props) {
 function subject(r: Report): string {
   if (r.snapshot.kind === 'world') {
     const w = r.snapshot.world
-    return `${w.name}: ${unrestWord(w.unrest)}, garrison ${w.garrison}`
+    const hulls = w.ships.length > 0 ? `, ${w.ships.length} hull${w.ships.length === 1 ? '' : 's'} in port` : ''
+    return `${w.name}: ${unrestWord(w.unrest)}, garrison ${w.garrison}${hulls}`
   }
   const s = r.snapshot.ship
-  return `${s.name} in port`
+  return `${s.name} sighted`
 }
 
 function body(r: Report): string {
   if (r.snapshot.kind === 'world') {
     const w = r.snapshot.world
     const gov = w.governorName ? `Governor ${w.governorName}` : 'no governor'
-    return `${gov}. The world is ${unrestWord(w.unrest)} (unrest ${w.unrest}); garrison strength ${w.garrison}. Starport ${w.profile.starport}.`
+    const hulls = w.ships.length > 0 ? ` In port: ${w.ships.map((s) => `${s.name} (${s.role})`).join(', ')}.` : ' No hulls in port.'
+    return `${gov}. The world is ${unrestWord(w.unrest)} (unrest ${w.unrest}); garrison strength ${w.garrison}. Starport ${w.profile.starport}.${hulls}`
   }
   const s = r.snapshot.ship
-  return `${s.name}, a ${s.role}, was in port.`
+  return `${s.name}, a ${s.role}, was seen in port.`
 }
