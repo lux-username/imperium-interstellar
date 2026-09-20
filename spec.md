@@ -42,6 +42,7 @@ These are the load-bearing ideas. A feature that undermines one of them is wrong
 - **Ground truth vs. belief.** The simulation holds the true state. The player's view is a set of *reports*: snapshots of an entity as observed at (location, date), delivered at (capital, later date). The map renders the newest report per entity and its age.
 - **Report propagation.** An observation made at world X on week D leaves X on the next departing hull bound toward the capital (a scheduled packet on a lane, or whatever ship happens to go). Arrival = D + waiting time + transit weeks. Off-lane worlds may not report for months, or ever.
 - **Dispatch propagation** (player → subordinate). Same rules in reverse. A dispatch addressed to a ship is sent to an *address* — a world or rally point. If the ship is not there when the courier arrives, the dispatch is held at the address until the ship shows up or a recall expires.
+- **Rumour propagation.** Merchants carry news along the lanes. A rumour is a degraded report — vague on date and place, sometimes wrong, sometimes about things no official observer saw — that hops lane to lane with commercial traffic, slower than packets, and reaches every A/B port in time, including ports outside the subsector. Rumour is how the player hears of the Council's mood, and how the Council hears of the subsector beyond what the player chooses to tell it.
 - **Subordinate knowledge.** Every acting entity (governor, ship commander, rival polity) has its own belief state and acts on it. Phase 1 may simplify NPC decision inputs, but a subordinate's *report to the player* is always what that subordinate observed, coloured by their traits.
 - **Player location.** Stored as a location entity. Phase 1: always the capital. The capital's `acting_governor` slot exists from day one and holds the player.
 
@@ -99,14 +100,23 @@ The scenario Phases 1–2 are built to deliver. It is the default game; other se
 
 ### Premise
 
-The player is the **Subsector Governor**, holding supreme civil and military authority over the subsector on the Empire's behalf — and confined to an office in orbit above the **subsector capital**. Everything is done through subordinates, dispatches, and the hulls that carry them.
+The player is the **Subsector Governor**, holding supreme civil and military authority over the subsector on the Empire's behalf — and confined to an office in orbit above the **subsector capital**. Everything is done through subordinates, dispatches, and the hulls that carry them. The capital world itself has its own planetary governor, who commands the local troops and suppresses local unrest; the player governs the subsector, not the planet below.
+
+### Starting position
+
+Week 1 is already a crisis. Most worlds have inherited planetary governors of unknown loyalty. The Warlord has already defected and holds his first worlds. Some worlds are in unrest, and one or more have declared independence. Pirates are known to be raiding the lanes. The Council's envoy delivers the brief: **restore order.**
 
 ### Goals
 
 Two ways to win, and they pull against each other:
 
-- **Loyal path — complete the term.** Serve out a fixed term of office without being recalled. Career advancement follows. Success is measured by the Empire's standing axis (*The Empire*, above): what the Council has heard about the subsector by the time the term ends.
-- **Rogue path — the pocket kingdom.** Declare the subsector independent. There is no threshold to meet; the declaration is a switch, and what happens next depends on who holds the seats. As the news reaches each commander and governor (by hull, like everything else), they react by their dominant loyalty: those loyal to the *player* keep following orders; those loyal to the *Empire* turn against the player; those loyal to *themselves* sit it out — holding their post, obeying nobody, until a winner is evident, and then pledging to whoever won. So the work of the rogue path is done before the declaration: appointing loyalists to the seats that matter (planetary governorships, ship and squadron commands, the capital garrison) so the switch, when flipped, leaves the Empire's partisans outnumbered. From the declaration the Empire is an enemy: after an **unknown number of weeks** the Council assembles a fleet and sends it straight for the capital. The rogue path is won by still holding the capital when that expedition is defeated or turned back.
+- **Loyal path — complete the term.** Serve out a fixed term of office without being replaced. Career advancement follows. Success is measured by the Empire's standing axis (*The Empire*, above): what the Council has heard about the subsector by the time the term ends.
+- **Rogue path — the pocket kingdom.** Declare the subsector independent. There is no threshold to meet; the declaration is a switch, and what happens next depends on who holds the seats. As the news reaches each commander and governor (by hull, like everything else), they react by their dominant loyalty, shaded by temperament (*Characters*: bold ↔ cautious):
+  - loyal to the *player* — keep following orders;
+  - loyal to the *Empire* — turn against the player, boldly (attack, declare for the Empire, close ports) or cautiously (withdraw to a rally and await the expedition);
+  - loyal to *themselves* — sit it out. Governors stop paying taxes and keep to themselves; ship officers hold their post, and the most daring turn pirate. They pledge to whoever wins once the outcome is evident.
+
+  So the work of the rogue path is done before the declaration: appointing loyalists to the seats that matter (planetary governorships, ship and squadron commands, the capital's planetary governor) so the switch, when flipped, leaves the Empire's partisans outnumbered. From the declaration the Empire is an enemy: after an **unknown number of weeks** the Council assembles a fleet and sends it straight for the capital. **The first expedition ends the campaign**: the rogue path is won by holding the capital when it is defeated or turned back, and lost when it isn't. (A Phase 3 hand-off to the pocket-polity seat would begin with the self-loyal governors pledging to the player as news of the victory reaches them.)
 
 The loyal path is Phase 1 scope. The rogue path needs the full loyalty model and is Phase 2 scope; Phase 1 should nonetheless track per-character loyalty so appointments made in Phase 1 games already carry weight.
 
@@ -114,28 +124,35 @@ The loyal path is Phase 1 scope. The rogue path needs the full loyalty model and
 
 Five sources of trouble. Each one reaches the player only as reports (Pillar 1) and is answered only by sending people and ships (Pillar 2).
 
-- **The Warlord.** A former Commodore of the subsector fleet who defected, taking ships with him. He holds a handful of worlds and is trying to take more, aiming to make the subsector his own independent kingdom. He is the campaign's *rival polity* and its example of a *governor's secession* at once. Worlds and ships he captures go dark to the player until someone observes them again.
-- **Pirates.** Raid the trade lanes, cutting revenue at A/B ports and sometimes taking tax convoys and packets (lost dispatches). They put in for repair and resupply at spaceports whose planetary governor is corrupt enough to look the other way — so a pirate problem on a lane is usually also a *governor* problem at one end of it.
-- **Planetary governors.** (Placeholder title; better ones wanted.) In theory they answer to the Subsector Governor and are recalled at will. In practice a recall dispatch is a piece of paper: replacing a governor who does not want to go requires a **detachment of marines** arriving with the appointment. Their competence, loyalty, and self-interest (corruption is high *loyalty to self*, in the *Characters* model) decide how much tax arrives, how honest their reports are, and whether pirates find a welcome.
+- **The Warlord.** A former Commodore of the subsector fleet who defected, taking ships with him. He wants the whole subsector: enough ships, spaceports, and revenue to pay their upkeep, and then the capital — once strong enough, he comes for it. He grows by capturing worlds and by recruiting self-interested commanders through intrigue and bribes. He is the campaign's *rival polity* and its example of a *governor's secession* at once. Worlds and ships he captures go dark to the player until someone observes them again. There is no negotiating with him in this campaign (diplomacy is Phase 3); if the player goes rogue, he sends a taunt on hearing the news and carries on.
+- **Pirates.** Raid the trade lanes, cutting revenue at A/B ports and sometimes taking tax convoys and packets (lost dispatches). They put in for repair and resupply at spaceports whose planetary governor is corrupt enough to look the other way — so a pirate problem on a lane is usually also a *governor* problem at one end of it. Merchants complain about piracy, and merchants talk to the Empire.
+- **Planetary governors.** (Placeholder title; better ones wanted.) In theory they answer to the Subsector Governor and are recalled at will. In practice a recall dispatch is a piece of paper. The default response of *any* governor recalled without marines — Empire-loyal ones included — is to ignore the message, stop paying taxes, and try to wait out the end of the player's term. Replacing a governor who does not want to go requires a **detachment of marines** arriving with the appointment. Their competence, loyalty, and self-interest (corruption is high *loyalty to self*, in the *Characters* model) decide how much tax arrives, how honest their reports are, and whether pirates find a welcome.
 - **Unrest.** No single world here can project power or rival the Empire, even one that declares independence. But an unrestful world can blow up the planetary governor's office, stop paying taxes, and occupy the spaceport — closing the port to packets and fuel, and so to information. Garrisons keep unrest from boiling over; when it does, the answer is ships carrying **army and marine detachments**, which take weeks to arrive and may find the situation changed.
-- **The Imperial Council** (the player's boss). Judges the player on reports that were months old when read. Too much bad news — lost worlds, unpaid taxes, a Warlord still at large — and the Council recalls the player: the loyal path is lost. **There is no recall letter.** The recall *is* the successor: a new governor arriving at the capital aboard a ship carrying a detachment of marines to make sure the player steps down quietly. The only warning is rumour — packets from the imperial capital carry word of how pleased or displeased the Council is, second-hand and weeks old — and the player uses it to judge how much danger they are in. A player who means to go rogue must anticipate the removal and declare first; a declaration after the successor's marines are in orbit is too late. On the rogue path, the Council is the enemy that sends the fleet.
+- **The Imperial Council** (the player's boss). Judges the player on what reaches the imperial capital: the player's own monthly report (see *Tribute*, below), **merchants' complaints** — mostly about piracy and other barriers to trade — and **rumour** (*Information model → Rumour propagation*), which travels slower than either. Trade routes out of the subsector cannot be closed to stop merchants talking without serious loss of revenue. The Council does *not* see who the player appoints or where loyalties lie, though specific appointments may displease it (an event: a noble's nephew arrives whom the player had better make a governor before promoting anyone else). Too much bad news — lost worlds, unpaid tribute, a Warlord still at large — and the Council replaces the player: the loyal path is lost. **There is no recall letter.** The recall *is* the successor: a new governor arriving at the capital aboard a ship carrying a detachment of marines, who **takes over in the same tick he arrives**. By the time an unknown ship is seen in the system, it is already too late. The only warning is rumour — word of how pleased or displeased the Council is, second-hand and weeks old — and the player uses it to judge how much danger they are in. A player who means to go rogue must anticipate the removal and declare first. If the declaration is made while the successor is *en route*, he arrives at a hostile capital: the player's forces can defeat his marines and capture his ship. On the rogue path, the Council is the enemy that sends the fleet.
+
+### Tribute
+
+Taxes owed to the Empire travel physically. Every month a **tribute delegation** — a specific ship with a specific character aboard — arrives at the capital; the player hands over the subsector's taxes and gives the monthly report that the Council will eventually read. The delegation then carries both back out of the subsector. Whether it needs escorting depends on the map: a capital on the subsector's edge is a short hop from the border, one in the centre means the delegation crosses pirate country. A lost delegation is lost money, a missing report, and — when the merchants get there first — bad news.
 
 ### Consequences for the model
 
 Things this campaign requires beyond what *Requirements* already lists:
 
 - **Troops.** Army detachments (garrison, hold a world) and marine detachments (boarding, seizing a spaceport or a governor's office) as transportable units with strength, carried by ships under the *Transport* order. Troops travel **cryofrozen** between worlds, and a percentage do not survive revival — so a detachment arrives weaker than it left, by an amount the sender learns only from the commander's report on arrival. Moving troops is therefore costly in itself, and stationing them ahead of need beats rushing them in.
-- **Appointments travel.** An appointment is a dispatch; it takes effect when it arrives — and, for a hostile incumbent, when the marines do.
-- **Loyalty as a resource.** Each seat records who holds it and where their loyalty runs (player / Empire / self). Nothing gates the declaration; loyalty decides which way each seat falls once the news of it arrives there.
-- **The Empire's reaction clock.** Recall and the punitive expedition are driven by what the Council has *received*, not by ground truth. Both are ships that depart the imperial capital on a hidden week and take the usual transit to arrive. The Council's disposition toward the player is a hidden value that leaks out only as rumour in packets; the successor and the expedition are visible only if some hull observes them en route and gets word back first.
+- **Appointments travel.** An appointment is a dispatch; it takes effect when it arrives — and, for an unwilling incumbent, when the marines do.
+- **Loyalty as a resource.** Each seat records who holds it and where their loyalty runs (player / Empire / self). Nothing gates the declaration; loyalty and temperament decide which way each seat falls once the news of it arrives there. This needs a *neutral* allegiance — a seat obeying nobody during a succession crisis — so `Faction` allegiance cannot be a two-value enum.
+- **The Council's ears.** The Council's disposition toward the player is a hidden value fed by three channels with different speeds and biases: the player's monthly report (which the player writes, and may shade), merchant complaints (piracy and trade barriers), and rumour (slowest, noisiest). It leaks back to the player only as rumour.
+- **The Empire's reaction clock.** The successor and the punitive expedition are ships that depart the imperial capital on a hidden week, driven by what the Council has *received*, and take the usual transit to arrive. They are visible only if some hull observes them en route and gets word back first.
 - **World states.** A world can be loyal, unrestful, in revolt, independent, or Warlord-held, and the player's belief about which may be wrong.
+- **Rumour.** Merchant-borne news along the lanes; specified under *Information model*.
 
 ### Open questions
 
 - Term length (placeholder: four years, ~208 weeks — long enough that the Warlord and at least one governor crisis play out).
 - Cryo survival rate — flat percentage, or dependent on ship quality and journey length?
 - Rumour fidelity — how noisy is the Council-mood signal, and can a well-placed agent (Phase 2) sharpen it?
-- Whether the Warlord can be negotiated with (Phase 3 diplomacy) or only fought.
+- Capital placement — a generation parameter (edge vs. centre) or always rolled?
+- How much the player can shade the monthly report before the merchant and rumour channels contradict it and make things worse.
 
 ## Architecture
 
@@ -154,7 +171,7 @@ Sketch; formalized in `src/sim/types.ts` as it lands.
 - `Character` — attributes, traits, post, relationships, career history.
 - `Order` — typed record with parameters and rendezvous.
 - `Dispatch` — from, to-address, payload (order, appointment, letter), sent week, route, eta, held-at.
-- `Report` — subject, observed-at location, observed week, delivered week, snapshot, observer.
+- `Report` — subject, observed-at location, observed week, delivered week, snapshot, observer. A rumour is a `Report` with a fidelity below certain and a merchant or "word on the docks" observer.
 - `Faction` — the Empire, the player's administration, rivals, pirates, rebels.
 - `GameState` — tick, ground truth, per-agent belief states, player view, RNG state.
 
