@@ -8,6 +8,7 @@ import { hexLabel } from './hex'
 import { route } from './chart'
 import { chartLanes, packetShips } from './lanes'
 import { arriveShips, deliverHeld, departShips, governorReport, learn, postDispatch, snapshotWorld } from './mail'
+import { forgetOldEvents, governorChangedEvent, unrestEvent } from './events'
 import { personName } from './names'
 import { createRng, roll } from './rng'
 import { generateWorlds, PLAYER } from './generate'
@@ -38,13 +39,15 @@ export function newGame(seed: number): GameState {
     characters,
     factions,
     mail: {},
+    events: {},
     beliefs: { [PLAYER]: { worlds: {}, ships: {} } },
   }
   openingSurvey(state)
   observeCapital(state)
   // Week 0's sailings have already happened when the player sits down, so
-  // every packet is where its timetable says it should be.
+  // every packet is where its timetable says it should be — and none of it is news.
   departShips(state)
+  state.events = {}
   return state
 }
 
@@ -66,17 +69,19 @@ function openingSurvey(state: GameState): void {
     if (snapshot.kind === 'world') snapshot.world.ships = []
     const report: Report = {
       id: `r-survey-${hexLabel(world.hex)}` as ReportId,
+      channel: 'official',
       observer: world.governor ?? PLAYER,
       observerName: world.governor ? state.characters[world.governor].name : 'Survey of the previous administration',
       observedAt: id,
       observed: -age,
       snapshot,
+      events: [],
       envelope: { origin: id, destination: { kind: 'world', world: state.capital }, sent: -age, route: path ?? [id], eta: 0 },
       delivered: 0,
     }
     learn(state, PLAYER, report)
-    // The world has had `age` weeks to drift since the survey was taken.
-    for (let i = 0; i < Math.floor(age / 6); i++) driftWorld(state, world)
+    // The world has had `age` weeks to drift since the survey was taken. Nothing that happened then is news now.
+    for (let i = 0; i < Math.floor(age / 6); i++) driftWorld(state, world, false)
   }
 }
 
@@ -90,6 +95,7 @@ function openingSurvey(state: GameState): void {
  */
 export function advanceWeek(state: GameState): void {
   state.week += 1
+  forgetOldEvents(state)
   arriveShips(state)
   deliverHeld(state)
   const ids = Object.keys(state.worlds).sort() as WorldId[]
@@ -114,16 +120,21 @@ function reportsThisWeek(state: GameState, world: World): boolean {
  * now and then a governor dies, resigns, or is quietly replaced by their
  * own council, and the desk hears of it only when the new one writes.
  */
-export function driftWorld(state: GameState, world: World): void {
+export function driftWorld(state: GameState, world: World, record = true): void {
   if (world.profile.population === 0) return
   const r = roll(state.rng)
-  if (r >= 11 && world.unrest < 10) world.unrest += 1
-  else if (r <= (world.garrison >= 3 ? 4 : 3) && world.unrest > 0) world.unrest -= 1
+  if (r >= 11 && world.unrest < 10) {
+    world.unrest += 1
+    if (record) unrestEvent(state, world.id, world.unrest, true)
+  } else if (r <= (world.garrison >= 3 ? 4 : 3) && world.unrest > 0) {
+    world.unrest -= 1
+    if (record) unrestEvent(state, world.id, world.unrest, false)
+  }
   if (world.id === state.capital) return
-  if (roll(state.rng) === 2 && roll(state.rng) >= 9) replaceGovernor(state, world)
+  if (roll(state.rng) === 2 && roll(state.rng) >= 9) replaceGovernor(state, world, record)
 }
 
-function replaceGovernor(state: GameState, world: World): void {
+function replaceGovernor(state: GameState, world: World, record: boolean): void {
   const old = world.governor
   if (old && state.characters[old]) state.characters[old].post = { kind: 'unassigned' }
   const id = `c-gov-${hexLabel(world.hex)}-${state.nextId}` as CharacterId
@@ -131,6 +142,7 @@ function replaceGovernor(state: GameState, world: World): void {
   state.characters[id] = { id, name: personName(state.rng), faction: world.faction, post: { kind: 'governor', world: world.id } }
   world.governor = id
   world.actingGovernor = id
+  if (record) governorChangedEvent(state, world.id, state.characters[id].name)
 }
 
 /**
@@ -141,11 +153,13 @@ function observeCapital(state: GameState): void {
   const capital = state.worlds[state.capital]
   const report: Report = {
     id: `r-desk-${state.week}` as ReportId,
+    channel: 'official',
     observer: PLAYER,
     observerName: state.characters[PLAYER].name,
     observedAt: capital.id,
     observed: state.week,
     snapshot: snapshotWorld(state, capital),
+    events: [],
     envelope: { origin: capital.id, destination: { kind: 'world', world: capital.id }, sent: state.week, route: [capital.id], eta: state.week },
     delivered: state.week,
   }

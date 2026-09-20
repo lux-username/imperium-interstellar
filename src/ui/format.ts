@@ -1,5 +1,5 @@
 /** Small formatting helpers shared by the panes. Everything takes PlayerView data only. */
-import type { PlayerView, Report, Week, WorldId, WorldProfile } from '../sim/view'
+import type { Event, PlayerView, Report, Week, WorldId, WorldProfile } from '../sim/view'
 
 /** "now", "1 wk ago", "14 wk ago". */
 export function ago(week: Week, observed: Week): string {
@@ -24,7 +24,26 @@ export function worldName(view: PlayerView, id: WorldId): string {
 
 /** The world a report is about, for selection: the world itself, or where the ship was seen. */
 export function subjectWorld(report: Report): WorldId {
-  return report.snapshot.kind === 'world' ? report.snapshot.world.id : report.snapshot.ship.at
+  const s = report.snapshot
+  return s.kind === 'world' ? s.world.id : s.kind === 'ship' ? s.ship.at : s.event.at
+}
+
+/** One sentence for an event, as a letter or a rumour would put it. */
+export function eventText(e: Event): string {
+  switch (e.kind) {
+    case 'unrest_rose':
+      return `Unrest has risen: the world is ${unrestWord(e.level ?? 0)}.`
+    case 'unrest_fell':
+      return `Unrest has eased: the world is ${unrestWord(e.level ?? 0)}.`
+    case 'governor_changed':
+      return `${e.person ?? 'A new governor'} now holds the seal.`
+    case 'hull_arrived':
+      return `${e.ship?.name ?? 'A hull'}${e.ship ? ` (${e.ship.role})` : ''} made port.`
+    case 'hull_departed':
+      return `${e.ship?.name ?? 'A hull'} sailed.`
+    case 'dispatch_received':
+      return 'Your dispatch was received.'
+  }
 }
 
 /** Freshness bucket for colouring: how old is what we know. */

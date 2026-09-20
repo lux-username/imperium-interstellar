@@ -8,8 +8,9 @@
  * on is: arrival = written + waiting + one week per jump.
  */
 import type { CharacterId, DispatchId, GameState, Mail, MailId, ReportId, Ship, ShipId, Week, World, WorldId } from './types'
-import type { Dispatch, DispatchPayload, Envelope, Recipient, Report, ShipSnapshot, Snapshot } from './view'
+import type { Channel, Dispatch, DispatchPayload, Envelope, Event, Recipient, Report, ShipSnapshot, Snapshot } from './view'
 import { expectedArrival, laneBetween, nextDeparture, route } from './chart'
+import { dispatchReceivedEvent, hullArrivedEvent, hullDepartedEvent } from './events'
 
 // ---------------------------------------------------------------------------
 // Minting
@@ -62,19 +63,28 @@ export function shipsAt(state: GameState, world: WorldId): Ship[] {
 // ---------------------------------------------------------------------------
 // Writing
 
+export interface Writing {
+  channel?: Channel
+  /** The events the writer chose to mention. */
+  events?: Event[]
+  observerName?: string
+}
+
 /**
  * An observer at `at` writes a report of `snapshot` addressed to the
  * capital and hands it to the port. Returns the mail. If `at` is the capital
  * itself the report is delivered on the spot.
  */
-export function writeReport(state: GameState, observer: CharacterId, at: WorldId, snapshot: Snapshot): Mail {
+export function writeReport(state: GameState, observer: CharacterId, at: WorldId, snapshot: Snapshot, writing: Writing = {}): Mail {
   const report: Report = {
     id: mint<ReportId>(state, 'r'),
+    channel: writing.channel ?? 'official',
     observer,
-    observerName: state.characters[observer]?.name ?? 'Unknown',
+    observerName: writing.observerName ?? state.characters[observer]?.name ?? 'Unknown',
     observedAt: at,
     observed: state.week,
     snapshot,
+    events: writing.events ?? [],
     envelope: envelope(state, at, state.capital, state.week),
     delivered: null,
   }
@@ -233,6 +243,11 @@ export function learn(state: GameState, reader: CharacterId, report: Report): vo
     sight(report.snapshot.ship)
     return
   }
+  if (report.snapshot.kind === 'event') {
+    // A rumour of a hull is still a sighting, and the dossier can see by the report which pile it came from.
+    if (report.snapshot.event.ship) sight(report.snapshot.event.ship)
+    return
+  }
   const world = report.snapshot.world
   const known = belief.worlds[world.id]
   if (!known || report.observed >= known.observed) belief.worlds[world.id] = report
@@ -241,6 +256,7 @@ export function learn(state: GameState, reader: CharacterId, report: Report): vo
 
 /** What a recipient does on reading a dispatch. Phase 0: a letter to a governor prompts a fresh report home. */
 function receiveDispatch(state: GameState, dispatch: Dispatch, at: WorldId): void {
+  if (at !== state.capital) dispatchReceivedEvent(state, at)
   if (dispatch.payload.kind === 'letter' && dispatch.recipient.kind === 'character') {
     const world = state.worlds[at]
     if (world && world.actingGovernor) governorReport(state, world)
@@ -260,6 +276,7 @@ export function arriveShips(state: GameState): void {
     if (ship.location.kind !== 'transit' || ship.location.arrives > state.week) continue
     const at = ship.location.to
     ship.location = { kind: 'world', world: at }
+    hullArrivedEvent(state, at, ship)
     unloadMail(state, ship, at)
   }
 }
@@ -287,6 +304,7 @@ export function departShips(state: GameState): void {
     // Packets keep the lane's timetable; anything else sails as soon as it can.
     if (ship.role === 'packet' && lane && nextDeparture(lane, from, state.week) !== state.week) continue
     loadMail(state, ship, from, to)
+    hullDepartedEvent(state, from, ship)
     ship.location = { kind: 'transit', from, to, arrives: state.week + 1 }
   }
 }

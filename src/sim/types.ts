@@ -10,7 +10,7 @@
 import type { Hex } from './hex'
 import type { Order } from './orders'
 import type { Rng } from './rng'
-import type { Belief, Dispatch, Report } from './view'
+import type { Belief, Dispatch, Event, Report } from './view'
 
 // ---------------------------------------------------------------------------
 // Identity and time
@@ -28,6 +28,7 @@ export type FactionId = Id<'faction'>
 export type ReportId = Id<'report'>
 export type DispatchId = Id<'dispatch'>
 export type MailId = Id<'mail'>
+export type EventId = Id<'event'>
 
 /** Weeks since the game began; week 0 is the opening turn. Every jump takes one. */
 export type Week = number
@@ -189,6 +190,8 @@ export interface GameState {
   characters: Record<CharacterId, Character>
   factions: Record<FactionId, Faction>
   mail: Record<MailId, Mail>
+  /** What has happened, by week and world: the unit of news. Forgotten after EVENT_MEMORY weeks (see ./events.ts). */
+  events: Record<EventId, Event>
   /**
    * What each acting character knows, built only from reports delivered to
    * them. The player's view is derived from `beliefs[player]` rather than

@@ -14,6 +14,7 @@ import type {
   Address,
   CharacterId,
   DispatchId,
+  EventId,
   FactionId,
   Lane,
   LaneId,
@@ -37,6 +38,7 @@ export type {
   Address,
   CharacterId,
   DispatchId,
+  EventId,
   FactionId,
   Hex,
   Lane,
@@ -80,9 +82,40 @@ export interface WorldSnapshot {
   ships: ShipSnapshot[]
 }
 
+// ---------------------------------------------------------------------------
+// Events: something that happened, as it may be told.
+
+export type EventKind = 'unrest_rose' | 'unrest_fell' | 'governor_changed' | 'hull_arrived' | 'hull_departed' | 'dispatch_received'
+
+/** Good or bad for whoever hears it; neutral is routine traffic nobody writes home about. */
+export type Valence = 'good' | 'bad' | 'neutral'
+
+/**
+ * An occurrence at a world on a week. Ground truth keeps the originals in
+ * GameState.events; a report carries a copy, which for a rumour may be
+ * vaguer than the original about when and where.
+ */
+export interface Event {
+  id: EventId
+  at: WorldId
+  week: Week
+  kind: EventKind
+  valence: Valence
+  /** 0 (nothing) to 3 (serious). Drives whether a governor mentions it and how far a rumour travels. */
+  severity: number
+  /** The hull concerned, if any, as it appeared. */
+  ship: ShipSnapshot | null
+  /** The person concerned, if any, by name. */
+  person: string | null
+  /** The new level after a step, for unrest and the like. */
+  level: number | null
+}
+
 export type Snapshot =
   | { kind: 'world'; world: WorldSnapshot }
   | { kind: 'ship'; ship: ShipSnapshot }
+  /** A rumour: one event, as told. */
+  | { kind: 'event'; event: Event }
 
 // ---------------------------------------------------------------------------
 // The postmark shared by everything that travels by hull.
@@ -101,14 +134,37 @@ export interface Envelope {
 // ---------------------------------------------------------------------------
 // Reports: observations travelling toward the player.
 
+/**
+ * How a report came. This is all the player legitimately knows about its
+ * provenance: who said it and by what route. There is no reliability score —
+ * distortion is baked into the content when the report is written and never
+ * recorded on it.
+ */
+export type Channel =
+  /** A governor's or commander's own letter. */
+  | 'official'
+  /** One of the player's agents on the spot. */
+  | 'agent'
+  /** A trader's word at a port. */
+  | 'merchant'
+  /** Talk nobody will put a name to. */
+  | 'docks'
+
+export function isRumour(channel: Channel): boolean {
+  return channel === 'merchant' || channel === 'docks'
+}
+
 export interface Report {
   id: ReportId
+  channel: Channel
   observer: CharacterId
   observerName: string
   /** Where the observation was made. Can differ from `envelope.origin` when a ship saw something and posted it from its next port. */
   observedAt: WorldId
   observed: Week
   snapshot: Snapshot
+  /** The events the writer chose to mention. A letter says what happened; the snapshot says how things stand. */
+  events: Event[]
   envelope: Envelope
   /** Set when it reaches the desk. Age at reading is `week - observed`. */
   delivered: Week | null
@@ -170,8 +226,10 @@ export interface PlayerView {
   /** Every world's name and position. What is *happening* there is only in `known`. */
   chart: Record<WorldId, ChartEntry>
   known: Belief
-  /** Everything that has reached the desk, newest arrival first. This week's news is whatever has `delivered === week`. */
+  /** Every official and agent report that has reached the desk, newest arrival first. This week's news is whatever has `delivered === week`. */
   inbox: Report[]
+  /** What the docks are saying: merchant and docks-channel reports, kept apart from the mail so the two piles are never confused. */
+  rumours: Report[]
   /** Dispatches the player has sent, newest first. Their fate is unknown until a report says otherwise. */
   outgoing: Dispatch[]
 }

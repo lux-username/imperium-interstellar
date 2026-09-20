@@ -25,6 +25,7 @@ function fixture(): GameState {
   const lane = 'l-1' as LaneId
   const report: Report = {
     id: 'r-1' as ReportId,
+    channel: 'official',
     observer: governor,
     observerName: 'Governor of Outpost',
     observedAt: outpost,
@@ -44,6 +45,7 @@ function fixture(): GameState {
         ships: [],
       },
     },
+    events: [],
     envelope: { origin: outpost, destination: { kind: 'world', world: capital }, sent: 3, route: [outpost, capital], eta: 4 },
     delivered: null,
   }
@@ -98,6 +100,7 @@ function fixture(): GameState {
     },
     factions: { [admin]: { id: admin, name: 'The Administration', kind: 'administration' } },
     mail: { ['m-1' as MailId]: { id: 'm-1' as MailId, contents: { kind: 'report', report }, status: { kind: 'aboard', ship: packet } } },
+    events: {},
     beliefs: { [player]: { worlds: {}, ships: {} }, [governor]: { worlds: {}, ships: {} } },
   }
 }

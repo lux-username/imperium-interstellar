@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { PlayerView, Report, ReportId, WorldId } from '../sim/view'
-import { ago, subjectWorld, unrestWord, weekLabel, worldName } from './format'
+import { ago, eventText, subjectWorld, unrestWord, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
@@ -83,7 +83,7 @@ export function Inbox({ view, onSelect, focus }: Props) {
               onClick={() => toggle(r)}
             >
               <div className="line1">
-                <span className="kind">{r.snapshot.kind === 'world' ? '◉' : '▲'}</span>
+                <span className="kind">{r.snapshot.kind === 'world' ? '◉' : r.snapshot.kind === 'ship' ? '▲' : '~'}</span>
                 <span className="subject">{subject(r)}</span>
                 <span className="arrived">
                   sent {weekLabel(r.envelope.sent)} · arr. {weekLabel(r.delivered ?? 0)}
@@ -98,6 +98,13 @@ export function Inbox({ view, onSelect, focus }: Props) {
                     {r.envelope.route.length > 2 && <> · via {r.envelope.route.slice(1, -1).map((id) => worldName(view, id)).join(', ')}</>}
                   </div>
                   <div className="line3">{body(r)}</div>
+                  {r.events.length > 0 && (
+                    <ul className="events">
+                      {r.events.map((e) => (
+                        <li key={e.id}>{eventText(e)}</li>
+                      ))}
+                    </ul>
+                  )}
                 </>
               )}
             </li>
@@ -108,15 +115,16 @@ export function Inbox({ view, onSelect, focus }: Props) {
   )
 }
 
-/** One line that says what the report is about. */
+/** One line that says what the report is about. A letter leads with what happened, if anything did. */
 function subject(r: Report): string {
   if (r.snapshot.kind === 'world') {
     const w = r.snapshot.world
+    if (r.events.length > 0) return `${w.name}: ${eventText(r.events[0]).replace(/\.$/, '')}${r.events.length > 1 ? ` (+${r.events.length - 1})` : ''}`
     const hulls = w.ships.length > 0 ? `, ${w.ships.length} hull${w.ships.length === 1 ? '' : 's'} in port` : ''
     return `${w.name}: ${unrestWord(w.unrest)}, garrison ${w.garrison}${hulls}`
   }
-  const s = r.snapshot.ship
-  return `${s.name} sighted`
+  if (r.snapshot.kind === 'ship') return `${r.snapshot.ship.name} sighted`
+  return eventText(r.snapshot.event)
 }
 
 function body(r: Report): string {
@@ -126,6 +134,6 @@ function body(r: Report): string {
     const hulls = w.ships.length > 0 ? ` In port: ${w.ships.map((s) => `${s.name} (${s.role})`).join(', ')}.` : ' No hulls in port.'
     return `${gov}. The world is ${unrestWord(w.unrest)} (unrest ${w.unrest}); garrison strength ${w.garrison}.${hulls}`
   }
-  const s = r.snapshot.ship
-  return `${s.name}, a ${s.role}, was seen in port.`
+  if (r.snapshot.kind === 'ship') return `${r.snapshot.ship.name}, a ${r.snapshot.ship.role}, was seen in port.`
+  return eventText(r.snapshot.event)
 }
