@@ -1,0 +1,51 @@
+import type { Culture } from './culture'
+
+export const igbo: Culture = {
+  name: 'Igbo',
+  group: 'African',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "Igboland before and around the first missions at Onitsha. The second name was the father's given name, so `family` is a second pool of men's names rather than hereditary surnames. Women's names include the older rural forms (Mgbafo, Mgbeke, Ekwutosi) that later generations dropped.",
+  given: {
+    m: [
+      'Okafor', 'Okeke', 'Okoye', 'Nwosu', 'Nwachukwu', 'Chukwuemeka', 'Obiora', 'Nnamdi', 'Ikenna', 'Chinedu',
+      'Emeka', 'Obi', 'Nwankwo', 'Okoro', 'Eze', 'Uche', 'Chike', 'Ifeanyi', 'Kelechi', 'Chidi',
+      'Nnaemeka', 'Obinna', 'Onyeka', 'Uzoma', 'Ejike', 'Ikechukwu', 'Chukwudi', 'Nonso', 'Azubuike', 'Chibuzo',
+      'Chiemeka', 'Chukwuma', 'Ebube', 'Ekene', 'Ezenwa', 'Ikemba', 'Kenechukwu', 'Nduka', 'Nkemdirim', 'Nwabueze',
+      'Nwafor', 'Odinaka', 'Ogbonna', 'Okwudili', 'Onwuka', 'Osita', 'Tobenna', 'Uchenna', 'Udoka', 'Ugochukwu',
+      'Ugonna', 'Uzochukwu', 'Chikezie', 'Chinweike', 'Echezona', 'Jideofor', 'Madueke', 'Nnabuike', 'Nwokedi', 'Obumneme',
+      'Okechukwu', 'Olisa', 'Onyekachi', 'Somtochukwu', 'Ekwueme', 'Anayo', 'Amaechi', 'Chukwunonso', 'Dike', 'Dubem',
+      'Ejiofor', 'Ikedi', 'Nkem', 'Okoli', 'Oputa', 'Agu', 'Akubueze', 'Nwakibe', 'Obiajulu', 'Okwuoma',
+    ],
+    f: [
+      'Ngozi', 'Adaeze', 'Adaobi', 'Chioma', 'Nneka', 'Ifeoma', 'Amaka', 'Chinyere', 'Nkechi', 'Obiageli',
+      'Uzoamaka', 'Chidinma', 'Ijeoma', 'Nkiru', 'Nneoma', 'Oluchi', 'Onyinye', 'Adanna', 'Akudo', 'Amarachi',
+      'Chiamaka', 'Chika', 'Chinelo', 'Chinwe', 'Ebele', 'Ezinne', 'Ifeyinwa', 'Ijeamaka', 'Kasie', 'Nkolika',
+      'Nwakaego', 'Nwanneka', 'Obianuju', 'Ogechi', 'Olaedo', 'Somadina', 'Ugochi', 'Ukamaka', 'Uloma', 'Urenna',
+      'Adaugo', 'Akwaugo', 'Anuli', 'Chiagozie', 'Chinasa', 'Chizoba', 'Ekwutosi', 'Ginika', 'Ifunanya', 'Ijele',
+      'Kambili', 'Mgbafo', 'Mgbeke', 'Nkemjika', 'Nnenna', 'Nwabugo', 'Nwadiuto', 'Obioma', 'Odera', 'Ogbenyealu',
+      'Okwuchi', 'Ozioma', 'Ukachi', 'Uju', 'Ulunma', 'Ahudiya', 'Nwakego', 'Akuabata', 'Chinwendu', 'Ekemma',
+      'Mgborie', 'Nwaoma', 'Oyibo', 'Nwanyieke', 'Ahunna', 'Nwanyibuife', 'Ozoemena', 'Nwamgbeke', 'Ugboaku', 'Nwakaku',
+    ],
+  },
+  family: [
+    'Nwosu', 'Okafor', 'Okeke', 'Okoye', 'Nwachukwu', 'Nwankwo', 'Okoro', 'Eze', 'Obi', 'Nnadi',
+    'Nwobi', 'Nwogu', 'Okonkwo', 'Okolie', 'Okoli', 'Onwudiwe', 'Onyeama', 'Onyekwere', 'Oparaji', 'Opara',
+    'Anyanwu', 'Anyaegbunam', 'Chukwu', 'Ekwueme', 'Emenike', 'Ezeugo', 'Ezeani', 'Ezekwesili', 'Ibekwe', 'Igwe',
+    'Iheanacho', 'Ihejirika', 'Ikeanyi', 'Iwuchukwu', 'Kalu', 'Madu', 'Maduka', 'Mbadiwe', 'Mbakwe', 'Nnaji',
+    'Nnamani', 'Nwabueze', 'Nwafor', 'Nwakanma', 'Nwaneri', 'Nwaobi', 'Nwuba', 'Obiano', 'Obidike', 'Odumegwu',
+    'Ofoegbu', 'Ofor', 'Ogbuagu', 'Ogbuefi', 'Ogbonna', 'Ogu', 'Ohaeri', 'Okagbue', 'Okereke', 'Okorie',
+    'Okwuosa', 'Onuoha', 'Onwuka', 'Onyeka', 'Onyido', 'Orji', 'Udeh', 'Udoji', 'Ugwu', 'Ukaegbu',
+    'Umeh', 'Umunna', 'Uzoka', 'Uzor', 'Agu', 'Achike', 'Akpu', 'Amadi', 'Aniagolu', 'Anozie',
+  ],
+  places: [
+    'Onitsha', 'Aba', 'Owerri', 'Awka', 'Nsukka', 'Nnewi', 'Orlu', 'Okigwe', 'Umuahia', 'Arochukwu',
+    'Bende', 'Afikpo', 'Abakaliki', 'Ohafia', 'Bonny', 'Opobo', 'Brass', 'Asaba', 'Agbor', 'Ogidi',
+    'Nkwerre', 'Oguta', 'Uli', 'Ihiala', 'Agulu', 'Nri', 'Igbo-Ukwu', 'Aguleri', 'Nsugbe', 'Ogbunike',
+    'Umuoji', 'Abagana', 'Nimo', 'Ozubulu', 'Ekwulobia', 'Achina', 'Umuchu', 'Uga', 'Ndikelionwu', 'Oba',
+    'Ojoto', 'Nnobi', 'Alor', 'Ideani', 'Oraifite', 'Ukpor', 'Ubulu', 'Ibusa', 'Okpanam', 'Illah',
+    'Isele', 'Idumuje', 'Ogwashi', 'Obosi', 'Nkpor', 'Umudioka', 'Awgu', 'Udi', 'Nike', 'Nara',
+    'Niger', 'Imo', 'Anambra', 'Nkisi', 'Idemili', 'Mamu', 'Otamiri', 'Aro', 'Nkanu', 'Ngwa',
+    'Ika', 'Ukwuani',
+  ],
+}

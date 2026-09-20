@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const afroAmerican: Culture = {
+  name: 'Afro-American',
+  group: 'African',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "Black America from the last decades of slavery through Reconstruction. Old Testament and classical given names, the day-names and place-names people carried, and the virtue names; surnames are the ones freedpeople chose or kept, weighted toward Freeman, Washington and the founders. Several are those of Reconstruction congressmen, used as ordinary family names.",
+  given: {
+    m: [
+      'Moses', 'Isaac', 'Jacob', 'Abraham', 'Elijah', 'Isaiah', 'Solomon', 'Booker', 'Frederick', 'Nathaniel',
+      'Josiah', 'Jeremiah', 'Ezekiel', 'Ezra', 'Caesar', 'Pompey', 'Cato', 'Scipio', 'Cuffee', 'Cudjoe',
+      'Quash', 'Prince', 'King', 'General', 'Major', 'Washington', 'Jefferson', 'Lincoln', 'Grant', 'Ulysses',
+      'Marcus', 'Cornelius', 'Augustus', 'Julius', 'Octavius', 'Titus', 'Sylvester', 'Ambrose', 'Alonzo', 'Amos',
+      'Andrew', 'Anthony', 'Benjamin', 'Cyrus', 'Daniel', 'Elias', 'Ephraim', 'Freeman', 'Gabriel', 'Gideon',
+      'Hezekiah', 'Hiram', 'Ishmael', 'Israel', 'Jesse', 'Jethro', 'Joshua', 'Levi', 'Luke', 'Mingo',
+      'Nathan', 'Ned', 'Noah', 'Obadiah', 'Peter', 'Phillip', 'Primus', 'Reuben', 'Samuel', 'Sampson',
+      'Silas', 'Simon', 'Toby', 'Zachariah', 'Henry', 'Wesley', 'Lewis', 'Pleasant', 'Squire', 'Jupiter',
+    ],
+    f: [
+      'Harriet', 'Sojourner', 'Phillis', 'Hagar', 'Dinah', 'Chloe', 'Rose', 'Sukey', 'Bett', 'Betsey',
+      'Tempe', 'Venus', 'Juno', 'Minerva', 'Diana', 'Phoebe', 'Flora', 'Sally', 'Nancy', 'Patsy',
+      'Peggy', 'Lucinda', 'Mahala', 'Malinda', 'Milly', 'Minnie', 'Mariah', 'Martha', 'Mary', 'Matilda',
+      'Amanda', 'Adeline', 'America', 'Missouri', 'Louisiana', 'Tennessee', 'Georgia', 'Carolina', 'Virginia', 'Queen',
+      'Princess', 'Precious', 'Pinkie', 'Easter', 'Charity', 'Patience', 'Prudence', 'Mercy', 'Temperance', 'Liberty',
+      'Silvia', 'Celia', 'Cynthia', 'Delia', 'Dorcas', 'Eliza', 'Esther', 'Fanny', 'Hannah', 'Henrietta',
+      'Ida', 'Isabella', 'Jemima', 'Josephine', 'Julia', 'Keziah', 'Leah', 'Letitia', 'Louisa', 'Lucy',
+      'Lula', 'Maggie', 'Mandy', 'Nettie', 'Ophelia', 'Priscilla', 'Rachel', 'Rhoda', 'Viney', 'Zilpha',
+    ],
+  },
+  family: [
+    'Freeman', 'Freedman', 'Washington', 'Jefferson', 'Jackson', 'Johnson', 'Williams', 'Brown', 'Jones', 'Davis',
+    'Robinson', 'Harris', 'Lewis', 'Walker', 'Allen', 'Green', 'Hill', 'Scott', 'Moore', 'Carter',
+    'Coleman', 'Banks', 'Booker', 'Mays', 'Jenkins', 'Gaines', 'Toney', 'Hairston', 'Pettiford', 'Whitfield',
+    'Bolden', 'Boyd', 'Mack', 'Pettus', 'Brooks', 'Ford', 'Grant', 'Turner', 'Forten', 'Purvis',
+    'Remond', 'Garnet', 'Bibb', 'Bruce', 'Cardozo', 'Cain', 'Elliott', 'Rainey', 'Revels', 'Rapier',
+    'Langston', 'Lynch', 'Menard', 'Nash', 'Pinchback', 'Ransier', 'Smalls', 'Walls', 'Bethune', 'Boone',
+    'Byrd', 'Copeland', 'Crummell', 'Dorsey', 'Fields', 'Gatewood', 'Hamlet', 'Hampton', 'Ivory', 'Joiner',
+    'Lightfoot', 'Manigault', 'Mosley', 'Nesbitt', 'Pinkney', 'Rivers', 'Simmons', 'Tolbert', 'Wormley', 'Yancey',
+  ],
+  places: [
+    'Charleston', 'Savannah', 'New Orleans', 'Natchez', 'Vicksburg', 'Memphis', 'Nashville', 'Richmond', 'Norfolk', 'Petersburg',
+    'Hampton', 'Beaufort', 'Port Royal', 'Edisto', 'St Helena', 'Mobile', 'Montgomery', 'Selma', 'Tuskegee', 'Macon',
+    'Augusta', 'Atlanta', 'Columbia', 'Wilmington', 'Raleigh', 'Fayetteville', 'Louisville', 'Lexington', 'Baltimore', 'Philadelphia',
+    'Brooklyn', 'Boston', 'New Bedford', 'Nantucket', 'Oberlin', 'Cincinnati', 'Xenia', 'Wilberforce', 'Chatham', 'Buxton',
+    'Nicodemus', 'Topeka', 'Chicago', 'Detroit', 'Harpers Ferry', 'Auburn', 'Rochester', 'Syracuse', 'Ripley', 'Cairo',
+    'Little Rock', 'Pine Bluff', 'Galveston', 'Houston', 'Mound Bayou', 'Eatonville', 'Yazoo', 'Combahee', 'Ashley', 'Santee',
+    'Pee Dee', 'Chesapeake', 'Potomac', 'Cumberland', 'Ohio', 'Mississippi', 'Red River', 'Sabine', 'Brazos', 'Sea Islands',
+  ],
+}
