@@ -1,29 +1,29 @@
-> Generated 2026-09-19 by /end-session at commit 5d7671e.
+> Generated 2026-09-20 by /end-session at commit 5dd7bc1.
 
 # STATUS
 
 ## Where things stand
 
-First session. The design is written and agreed (`spec.md`); the workflow skeleton, a Vite/React/TypeScript project, and the public GitHub repo exist. The only code is the deterministic foundation the sim needs before anything else: a seeded PRNG with 2d6 helpers and the odd-q hex grid with parsec distances, both tested. The UI is an empty two-pane shell (Inbox | Map) with a disabled Advance Week button.
+Second session. The core data model is in (`#1`, merged via PR #10): ground truth lives in `src/sim/types.ts`, everything the player may see lives in `src/sim/view.ts`, and the Phase 0 order kinds live in `src/sim/orders.ts`. All entities are plain id-keyed data, so `GameState` round-trips through JSON; a report carries its own snapshot rather than the truth record, so the UI structurally cannot read ground truth. The UI is still the empty two-pane shell.
 
-Current thinking: start Phase 0 at issue #1 (core types), because the ground-truth / PlayerView split has to be in the type system before generation, propagation, or rendering are built on it.
+Current thinking: the next step is `#2` (subsector generation), which is the first module that produces `World[]`/`Lane[]` against these types. `#3` (lanes and packet schedules) and `#4` (mail propagation) follow; `#4` should move both reports and dispatches through the single `Mail` wrapper. `PlayerView` is deliberately derived, not stored — `#5` builds it from `GameState.beliefs[player]` each week.
 
 ## Derived facts
 
 | Fact | Value |
 |---|---|
-| Test status | 12 passed (12) |
+| Test status | 15 passed (15) |
 | Typecheck | ok |
 | Version | 0.0.1 |
-| Sim modules | `hex.ts`, `rng.ts` |
-| Order types implemented | none (`orders.ts` not yet created) |
-| Open issues | 9 (#1–#9) |
-| HEAD | 5d7671e — Initial scaffold |
+| Sim modules | `hex.ts`, `orders.ts`, `rng.ts`, `types.ts`, `view.ts` |
+| Order types implemented | `courier`, `hold`, `move` |
+| Open issues | 8 (#2–#9) |
+| HEAD | 5dd7bc1 — Merge pull request #10 (core types) |
 
 ## Active milestone
 
-[Phase 0 — Belief map](https://github.com/lux-username/imperium-interstellar/milestone/1) — 9 open / 0 closed.
+[Phase 0 — Belief map](https://github.com/lux-username/imperium-interstellar/milestone/1) — 8 open / 1 closed.
 
 ## Blockers / open questions
 
-- None blocking. The per-repo `/end-session` and `/weekly-reconciliation` skills were installed this session and will register on the next session start; this first close-out was run by following `.claude/skills/end-session/SKILL.md` by hand.
+- None blocking. The `Test count` command in CLAUDE.md's Derived Facts table was returning nothing because vitest colours its summary line; fixed this session with `NO_COLOR=1`.
