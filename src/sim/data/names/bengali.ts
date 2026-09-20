@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const bengali: Culture = {
+  name: 'Bengali',
+  group: 'South Asian',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "Bengal in the Renaissance decades: the long compound given names of the Calcutta bhadralok, the -moyee/-bala/-bati women's names, and the Muslim east at roughly a fifth. Spellings are the period's own anglicisations.",
+  given: {
+    m: [
+      'Rabindranath', 'Bankimchandra', 'Ishwarchandra', 'Madhusudan', 'Rammohan', 'Debendranath', 'Keshabchandra', 'Surendranath', 'Bipinchandra', 'Jagadishchandra',
+      'Prafullachandra', 'Satyendranath', 'Jyotirindranath', 'Dwarkanath', 'Girishchandra', 'Radhakanta', 'Ramtanu', 'Akshaykumar', 'Bhudev', 'Kaliprasanna',
+      'Pearychand', 'Dinabandhu', 'Rajnarayan', 'Hemchandra', 'Nabinchandra', 'Haraprasad', 'Ashutosh', 'Upendranath', 'Nagendranath', 'Jogendranath',
+      'Bhupendranath', 'Rajendralal', 'Brajendranath', 'Chandranath', 'Manmohan', 'Bhabanicharan', 'Ramgopal', 'Shibchandra', 'Gourmohan', 'Nilmoni',
+      'Rasiklal', 'Kedarnath', 'Mahendralal', 'Taraknath', 'Lalmohan', 'Sisirkumar', 'Nabakrishna', 'Radhanath', 'Durgacharan', 'Krishnadas',
+      'Umeshchandra', 'Anandamohan', 'Harishchandra', 'Gopalchandra', 'Kalikrishna', 'Pramathanath', 'Ramendrasundar', 'Saratchandra', 'Bibhutibhushan', 'Amarendranath',
+      'Birendranath', 'Dhirendranath', 'Nirmalchandra', 'Priyanath', 'Sailendra', 'Sudhindranath', 'Mosharraf', 'Abdul Latif', 'Ameer Ali', 'Abdul Karim',
+      'Naimuddin', 'Reazuddin', 'Fazlul', 'Sirajul', 'Wajed Ali', 'Ismail Hossain', 'Muzaffar', 'Golam Mostafa', 'Abdul Halim', 'Nawab Ali',
+    ],
+    f: [
+      'Kadambari', 'Jnanadanandini', 'Swarnakumari', 'Sarala', 'Mrinalini', 'Kamini', 'Rassundari', 'Binodini', 'Rokeya', 'Kusum',
+      'Kumudini', 'Saudamini', 'Sukumari', 'Hemangini', 'Nistarini', 'Manorama', 'Sushila', 'Sarada', 'Bhubaneswari', 'Jagattarini',
+      'Tarini', 'Priyamvada', 'Kadambini', 'Chandramukhi', 'Lilabati', 'Nirupama', 'Kiranbala', 'Suhasini', 'Malati', 'Mallika',
+      'Ashalata', 'Bimala', 'Charulata', 'Giribala', 'Haimabati', 'Indira', 'Jyotirmoyee', 'Krishnabhabini', 'Labanya', 'Mohini',
+      'Nalini', 'Pramila', 'Radharani', 'Sarbani', 'Sudakshina', 'Tagar', 'Uma', 'Basanti', 'Bhabani', 'Dayamayi',
+      'Durgamoni', 'Hemlata', 'Kanak', 'Madhabi', 'Nandarani', 'Parul', 'Rajlakshmi', 'Sabitri', 'Shefali', 'Shyama',
+      'Subhadra', 'Sunayani', 'Tarulata', 'Urmila', 'Annapurna', 'Bindubasini', 'Digambari', 'Mankumari', 'Prasannamoyee', 'Saratkumari',
+      'Suniti', 'Khairunnesa', 'Faizunnesa', 'Nurunnahar', 'Rahima', 'Sakhina', 'Ambia', 'Hasina', 'Karimunnesa', 'Rabeya',
+    ],
+  },
+  family: [
+    'Banerjee', 'Chatterjee', 'Mukherjee', 'Bhattacharya', 'Ganguly', 'Tagore', 'Bose', 'Ghosh', 'Mitra', 'Dutta',
+    'Sen', 'Das', 'Dey', 'Roy', 'Sarkar', 'Sinha', 'Guha', 'Majumdar', 'Chaudhuri', 'Chakraborty',
+    'Sanyal', 'Bagchi', 'Lahiri', 'Maitra', 'Bhaduri', 'Ghoshal', 'Pal', 'Nag', 'Kar', 'Dhar',
+    'Nandi', 'Saha', 'Biswas', 'Mondal', 'Haldar', 'Mallick', 'Naskar', 'Rakshit', 'Sengupta', 'Dasgupta',
+    'Basu', 'Bhowmik', 'Adhikari', 'Barua', 'Chanda', 'Deb', 'Goswami', 'Hazra', 'Kundu', 'Laha',
+    'Mukhopadhyay', 'Bandyopadhyay', 'Chattopadhyay', 'Gangopadhyay', 'Pramanik', 'Samanta', 'Sarbadhikari', 'Sil', 'Som', 'Talukdar',
+    'Thakur', 'Chowdhury', 'Khan', 'Mia', 'Molla', 'Sheikh', 'Bhuiyan', 'Hossain', 'Ahmed', 'Rahman',
+    'Siddiqui', 'Kazi', 'Munshi', 'Bepari', 'Howladar', 'Akhand', 'Patwari', 'Mirza', 'Sardar', 'Tarafdar',
+  ],
+  places: [
+    'Calcutta', 'Dacca', 'Murshidabad', 'Hooghly', 'Chinsurah', 'Serampore', 'Chandernagore', 'Howrah', 'Burdwan', 'Krishnanagar',
+    'Nadia', 'Santipur', 'Bankura', 'Bishnupur', 'Midnapore', 'Tamluk', 'Birbhum', 'Suri', 'Malda', 'Rajshahi',
+    'Pabna', 'Bogra', 'Rangpur', 'Dinajpur', 'Jalpaiguri', 'Darjeeling', 'Kalimpong', 'Cooch Behar', 'Mymensingh', 'Tangail',
+    'Sylhet', 'Comilla', 'Chittagong', 'Noakhali', 'Barisal', 'Faridpur', 'Jessore', 'Khulna', 'Bagerhat', 'Kushtia',
+    'Natore', 'Barrackpore', 'Uluberia', 'Diamond Harbour', 'Sundarbans', 'Padma', 'Meghna', 'Damodar', 'Rupnarayan', 'Ajay',
+    'Mayurakshi', 'Teesta', 'Karnaphuli', 'Brahmaputra', 'Bhagirathi', 'Ichamati', 'Rarh', 'Gaur', 'Pandua', 'Sonargaon',
+    'Bikrampur', 'Nabadwip', 'Tarakeswar', 'Kalighat',
+  ],
+}

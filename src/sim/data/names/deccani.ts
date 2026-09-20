@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const deccani: Culture = {
+  name: 'Deccani',
+  group: 'South Asian',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "The Deccan plateau: Marathi country (women's names in -bai), the Telugu and Kannada south (-amma), and the Dakhni Muslim court at Hyderabad. Roughly two-fifths, two-fifths, one-fifth.",
+  given: {
+    m: [
+      'Balwant', 'Vishnu', 'Ganesh', 'Gopal', 'Narayan', 'Vinayak', 'Gangadhar', 'Mahadev', 'Jyotirao', 'Jagannath',
+      'Sakharam', 'Dadoba', 'Bhaskar', 'Keshav', 'Damodar', 'Vasudev', 'Ramchandra', 'Krishnaji', 'Shankar', 'Trimbak',
+      'Moreshwar', 'Hari', 'Dattatreya', 'Yashwant', 'Raghunath', 'Bapu', 'Nana', 'Tatya', 'Appa', 'Bhau',
+      'Ganpat', 'Govind', 'Kashinath', 'Laxman', 'Narhar', 'Pandurang', 'Purushottam', 'Sadashiv', 'Shivram', 'Waman',
+      'Venkata', 'Subba Rao', 'Rama Rao', 'Krishna Rao', 'Narasimha', 'Venkataramana', 'Seshagiri', 'Veeresalingam', 'Apparao', 'Nagabhushanam',
+      'Ranga', 'Raghava', 'Subrahmanya', 'Seshayya', 'Basavappa', 'Ningappa', 'Lingappa', 'Mallappa', 'Siddappa', 'Timmappa',
+      'Hanumantha', 'Chennappa', 'Venkatappa', 'Kempegowda', 'Ramaswamy', 'Srinivasa', 'Mir Osman', 'Mahbub Ali', 'Afzal', 'Turab Ali',
+      'Mir Alam', 'Abdul Qadir', 'Muhammad Ali', 'Ghulam Yazdani', 'Sikandar', 'Fakhruddin', 'Karimuddin', 'Moinuddin', 'Nizamuddin', 'Khaja',
+    ],
+    f: [
+      'Savitribai', 'Ramabai', 'Anandibai', 'Rakhmabai', 'Kashibai', 'Parvatibai', 'Yamunabai', 'Tarabai', 'Gangabai', 'Radhabai',
+      'Laxmibai', 'Bhagirathibai', 'Jankibai', 'Sitabai', 'Rukminibai', 'Godavaribai', 'Tanubai', 'Manubai', 'Umabai', 'Krishnabai',
+      'Bhimabai', 'Durgabai', 'Saraswatibai', 'Ahilyabai', 'Yesubai', 'Sagunabai', 'Chimnabai', 'Girijabai', 'Indirabai', 'Kamalabai',
+      'Malatibai', 'Mathurabai', 'Nirmalabai', 'Padmabai', 'Shantabai', 'Sonabai', 'Sundarabai', 'Venubai', 'Vimalabai', 'Lakshmamma',
+      'Venkamma', 'Subbamma', 'Ramamma', 'Seethamma', 'Rajamma', 'Chennamma', 'Nagamma', 'Kamalamma', 'Gowramma', 'Bhagyamma',
+      'Puttamma', 'Sharadamma', 'Saraswathamma', 'Rukminamma', 'Ratnamma', 'Manikyamma', 'Padmamma', 'Sarojamma', 'Jayamma', 'Anasuya',
+      'Bangaramma', 'Durgamma', 'Gangamma', 'Hanumamma', 'Kanakamma', 'Lalithamma', 'Muniyamma', 'Nanjamma', 'Parvathamma', 'Chand Bibi',
+      'Fatima', 'Zainab', 'Amtul', 'Sultan Begum', 'Hayat', 'Mahlaqa', 'Zeenat', 'Nur', 'Sajida', 'Wahida',
+    ],
+  },
+  family: [
+    'Patil', 'Deshmukh', 'Deshpande', 'Kulkarni', 'Joshi', 'Jadhav', 'Pawar', 'Shinde', 'Bhosale', 'Gaikwad',
+    'More', 'Salunkhe', 'Chavan', 'Kadam', 'Mane', 'Sawant', 'Naik', 'Ranade', 'Gokhale', 'Tilak',
+    'Agarkar', 'Chiplunkar', 'Phule', 'Karve', 'Bhandarkar', 'Apte', 'Godbole', 'Limaye', 'Paranjape', 'Sathe',
+    'Vaidya', 'Kelkar', 'Damle', 'Ghorpade', 'Nimbalkar', 'Dabholkar', 'Mahajan', 'Wagh', 'Bhagwat', 'Sardesai',
+    'Reddy', 'Naidu', 'Rao', 'Chowdary', 'Gowda', 'Hegde', 'Shetty', 'Nayak', 'Pantulu', 'Sastri',
+    'Achar', 'Bhat', 'Kamath', 'Pai', 'Prabhu', 'Setty', 'Varma', 'Raju', 'Iyengar', 'Murthy',
+    'Gupta', 'Pillai', 'Desai', 'Kotwal', 'Khan', 'Mirza', 'Sayyid', 'Sheikh', 'Qureshi', 'Jung',
+    'Mohiuddin', 'Nawaz', 'Baig', 'Pasha', 'Yar Khan', 'Ali Khan', 'Hussaini', 'Bilgrami', 'Zaidi', 'Siddiqi',
+  ],
+  places: [
+    'Poona', 'Bombay', 'Satara', 'Kolhapur', 'Nasik', 'Ahmednagar', 'Aurangabad', 'Sholapur', 'Bijapur', 'Gulbarga',
+    'Bidar', 'Hyderabad', 'Golconda', 'Secunderabad', 'Warangal', 'Nizamabad', 'Kurnool', 'Bellary', 'Raichur', 'Dharwar',
+    'Belgaum', 'Hubli', 'Bangalore', 'Mysore', 'Seringapatam', 'Tumkur', 'Chitradurga', 'Shimoga', 'Hampi', 'Anantapur',
+    'Cuddapah', 'Nellore', 'Guntur', 'Masulipatam', 'Rajahmundry', 'Vizagapatam', 'Nagpur', 'Wardha', 'Amravati', 'Akola',
+    'Jalna', 'Parbhani', 'Nanded', 'Latur', 'Pandharpur', 'Daulatabad', 'Ellora', 'Ajanta', 'Sinhagad', 'Raigad',
+    'Pratapgad', 'Panhala', 'Mahabaleshwar', 'Godavari', 'Krishna', 'Bhima', 'Tungabhadra', 'Kaveri', 'Manjira', 'Penner',
+    'Sahyadri', 'Balaghat', 'Nallamala', 'Konkan', 'Marathwada', 'Telangana', 'Rayalaseema', 'Berar',
+  ],
+}
