@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const vietnamese: Culture = {
+  name: 'Vietnamese',
+  group: 'Southeast Asian',
+  order: 'family-given',
+  pattern: { m: '{family} Văn {given}', f: '{family} Thị {given}' },
+  notes: "Nguyễn dynasty and early French rule, with full diacritics. The middle element is in the pattern: Văn for men, Thị for women, as almost every commoner's name was written. Peasant women's names were often plants and fruits (Bưởi, Mít, Sen); they are in the pool at that rate.",
+  given: {
+    m: [
+      'Thành', 'Hùng', 'Dũng', 'Minh', 'Quang', 'Tuấn', 'Đức', 'Long', 'Bình', 'Hải',
+      'Sơn', 'Nam', 'Thắng', 'Cường', 'Hòa', 'Khang', 'Khánh', 'Lâm', 'Lộc', 'Nghĩa',
+      'Nhân', 'Phúc', 'Phước', 'Quý', 'Tài', 'Tâm', 'Thái', 'Thiện', 'Thịnh', 'Thông',
+      'Tín', 'Toàn', 'Trí', 'Trung', 'Tùng', 'Vinh', 'Vũ', 'Xuân', 'An', 'Bảo',
+      'Chí', 'Công', 'Đạt', 'Định', 'Hiếu', 'Hiệp', 'Học', 'Huy', 'Kiên', 'Kiệt',
+      'Lợi', 'Lực', 'Mạnh', 'Nghị', 'Ngọc', 'Phát', 'Phong', 'Quân', 'Sang', 'Tấn',
+      'Thạch', 'Thanh', 'Thế', 'Thọ', 'Thuận', 'Tiến', 'Trọng', 'Trực', 'Tường', 'Uy',
+      'Viên', 'Việt', 'Vượng', 'Ý', 'Chương', 'Doanh', 'Giang', 'Hoàng', 'Khoa', 'Lễ',
+    ],
+    f: [
+      'Hoa', 'Lan', 'Mai', 'Cúc', 'Đào', 'Hồng', 'Hạnh', 'Hiền', 'Huệ', 'Hương',
+      'Lệ', 'Liên', 'Loan', 'Ngọc', 'Nguyệt', 'Nhung', 'Oanh', 'Phượng', 'Quyên', 'Thảo',
+      'Thu', 'Thúy', 'Trang', 'Tuyết', 'Vân', 'Xuân', 'Yến', 'Bích', 'Châu', 'Diệp',
+      'Dung', 'Giang', 'Hà', 'Hải', 'Hằng', 'Hòa', 'Huyền', 'Khuê', 'Kim', 'Lam',
+      'Lý', 'My', 'Nga', 'Ngân', 'Nhàn', 'Nhi', 'Như', 'Ninh', 'Phương', 'Quế',
+      'Quỳnh', 'Sen', 'Tâm', 'Thanh', 'Thi', 'Thoa', 'Thơm', 'Thủy', 'Tình', 'Tú',
+      'Uyên', 'Vy', 'Xoan', 'Ánh', 'Bé', 'Bưởi', 'Cam', 'Chanh', 'Dâu', 'Đậu',
+      'Gái', 'Hến', 'Lụa', 'Mận', 'Mơ', 'Mít', 'Na', 'Nhãn', 'Ổi', 'Quýt',
+    ],
+  },
+  family: [
+    'Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng',
+    'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý', 'Đinh', 'Đào', 'Đoàn', 'Vương',
+    'Trịnh', 'Trương', 'Lưu', 'Lương', 'Mai', 'Tô', 'Tạ', 'Cao', 'Chu', 'Châu',
+    'Hà', 'Kiều', 'La', 'Lâm', 'Mạc', 'Ông', 'Phùng', 'Quách', 'Tăng', 'Thái',
+    'Thân', 'Tống', 'Từ', 'Văn', 'Vi', 'Nghiêm', 'Ninh', 'Bạch', 'Bành', 'Chế',
+    'Diệp', 'Doãn', 'Giang', 'Hứa', 'Khổng', 'Khuất', 'Kim', 'Lại', 'Lục', 'Mã',
+    'Nhan', 'Phí', 'Quản', 'Sử', 'Thạch', 'Thi', 'Tiêu', 'Tôn', 'Triệu', 'Ưng',
+    'Vòng', 'Xa', 'Yên', 'Âu', 'Biện', 'Cù', 'Đàm', 'Đường', 'Hạ', 'Hàn',
+  ],
+  places: [
+    'Huế', 'Hà Nội', 'Sài Gòn', 'Gia Định', 'Chợ Lớn', 'Hải Phòng', 'Nam Định', 'Thanh Hóa', 'Nghệ An', 'Vinh',
+    'Hà Tĩnh', 'Quảng Bình', 'Đồng Hới', 'Quảng Trị', 'Đà Nẵng', 'Hội An', 'Quảng Nam', 'Quảng Ngãi', 'Bình Định', 'Quy Nhơn',
+    'Phú Yên', 'Khánh Hòa', 'Nha Trang', 'Bình Thuận', 'Phan Thiết', 'Biên Hòa', 'Mỹ Tho', 'Vĩnh Long', 'Cần Thơ', 'Châu Đốc',
+    'Hà Tiên', 'Rạch Giá', 'Sóc Trăng', 'Bạc Liêu', 'Bến Tre', 'Tây Ninh', 'Thủ Dầu Một', 'Bắc Ninh', 'Hải Dương', 'Hưng Yên',
+    'Sơn Tây', 'Ninh Bình', 'Thái Bình', 'Lạng Sơn', 'Cao Bằng', 'Tuyên Quang', 'Lào Cai', 'Yên Bái', 'Hòa Bình', 'Sơn La',
+    'Sông Hồng', 'Sông Hương', 'Cửu Long', 'Đồng Nai', 'Sông Mã', 'Sông Cả', 'Ba Vì', 'Tam Đảo', 'Hoàng Liên', 'Trường Sơn',
+    'Ngũ Hành Sơn', 'Bạch Mã', 'Hạ Long', 'Cát Bà', 'Côn Đảo', 'Phú Quốc', 'Bắc Kỳ', 'Trung Kỳ', 'Nam Kỳ',
+  ],
+}

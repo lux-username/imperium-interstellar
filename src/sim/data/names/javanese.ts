@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const javanese: Culture = {
+  name: 'Javanese',
+  group: 'Southeast Asian',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given}' },
+  notes: "Java under the Dutch, in the Dutch-era spelling (oe, dj, tj). Commoners had one name. A man of the priyayi class took a second, adult name on appointment — Sastro-, Prawiro-, Djojo- and the like joined to -diningrat, -atmodjo, -koesoemo — which is what `family` holds; women kept a single name, so the f pattern has no family token.",
+  given: {
+    m: [
+      'Slamet', 'Sarmin', 'Wagiman', 'Paiman', 'Ngatiman', 'Soetrisno', 'Soeparman', 'Soekardi', 'Karto', 'Kromo',
+      'Wongso', 'Sastro', 'Marto', 'Djojo', 'Prawiro', 'Setjo', 'Widodo', 'Soegeng', 'Bambang', 'Basoeki',
+      'Darmo', 'Hardjo', 'Djoko', 'Kasim', 'Kasno', 'Mardi', 'Moeljo', 'Ngadimin', 'Paidi', 'Pardi',
+      'Poniman', 'Ponimin', 'Rono', 'Sadiman', 'Sadimin', 'Sardi', 'Sarno', 'Soedarmo', 'Soedibjo', 'Soegiono',
+      'Soekirman', 'Soemarno', 'Soenarto', 'Soepardi', 'Soeradi', 'Soerono', 'Soetarno', 'Soewardi', 'Soejono', 'Tarmidi',
+      'Toekiman', 'Toekimin', 'Wagimin', 'Wardojo', 'Warno', 'Wirjo', 'Jatno', 'Ngatimin', 'Soemardi', 'Soekiman',
+      'Kartono', 'Soedjono', 'Soemitro', 'Soetedjo', 'Sosro', 'Noto', 'Poerwo', 'Rekso', 'Singo', 'Tjokro',
+      'Atmo', 'Djoemadi', 'Giman', 'Harjono', 'Kardi', 'Koesno', 'Legimin', 'Mangoen', 'Ngadiran', 'Radjiman',
+    ],
+    f: [
+      'Sri', 'Siti', 'Soemarni', 'Soekarni', 'Painem', 'Ponijem', 'Toekijem', 'Wagijem', 'Sarinah', 'Sarijem',
+      'Ngatijem', 'Ratna', 'Dewi', 'Endang', 'Roekmini', 'Kartini', 'Kardinah', 'Soelastri', 'Soemiati', 'Soetinah',
+      'Painten', 'Ponirah', 'Sakinem', 'Salijem', 'Sarmi', 'Soemi', 'Soeminah', 'Toemini', 'Wagini', 'Warsini',
+      'Ngadinem', 'Paini', 'Ponijah', 'Rasmi', 'Roebinem', 'Sadinem', 'Sainem', 'Sardjinem', 'Soekinah', 'Soemirah',
+      'Soepinah', 'Soeratmi', 'Soeratni', 'Soewarni', 'Toekinem', 'Toeminem', 'Waginem', 'Warsinem', 'Wartini', 'Jatmi',
+      'Jatinem', 'Ambar', 'Asih', 'Lestari', 'Moerni', 'Ningsih', 'Rahajoe', 'Sekar', 'Sinta', 'Srikandi',
+      'Woelan', 'Mardijah', 'Marfoeah', 'Mardjinem', 'Marni', 'Marsinah', 'Martini', 'Moedjinem', 'Moeljani', 'Ngatmini',
+      'Parinem', 'Parti', 'Poedjiati', 'Sartinem', 'Soeparmi', 'Toemirah', 'Wagirah', 'Warti', 'Kasinem', 'Kasijah',
+    ],
+  },
+  family: [
+    'Sastrowardojo', 'Prawirodirdjo', 'Djojodiningrat', 'Kartoatmodjo', 'Wirjoatmodjo', 'Notosoesanto', 'Koesoemodiningrat', 'Hardjodipoero', 'Soerjoatmodjo', 'Notonegoro',
+    'Sosrodiningrat', 'Djojohadikoesoemo', 'Kertopati', 'Mangoenkoesoemo', 'Prawiroatmodjo', 'Sastroamidjojo', 'Reksosoedarmo', 'Wirjopranoto', 'Djojosoebroto', 'Kartodirdjo',
+    'Poerwodiningrat', 'Sastrosoewignjo', 'Singodimedjo', 'Tjokrosoedarmo', 'Wignjosoebroto', 'Atmodirdjo', 'Djojosoeparto', 'Hadikoesoemo', 'Kromodimedjo', 'Martodihardjo',
+    'Notowidagdo', 'Poedjoprajitno', 'Sastrodihardjo', 'Prawirosoedarmo', 'Djojowardojo', 'Kartosoebroto', 'Wirjodiningrat', 'Notoatmodjo', 'Koesoemowardojo', 'Hardjosoewignjo',
+    'Soerjodiningrat', 'Sosrowardojo', 'Reksodiningrat', 'Poerwoatmodjo', 'Singowardojo', 'Tjokrodiningrat', 'Wignjodirdjo', 'Atmosoedarmo', 'Kromowardojo', 'Martodiningrat',
+    'Mangoenwidagdo', 'Hadiprajitno', 'Sastrodiningrat', 'Prawirowidagdo', 'Djojoatmodjo', 'Kartowardojo', 'Wirjosoedarmo', 'Notodirdjo', 'Koesoemosoebroto', 'Hardjowardojo',
+    'Soerjosoedarmo', 'Sosroatmodjo', 'Reksowardojo', 'Poerwosoebroto', 'Singodiningrat', 'Tjokroatmodjo', 'Wignjowardojo', 'Atmodiningrat', 'Kromoatmodjo', 'Martowardojo',
+    'Mangoendiningrat', 'Hadiwardojo', 'Sastrosoedarmo', 'Prawirosoebroto', 'Djojodirdjo', 'Kartodiningrat', 'Wirjowidagdo', 'Notosoedarmo', 'Koesoemodirdjo', 'Hardjoatmodjo',
+  ],
+  places: [
+    'Batavia', 'Buitenzorg', 'Bandoeng', 'Semarang', 'Soerabaja', 'Jogjakarta', 'Soerakarta', 'Malang', 'Kediri', 'Madioen',
+    'Pasoeroean', 'Probolinggo', 'Banjoewangi', 'Djember', 'Blitar', 'Toeloengagoeng', 'Ponorogo', 'Magelang', 'Salatiga', 'Pekalongan',
+    'Tegal', 'Cheribon', 'Koedoes', 'Demak', 'Rembang', 'Pati', 'Djepara', 'Toeban', 'Bodjonegoro', 'Lamongan',
+    'Gresik', 'Sidoardjo', 'Modjokerto', 'Djombang', 'Ngandjoek', 'Poerworedjo', 'Keboemen', 'Banjoemas', 'Tjilatjap', 'Garoet',
+    'Tasikmalaja', 'Soekaboemi', 'Tjiandjoer', 'Serang', 'Bantam', 'Tangerang', 'Karawang', 'Indramajoe', 'Merapi', 'Merbaboe',
+    'Lawoe', 'Semeroe', 'Bromo', 'Keloed', 'Dieng', 'Brantas', 'Serajoe', 'Tjitaroem', 'Madoera', 'Karimoendjawa',
+    'Kedoe', 'Bagelen', 'Mataram', 'Pasisir', 'Priangan',
+  ],
+}

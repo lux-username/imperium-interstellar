@@ -1,0 +1,51 @@
+import type { Culture } from './culture'
+
+export const siamese: Culture = {
+  name: 'Siamese',
+  group: 'Southeast Asian',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "Siam under the fifth reign. THIN AND BENT: Siamese had no surnames until the decree of 1913, going by a short given name and the honorific Nai or Nang. The given-name pools are period; `family` holds surnames in the Pali-Sanskrit style the decree produced a decade later, so that a full name exists. Prefer the honorific form (Nai Chan, Nang Bua) where the UI can manage without a family name.",
+  given: {
+    m: [
+      'Chan', 'Bua', 'Kaeo', 'Thong', 'Sin', 'Chuang', 'Dam', 'Daeng', 'Khiao', 'Phum',
+      'Mi', 'Mai', 'Muang', 'Nak', 'Nu', 'Pan', 'Phet', 'Phlu', 'Puk', 'Sang',
+      'Som', 'Suk', 'Tan', 'Thap', 'To', 'Wan', 'Yai', 'Yim', 'Chom', 'Chit',
+      'Chin', 'Choei', 'Chum', 'Di', 'Duang', 'Fak', 'Hong', 'In', 'Kham', 'Khun',
+      'Klin', 'Lek', 'Ma', 'Mak', 'Man', 'Mun', 'Ngoen', 'Nim', 'Nok', 'On',
+      'Pao', 'Phan', 'Phon', 'Phrom', 'Plaek', 'Pluem', 'Pong', 'Rot', 'Rung', 'Sai',
+      'Sam', 'Si', 'Sut', 'Tai', 'Tem', 'Thet', 'Thian', 'Thim', 'Thuam', 'Tia',
+      'Tuan', 'Un', 'Waen', 'Wat', 'Yot', 'Bunmi', 'Bunma', 'Thongdi', 'Thongkham', 'Charoen',
+    ],
+    f: [
+      'Bua', 'Kaeo', 'Thong', 'Phueng', 'Nuan', 'Sombun', 'Chan', 'Chuang', 'Daeng', 'Duang',
+      'Fong', 'Hong', 'In', 'Iam', 'Kham', 'Khiao', 'Klin', 'Lamai', 'Lek', 'Mali',
+      'Mi', 'Mon', 'Muang', 'Nak', 'Ngam', 'Ngoen', 'Nim', 'Nit', 'Nom', 'Nu',
+      'On', 'Pan', 'Phae', 'Phan', 'Phin', 'Phit', 'Phlu', 'Phrom', 'Pik', 'Plaeng',
+      'Pluem', 'Puk', 'Rai', 'Rot', 'Sa', 'Sai', 'Sap', 'Sawat', 'Si', 'Som',
+      'Son', 'Suk', 'Tan', 'Tap', 'Thap', 'Thian', 'Thim', 'Tiam', 'Tim', 'Tuan',
+      'Ubon', 'Un', 'Waen', 'Wan', 'Yai', 'Yaem', 'Yim', 'Yot', 'Bunchuai', 'Bunma',
+      'Thongdi', 'Thongkham', 'Thongsuk', 'Kaeota', 'Malai', 'Samli', 'Sangwan', 'Somchit', 'Somsi', 'Wanni',
+    ],
+  },
+  family: [
+    'Bunyarat', 'Sirisuk', 'Suwannaphum', 'Kaeomani', 'Thongchai', 'Chaiyaphum', 'Wongsawat', 'Phromsuwan', 'Ratanakun', 'Thepphasit',
+    'Sombatsiri', 'Phetcharat', 'Sirivong', 'Suksawat', 'Wongyai', 'Charoenrat', 'Prasertsak', 'Kittikun', 'Bunyakiat', 'Saengthong',
+    'Chanthawong', 'Inthawong', 'Kaeosri', 'Maneerat', 'Nakphet', 'Phanthong', 'Puksawat', 'Sangkham', 'Thongkhamkun', 'Yotsawat',
+    'Chandrakun', 'Devavong', 'Prapasri', 'Rattanasiri', 'Sutchai', 'Thanasombat', 'Wanitkun', 'Yaemsuk', 'Buranasiri', 'Chaikun',
+    'Duangchai', 'Fakthong', 'Hongsakun', 'Inthon', 'Kanchana', 'Lertsiri', 'Nakhonthap', 'Ngamsiri', 'Phumisak', 'Ratchakun',
+    'Saiyut', 'Suriyawong', 'Tantiwong', 'Ubonrat', 'Wisetsiri', 'Yindi', 'Chumsai', 'Bunsong', 'Kongkaeo', 'Panyarat',
+    'Sribun', 'Thongsiri', 'Warasiri', 'Kritsana', 'Chaisong', 'Rungrot', 'Prasitkun', 'Amphonsiri', 'Boonlert', 'Chanthasiri',
+    'Dechawong', 'Ekkarat', 'Hemsiri', 'Jaturong', 'Kesorn', 'Laksana', 'Mongkhon', 'Nopphakun', 'Phakdi', 'Sawatsiri',
+  ],
+  places: [
+    'Bangkok', 'Thonburi', 'Ayutthaya', 'Lopburi', 'Saraburi', 'Nakhon Pathom', 'Ratchaburi', 'Phetchaburi', 'Kanchanaburi', 'Suphanburi',
+    'Chachoengsao', 'Prachinburi', 'Chanthaburi', 'Trat', 'Chonburi', 'Rayong', 'Nakhon Nayok', 'Ang Thong', 'Sing Buri', 'Chai Nat',
+    'Uthai Thani', 'Nakhon Sawan', 'Phichit', 'Phitsanulok', 'Sukhothai', 'Sawankhalok', 'Kamphaeng Phet', 'Tak', 'Uttaradit', 'Phrae',
+    'Nan', 'Lampang', 'Lamphun', 'Chiang Mai', 'Chiang Rai', 'Mae Hong Son', 'Khorat', 'Buriram', 'Surin', 'Sisaket',
+    'Ubon', 'Roi Et', 'Maha Sarakham', 'Khon Kaen', 'Udon', 'Nong Khai', 'Loei', 'Sakon Nakhon', 'Nakhon Phanom', 'Chumphon',
+    'Ranong', 'Surat Thani', 'Nakhon Si Thammarat', 'Phatthalung', 'Songkhla', 'Pattani', 'Trang', 'Phuket', 'Krabi', 'Phang Nga',
+    'Chao Phraya', 'Mekong', 'Mun', 'Chi', 'Ping', 'Wang', 'Yom', 'Tha Chin', 'Mae Klong', 'Khao Yai',
+    'Doi Inthanon', 'Isan', 'Lanna',
+  ],
+}
