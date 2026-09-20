@@ -1,0 +1,35 @@
+# raw session transcripts — bulky, meaningless in diffs, still greppable on local disk
+sessions/
+
+# secrets — never in the tree, never in history
+.env
+.env.*
+*Secrets.swift
+*.key
+*.pem
+
+# tool residue
+.playwright-mcp/
+.DS_Store
+
+# dependencies / caches
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+
+# build output
+dist/
+dist-ssr/
+*.local
+
+# logs
+*.log
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# third-party reference material (copyrighted blog posts etc.) — kept locally, never committed
+references/*.pdf

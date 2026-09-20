@@ -1,0 +1,90 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0e14;
+  --panel: #131722;
+  --line: #262c3a;
+  --ink: #d6dae3;
+  --muted: #7d8494;
+  --accent: #e0b04f;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar h1 {
+  font-size: 1rem;
+  margin: 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.topbar .week {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.topbar button {
+  background: var(--accent);
+  color: var(--bg);
+  border: 0;
+  padding: 0.4rem 0.9rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.topbar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.panes {
+  display: grid;
+  grid-template-columns: minmax(20rem, 1fr) 2fr;
+  flex: 1;
+  min-height: 0;
+}
+
+.pane {
+  padding: 1rem;
+  overflow: auto;
+}
+
+.pane + .pane {
+  border-left: 1px solid var(--line);
+}
+
+.pane h2 {
+  font-size: 0.8rem;
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.empty {
+  color: var(--muted);
+}
