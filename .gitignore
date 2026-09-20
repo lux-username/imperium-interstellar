@@ -33,3 +33,6 @@ dist-ssr/
 
 # third-party reference material (copyrighted blog posts etc.) — kept locally, never committed
 references/*.pdf
+
+# per-session git worktrees (Claude Code isolation) — never committed
+.claude/worktrees/
