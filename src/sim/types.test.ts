@@ -1,4 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
+import { playerTraits } from './characters'
 import { createRng } from './rng'
 import type {
   CharacterId,
@@ -88,15 +89,17 @@ function fixture(): GameState {
         role: 'packet',
         faction: admin,
         jump: 2,
+        strength: 0,
         location: { kind: 'transit', from: outpost, to: capital, arrives: 4 },
         commander: null,
-        order: { kind: 'courier', route: [capital, outpost], then: null, repeat: true },
+        order: { kind: 'courier', route: [capital, outpost], then: null, repeat: true, leg: 0 },
+        standing: { rally: null },
         mailbag: ['m-1' as MailId],
       },
     },
     characters: {
-      [player]: { id: player, name: 'The Governor-General', faction: admin, post: { kind: 'governor', world: capital } },
-      [governor]: { id: governor, name: 'Governor of Outpost', faction: admin, post: { kind: 'governor', world: outpost } },
+      [player]: { id: player, name: 'The Governor-General', faction: admin, post: { kind: 'governor', world: capital }, traits: playerTraits() },
+      [governor]: { id: governor, name: 'Governor of Outpost', faction: admin, post: { kind: 'governor', world: outpost }, traits: playerTraits() },
     },
     factions: { [admin]: { id: admin, name: 'The Administration', kind: 'administration' } },
     mail: { ['m-1' as MailId]: { id: 'm-1' as MailId, contents: { kind: 'report', report }, status: { kind: 'aboard', ship: packet } } },

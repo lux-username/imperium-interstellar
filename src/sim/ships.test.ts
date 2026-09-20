@@ -1,0 +1,127 @@
+import { describe, expect, it } from 'vitest'
+import { advanceWeek } from './game'
+import { governorReport, postDispatch } from './mail'
+import { buildPlayerView } from './player'
+import { playerTraits } from './characters'
+import { shipRoute } from './ships'
+import type { CharacterId, GameState, ShipId, WorldId } from './types'
+import { line, runUntil } from './fixtures.test-helper'
+
+const C = 'w-c' as WorldId
+const X = 'w-x' as WorldId
+const Y = 'w-y' as WorldId
+const Z = 'w-z' as WorldId
+
+/** The line, plus a patrol craft with a commander at the capital and an off-lane world Z two parsecs beyond Y. */
+function fleet(): GameState {
+  const s = line()
+  const cmdr = 'c-cmdr' as CharacterId
+  const ship = 's-patrol' as ShipId
+  s.characters[cmdr] = { id: cmdr, name: 'Cmdr', faction: s.characters[s.player].faction, post: { kind: 'commander', ship }, traits: playerTraits() }
+  s.ships[ship] = {
+    id: ship,
+    name: 'Vigilant',
+    role: 'patrol',
+    faction: s.characters[s.player].faction,
+    jump: 2,
+    strength: 3,
+    location: { kind: 'world', world: C },
+    commander: cmdr,
+    order: null,
+    standing: { rally: C },
+    mailbag: [],
+  }
+  const govZ = 'c-z' as CharacterId
+  s.worlds[Z] = { ...s.worlds[Y], id: Z, name: 'Zed', hex: { col: 5, row: 5 }, governor: govZ, actingGovernor: govZ, profile: { ...s.worlds[Y].profile, starport: 'D' } }
+  s.characters[govZ] = { id: govZ, name: 'Zee', faction: s.characters[s.player].faction, post: { kind: 'governor', world: Z }, traits: playerTraits() }
+  return s
+}
+
+const patrol = (s: GameState) => s.ships['s-patrol' as ShipId]
+const at = (s: GameState) => (patrol(s).location.kind === 'world' ? (patrol(s).location as { world: WorldId }).world : null)
+
+describe('ordered hulls', () => {
+  it('an order given at the capital is taken up at once and the hull sails by lane, writing home on arrival', () => {
+    const s = fleet()
+    postDispatch(s, { kind: 'ship', ship: 's-patrol' as ShipId }, C, { kind: 'order', ship: 's-patrol' as ShipId, order: { kind: 'patrol', world: Y, weeks: 2, posture: 'favourable', then: null, began: null } })
+    expect(patrol(s).order?.kind).toBe('patrol')
+    // Hulls land and sail in the same week, so a hull passing through X is only ever seen in transit.
+    advanceWeek(s)
+    expect(patrol(s).location).toEqual({ kind: 'transit', from: C, to: X, arrives: 2 })
+    advanceWeek(s)
+    expect(patrol(s).location).toEqual({ kind: 'transit', from: X, to: Y, arrives: 3 })
+    advanceWeek(s)
+    expect(at(s)).toBe(Y)
+    const arrival = Object.values(s.mail).find((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-cmdr')
+    expect(arrival).toBeDefined()
+    expect(arrival?.contents.kind === 'report' && arrival.contents.report.observedAt).toBe(Y)
+    expect(arrival?.contents.kind === 'report' && arrival.contents.report.channel).toBe('official')
+    // Two weeks on station, a closing report, then home to the rally point.
+    advanceWeek(s)
+    expect(at(s)).toBe(Y)
+    advanceWeek(s)
+    expect(patrol(s).location.kind).toBe('transit')
+    const reports = Object.values(s.mail).filter((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-cmdr')
+    expect(reports).toHaveLength(2)
+    runUntil(s, (g) => at(g) === C && patrol(g).order?.kind === 'hold', 20)
+    expect(at(s)).toBe(C)
+  })
+
+  it('a hull sent on purpose may leave the lanes within its jump rating; a packet may not', () => {
+    const s = fleet()
+    // Nothing charted reaches Z, so the hull plots by hex: C to Y is two parsecs, Y to Z two more.
+    expect(shipRoute(s, patrol(s), C, Z)).toEqual([C, Y, Z])
+    // Where the chart does connect, it is used even if a hex path would be shorter.
+    expect(shipRoute(s, patrol(s), C, Y)).toEqual([C, X, Y])
+    expect(shipRoute(s, s.ships['s-cx' as ShipId], C, Z)).toBeNull()
+    patrol(s).jump = 1
+    expect(shipRoute(s, patrol(s), C, Z)).toBeNull()
+  })
+
+  it('a scout at an off-lane world looks for a week, then carries its own letter and the port\'s stranded mail to the chart', () => {
+    const s = fleet()
+    // Zed's governor wrote long ago; nothing ever called.
+    const stranded = governorReport(s, s.worlds[Z])!
+    expect(stranded.status).toEqual({ kind: 'awaiting_carrier', at: Z })
+    patrol(s).order = { kind: 'scout', world: Z, then: null, lookedOn: null }
+    runUntil(s, (g) => at(g) === Z, 10)
+    const arrived = s.week
+    expect(patrol(s).order).toEqual({ kind: 'scout', world: Z, then: null, lookedOn: arrived }) // the week is spent looking
+    advanceWeek(s)
+    expect(patrol(s).location.kind).toBe('transit')
+    expect(stranded.status.kind).toBe('aboard')
+    const own = Object.values(s.mail).find((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-cmdr')!
+    expect(own.status.kind).toBe('aboard')
+    expect(own.contents.kind === 'report' && own.contents.report.observed).toBe(arrived)
+    // Set down at Y, re-routed, and both land on the desk by packet.
+    runUntil(s, () => stranded.status.kind === 'delivered' && own.status.kind === 'delivered', 30)
+    expect(stranded.status.kind).toBe('delivered')
+    expect(own.status.kind).toBe('delivered')
+    // The desk's word of Z is now at least as fresh as the scout's look (Zed's governor may have written since and had that letter carried too).
+    const view = buildPlayerView(s)
+    expect(view.known.worlds[Z].observed).toBeGreaterThanOrEqual(arrived)
+    expect(view.inbox.some((r) => r.observer === 'c-cmdr' && r.observedAt === Z)).toBe(true)
+  })
+
+  it('a courier follows its route by leg, so a route that revisits a world is not ambiguous', () => {
+    const s = fleet()
+    patrol(s).order = { kind: 'courier', route: [X, C, Y], then: null, repeat: false, leg: 0 }
+    for (let i = 0; i < 12; i++) advanceWeek(s)
+    const landings = Object.values(s.events)
+      .filter((e) => e.kind === 'hull_arrived' && e.ship?.id === 's-patrol')
+      .sort((a, b) => a.week - b.week)
+      .map((e) => e.at)
+    // X, back to C, out through X to Y, then home to the rally point through X.
+    expect(landings).toEqual([X, C, X, Y, X, C])
+    expect(patrol(s).order?.kind).toBe('hold')
+  })
+
+  it('a ship with nowhere to go holds and waits', () => {
+    const s = fleet()
+    patrol(s).jump = 1
+    patrol(s).order = { kind: 'move', to: Z, then: null }
+    advanceWeek(s)
+    expect(patrol(s).order).toEqual({ kind: 'hold' })
+    expect(at(s)).toBe(C)
+  })
+})

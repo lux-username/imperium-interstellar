@@ -104,10 +104,22 @@ export interface Lane {
 
 // ---------------------------------------------------------------------------
 // Ships, characters, factions
-//
-// Phase 0 needs only enough of these to move mail. Phase 1 fills them out.
 
-export type ShipRole = 'packet' | 'courier' | 'warship' | 'merchant'
+/**
+ * What a hull is for. Packets run the lanes on schedule; scouts are tiny
+ * two-person hulls that look and run; patrol craft, escorts and transports
+ * are the warships the desk commands.
+ */
+export type ShipRole = 'packet' | 'courier' | 'scout' | 'patrol' | 'escort' | 'transport' | 'merchant'
+
+/** Hulls the desk can give orders to; the rest run themselves. */
+export const COMMANDABLE_ROLES: readonly ShipRole[] = ['courier', 'scout', 'patrol', 'escort', 'transport']
+
+/** What a ship does when its order runs out or something unexpected happens. Phase 1b adds contact posture and a damage threshold. */
+export interface StandingOrders {
+  /** Where to go when there is nothing else to do. Null: hold wherever the last order ended. */
+  rally: WorldId | null
+}
 
 export interface Ship {
   id: ShipId
@@ -116,10 +128,13 @@ export interface Ship {
   faction: FactionId
   /** Jump rating: the most parsecs one jump can cover. */
   jump: number
+  /** Abstract fighting strength. Zero for hulls that only run. */
+  strength: number
   location: Location
   commander: CharacterId | null
   /** What the ship is doing. Null means holding where it is. */
   order: Order | null
+  standing: StandingOrders
   /** Mail in the hold, by MailId. */
   mailbag: MailId[]
 }
@@ -129,11 +144,29 @@ export type Post =
   | { kind: 'commander'; ship: ShipId }
   | { kind: 'unassigned' }
 
+/** Whose interest a person serves when it comes to it. Corruption is loyalty to self. */
+export type Loyalty = 'player' | 'empire' | 'self'
+
+/**
+ * What a person is like. The player never reads these directly; they show
+ * in what the person writes, does and leaves out.
+ */
+export interface Traits {
+  loyalty: Loyalty
+  /** −2 cautious … +2 bold. A modifier wherever nerve matters. */
+  initiative: number
+  /** −2 … +2 modifiers on the three kinds of work. */
+  competence: { administrative: number; naval: number; diplomatic: number }
+  /** 0 content … 3 hungry. */
+  ambition: number
+}
+
 export interface Character {
   id: CharacterId
   name: string
   faction: FactionId
   post: Post
+  traits: Traits
 }
 
 export type FactionKind = 'empire' | 'administration' | 'rival' | 'pirates' | 'rebels'

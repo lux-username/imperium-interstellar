@@ -9,7 +9,7 @@
  * real thing.
  */
 import type { Hex } from './hex'
-import type { Order } from './orders'
+import type { Order, Posture } from './orders'
 import type {
   Address,
   CharacterId,
@@ -45,6 +45,7 @@ export type {
   LaneId,
   Order,
   Post,
+  Posture,
   ReportId,
   ShipId,
   ShipRole,

@@ -1,0 +1,187 @@
+/**
+ * Ships under way: what an order says to do next, how a hull gets there,
+ * and what its commander writes when it arrives. Packets keep the lanes'
+ * timetables; everything else sails as soon as it has somewhere to go.
+ *
+ * A charted route is preferred. A hull someone sent on purpose may also
+ * jump off-lane to any world within its jump rating — that is what makes
+ * scouts and warships worth having. Fuel risk is Phase 1b.
+ */
+import { hexDistance } from './hex'
+import { laneBetween, nextDeparture, route } from './chart'
+import { hullArrivedEvent, hullDepartedEvent } from './events'
+import { loadMail, snapshotWorld, unloadMail, writeReport } from './mail'
+import type { Address, GameState, Ship, ShipId, WorldId } from './types'
+import type { Order } from './orders'
+
+// ---------------------------------------------------------------------------
+// Routing
+
+/**
+ * Fewest-jumps path from one world to another for this hull: over the
+ * chart if it connects them, otherwise hex to hex within jump range for a
+ * hull that may leave the lanes. Null if it cannot get there.
+ */
+export function shipRoute(state: GameState, ship: Ship, from: WorldId, to: WorldId): WorldId[] | null {
+  const charted = route(state.lanes, from, to)
+  if (charted || ship.role === 'packet') return charted
+  const ids = Object.keys(state.worlds).sort() as WorldId[]
+  const prev = new Map<WorldId, WorldId | null>([[from, null]])
+  const queue: WorldId[] = [from]
+  while (queue.length > 0) {
+    const cur = queue.shift() as WorldId
+    for (const next of ids) {
+      if (prev.has(next) || hexDistance(state.worlds[cur].hex, state.worlds[next].hex) > ship.jump) continue
+      prev.set(next, cur)
+      if (next === to) {
+        const path: WorldId[] = []
+        for (let w: WorldId | null = to; w !== null; w = prev.get(w) ?? null) path.unshift(w)
+        return path
+      }
+      queue.push(next)
+    }
+  }
+  return null
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+
+/** The order a ship falls back to when the current one is done: the rendezvous, the rally point, or nothing. */
+function afterwards(ship: Ship, then: Address | null): Order {
+  const world = then?.kind === 'world' ? then.world : ship.standing.rally
+  return world ? { kind: 'move', to: world, then: null } : { kind: 'hold' }
+}
+
+/**
+ * Where the ship's order says to head next from `at`, or null to stay this
+ * week. Orders that are complete give way to what comes after them.
+ */
+export function orderTarget(state: GameState, ship: Ship, at: WorldId): WorldId | null {
+  for (let hops = 0; hops < 3; hops++) {
+    const order = ship.order ?? afterwards(ship, null)
+    switch (order.kind) {
+      case 'hold':
+        return null
+      case 'move':
+        if (order.to !== at) return order.to
+        ship.order = afterwards(ship, order.then)
+        if (ship.order.kind === 'move' && ship.order.to === at) ship.order = { kind: 'hold' }
+        continue
+      case 'courier': {
+        // Skip stops already reached, wrapping on a repeating loop.
+        while (order.leg < order.route.length && order.route[order.leg] === at) {
+          order.leg += 1
+          if (order.leg >= order.route.length && order.repeat) order.leg = 0
+        }
+        if (order.leg < order.route.length) return order.route[order.leg]
+        ship.order = afterwards(ship, order.then)
+        continue
+      }
+      case 'patrol':
+        if (order.world !== at) return order.world
+        if (order.began === null) order.began = state.week
+        if (state.week < order.began + order.weeks) return null
+        ship.order = afterwards(ship, order.then)
+        continue
+      case 'scout':
+        if (order.world !== at) return order.world
+        if (order.lookedOn === null) {
+          order.lookedOn = state.week
+          commanderReport(state, ship, at)
+        }
+        if (state.week <= order.lookedOn) return null
+        ship.order = afterwards(ship, order.then)
+        continue
+    }
+  }
+  return null
+}
+
+/** The world an order is ultimately about, for deciding when a commander writes. */
+function orderDestination(order: Order | null): WorldId | null {
+  if (!order) return null
+  if (order.kind === 'move') return order.to
+  if (order.kind === 'patrol' || order.kind === 'scout') return order.world
+  return null
+}
+
+// ---------------------------------------------------------------------------
+// Commanders' reports
+
+/**
+ * A commander writes home on reaching the world their order was about, and
+ * again when a patrol there ends: what the world looks like from orbit and
+ * what is in port. At a charted port the letter goes by packet; off the
+ * lanes it rides with the ship until it finds a port with a lane home.
+ */
+export function commanderReport(state: GameState, ship: Ship, at: WorldId): void {
+  if (!ship.commander || at === state.capital) return
+  const world = state.worlds[at]
+  const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world))
+  if (route(state.lanes, at, state.capital) === null) {
+    mail.status = { kind: 'aboard', ship: ship.id }
+    ship.mailbag.push(mail.id)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The week's movements
+
+/**
+ * Ships that have landed this week. Cargo comes off before anything departs,
+ * so a packet that turns straight around can carry on what just arrived.
+ */
+export function arriveShips(state: GameState): void {
+  const ids = Object.keys(state.ships).sort() as ShipId[]
+  for (const id of ids) {
+    const ship = state.ships[id]
+    if (ship.location.kind !== 'transit' || ship.location.arrives > state.week) continue
+    const at = ship.location.to
+    ship.location = { kind: 'world', world: at }
+    hullArrivedEvent(state, at, ship)
+    unloadMail(state, ship, at)
+    onArrival(state, ship, at)
+  }
+}
+
+function onArrival(state: GameState, ship: Ship, at: WorldId): void {
+  const order = ship.order
+  if (!order) return
+  if (order.kind === 'patrol' && order.world === at && order.began === null) {
+    order.began = state.week
+    commanderReport(state, ship, at)
+  } else if (order.kind === 'scout' && order.world === at && order.lookedOn === null) {
+    order.lookedOn = state.week
+    commanderReport(state, ship, at)
+  } else if (order.kind === 'move' && orderDestination(order) === at) {
+    commanderReport(state, ship, at)
+  }
+}
+
+/** Ships in port decide whether this is a departure week; those that go take the mail and jump. */
+export function departShips(state: GameState): void {
+  const ids = Object.keys(state.ships).sort() as ShipId[]
+  for (const id of ids) {
+    const ship = state.ships[id]
+    if (ship.location.kind !== 'world') continue
+    const from = ship.location.world
+    const wasPatrolling = ship.order?.kind === 'patrol' && ship.order.world === from && ship.order.began !== null
+    const target = orderTarget(state, ship, from)
+    if (wasPatrolling && ship.order?.kind !== 'patrol') commanderReport(state, ship, from)
+    if (!target || target === from) continue
+    const path = shipRoute(state, ship, from, target)
+    if (!path || path.length < 2) {
+      // Nowhere to go from here: hold and wait for new orders. (Phase 1b: send a courier saying so.)
+      ship.order = { kind: 'hold' }
+      continue
+    }
+    const to = path[1]
+    const lane = laneBetween(state.lanes, from, to)
+    // Packets keep the lane's timetable; anything else sails as soon as it can.
+    if (ship.role === 'packet' && lane && nextDeparture(lane, from, state.week) !== state.week) continue
+    loadMail(state, ship, from, to)
+    hullDepartedEvent(state, from, ship)
+    ship.location = { kind: 'transit', from, to, arrives: state.week + 1 }
+  }
+}

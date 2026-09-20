@@ -7,9 +7,10 @@
 import { hexLabel } from './hex'
 import { route } from './chart'
 import { chartLanes, packetShips } from './lanes'
-import { arriveShips, deliverHeld, departShips, governorReport, learn, postDispatch, snapshotWorld } from './mail'
+import { deliverHeld, governorReport, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
+import { arriveShips, departShips } from './ships'
 import { forgetOldEvents, governorChangedEvent, unrestEvent } from './events'
-import { personName } from './names'
+import { newCharacter } from './characters'
 import { createRng, roll } from './rng'
 import { generateWorlds, PLAYER } from './generate'
 import type { CharacterId, GameState, Mail, World, WorldId } from './types'
@@ -105,6 +106,7 @@ export function advanceWeek(state: GameState): void {
     if (id !== state.capital && reportsThisWeek(state, world)) governorReport(state, world)
   }
   departShips(state)
+  pruneMail(state)
   observeCapital(state)
 }
 
@@ -139,7 +141,7 @@ function replaceGovernor(state: GameState, world: World, record: boolean): void 
   if (old && state.characters[old]) state.characters[old].post = { kind: 'unassigned' }
   const id = `c-gov-${hexLabel(world.hex)}-${state.nextId}` as CharacterId
   state.nextId += 1
-  state.characters[id] = { id, name: personName(state.rng), faction: world.faction, post: { kind: 'governor', world: world.id } }
+  state.characters[id] = newCharacter(state.rng, id, world.faction, { kind: 'governor', world: world.id })
   world.governor = id
   world.actingGovernor = id
   if (record) governorChangedEvent(state, world.id, state.characters[id].name)
