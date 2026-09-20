@@ -42,7 +42,7 @@ These are the load-bearing ideas. A feature that undermines one of them is wrong
 - **Ground truth vs. belief.** The simulation holds the true state. The player's view is a set of *reports*: snapshots of an entity as observed at (location, date), delivered at (capital, later date). The map renders the newest report per entity and its age.
 - **Report propagation.** An observation made at world X on week D leaves X on the next departing hull bound toward the capital (a scheduled packet on a lane, or whatever ship happens to go). Arrival = D + waiting time + transit weeks. Off-lane worlds may not report for months, or ever.
 - **Dispatch propagation** (player → subordinate). Same rules in reverse. A dispatch addressed to a ship is sent to an *address* — a world or rally point. If the ship is not there when the courier arrives, the dispatch is held at the address until the ship shows up or a recall expires.
-- **Rumour propagation.** Merchants carry news along the lanes. A rumour is a degraded report — vague on date and place, sometimes wrong, sometimes about things no official observer saw — that hops lane to lane with commercial traffic, slower than packets, and reaches every A/B port in time, including ports outside the subsector. Rumour is how the player hears of the Council's mood, and how the Council hears of the subsector beyond what the player chooses to tell it.
+- **Rumour propagation.** Merchants carry news along the lanes. A rumour is a degraded report — vague on date and place, sometimes wrong, sometimes about things no official observer saw — that hops lane to lane with commercial traffic, slower than packets, and reaches every A/B port in time, including ports outside the subsector. Rumour flows both ways: it is how the Council hears of the subsector beyond what the player chooses to tell it, and how the player hears of the Council's mood and of corners of the subsector no official report has come from — a world that has gone quiet, a battle nobody survived to report.
 - **Subordinate knowledge.** Every acting entity (governor, ship commander, rival polity) has its own belief state and acts on it. Phase 1 may simplify NPC decision inputs, but a subordinate's *report to the player* is always what that subordinate observed, coloured by their traits.
 - **Player location.** Stored as a location entity. Phase 1: always the capital. The capital's `acting_governor` slot exists from day one and holds the player.
 
@@ -72,7 +72,7 @@ Governors, ship commanders and commodores, agents, deputies, and the Empire's en
 - **Attributes**: competence (administrative / naval / diplomatic), initiative (cautious ↔ bold), loyalty (to the player / to the Empire / to self), ambition, and a small set of quirks.
 - **Effects**: traits bias how orders are interpreted (a bold commander shifts engagement posture one step up; a cautious one retreats early), report honesty and frequency, likelihood of exceeding orders, and handling of unrest.
 - **Relationships**: patronage, rivalry, faction ties. Careers: they age, die, get promoted, resign, defect.
-- **Learning them**: the player only ever knows a character through their reports and outcomes. Dossiers accumulate; they are never omniscient.
+- **Learning them**: the player only ever knows a character through their reports and outcomes — and, for officers physically at the capital (awaiting assignment, or because their ship is in port), through **conversation**: the player may speak with one such officer per week, which has a chance of revealing something of their personality and loyalty. Dossiers accumulate; they are never omniscient, and a self-loyal officer has every reason to present as a loyal one.
 
 ### The Empire (delegation upward)
 
@@ -111,7 +111,7 @@ Week 1 is already a crisis. Most worlds have inherited planetary governors of un
 Two ways to win, and they pull against each other:
 
 - **Loyal path — complete the term.** Serve out a fixed term of office without being replaced. Career advancement follows. Success is measured by the Empire's standing axis (*The Empire*, above): what the Council has heard about the subsector by the time the term ends.
-- **Rogue path — the pocket kingdom.** Declare the subsector independent. There is no threshold to meet; the declaration is a switch, and what happens next depends on who holds the seats. As the news reaches each commander and governor (by hull, like everything else), they react by their dominant loyalty, shaded by temperament (*Characters*: bold ↔ cautious):
+- **Rogue path — the pocket kingdom.** Declare the subsector independent. There is no threshold to meet; the declaration is a switch, and what happens next depends on who holds the seats. The declaration is itself news: it reaches each commander and governor by dispatch if the player sends one, otherwise by rumour, and each reacts on the week it reaches *them*. As the news arrives, they react by their dominant loyalty, shaded by temperament (*Characters*: bold ↔ cautious):
   - loyal to the *player* — keep following orders;
   - loyal to the *Empire* — turn against the player, boldly (attack, declare for the Empire, close ports) or cautiously (withdraw to a rally and await the expedition);
   - loyal to *themselves* — sit it out. Governors stop paying taxes and keep to themselves; ship officers hold their post, and the most daring turn pirate. They pledge to whoever wins once the outcome is evident.
@@ -130,9 +130,16 @@ Five sources of trouble. Each one reaches the player only as reports (Pillar 1) 
 - **Unrest.** No single world here can project power or rival the Empire, even one that declares independence. But an unrestful world can blow up the planetary governor's office, stop paying taxes, and occupy the spaceport — closing the port to packets and fuel, and so to information. Garrisons keep unrest from boiling over; when it does, the answer is ships carrying **army and marine detachments**, which take weeks to arrive and may find the situation changed.
 - **The Imperial Council** (the player's boss). Judges the player on what reaches the imperial capital: the player's own monthly report (see *Tribute*, below), **merchants' complaints** — mostly about piracy and other barriers to trade — and **rumour** (*Information model → Rumour propagation*), which travels slower than either. Trade routes out of the subsector cannot be closed to stop merchants talking without serious loss of revenue. The Council does *not* see who the player appoints or where loyalties lie, though specific appointments may displease it (an event: a noble's nephew arrives whom the player had better make a governor before promoting anyone else). Too much bad news — lost worlds, unpaid tribute, a Warlord still at large — and the Council replaces the player: the loyal path is lost. **There is no recall letter.** The recall *is* the successor: a new governor arriving at the capital aboard a ship carrying a detachment of marines, who **takes over in the same tick he arrives**. By the time an unknown ship is seen in the system, it is already too late. The only warning is rumour — word of how pleased or displeased the Council is, second-hand and weeks old — and the player uses it to judge how much danger they are in. A player who means to go rogue must anticipate the removal and declare first. If the declaration is made while the successor is *en route*, he arrives at a hostile capital: the player's forces can defeat his marines and capture his ship. On the rogue path, the Council is the enemy that sends the fleet.
 
-### Tribute
+### Tribute and the envoy's visit
 
-Taxes owed to the Empire travel physically. Every month a **tribute delegation** — a specific ship with a specific character aboard — arrives at the capital; the player hands over the subsector's taxes and gives the monthly report that the Council will eventually read. The delegation then carries both back out of the subsector. Whether it needs escorting depends on the map: a capital on the subsector's edge is a short hop from the border, one in the centre means the delegation crosses pirate country. A lost delegation is lost money, a missing report, and — when the merchants get there first — bad news.
+Taxes owed to the Empire travel physically. Every month the **Council's envoy** arrives at the capital aboard the **tribute delegation** — a specific ship with a specific character aboard; the player hands over the subsector's taxes and gives the monthly report that the Council will eventually read. The delegation then carries both back out of the subsector. Whether it needs escorting depends on the map: a capital on the subsector's edge is a short hop from the border, one in the centre means the delegation crosses pirate country. A lost delegation is lost money, a missing report, and — when the merchants get there first — bad news.
+
+The visit is an **event with a choice** about what the report says:
+
+- *"Order is being restored as planned."* — Council approval rises. But if merchant complaints and rumour reaching the imperial capital say otherwise, there is a chance the Council decides the player is a liar: standing falls further than honesty would have cost, and the envoy delivers a reprimand at the next visit.
+- *"The subsector is on fire; send help."* — Standing falls, but the Council may send more ships, troops, and money (arriving, as everything does, weeks later and possibly with strings attached).
+
+The envoy sometimes — not always — lets slip how the Council currently feels about the player, which is the freshest reading of Council mood the player can get, though still weeks old. Other events may ride in with the visit (the noble's nephew, a quota change, a censure).
 
 ### Consequences for the model
 
@@ -145,6 +152,7 @@ Things this campaign requires beyond what *Requirements* already lists:
 - **The Empire's reaction clock.** The successor and the punitive expedition are ships that depart the imperial capital on a hidden week, driven by what the Council has *received*, and take the usual transit to arrive. They are visible only if some hull observes them en route and gets word back first.
 - **World states.** A world can be loyal, unrestful, in revolt, independent, or Warlord-held, and the player's belief about which may be wrong.
 - **Rumour.** Merchant-borne news along the lanes; specified under *Information model*.
+- **Conversation.** One officer per week at the capital; specified under *Characters → Learning them*. This is the player's only way to read a character's loyalty before appointing them, so the seat-stacking game of the rogue path runs through it.
 
 ### Open questions
 
@@ -152,7 +160,10 @@ Things this campaign requires beyond what *Requirements* already lists:
 - Cryo survival rate — flat percentage, or dependent on ship quality and journey length?
 - Rumour fidelity — how noisy is the Council-mood signal, and can a well-placed agent (Phase 2) sharpen it?
 - Capital placement — a generation parameter (edge vs. centre) or always rolled?
-- How much the player can shade the monthly report before the merchant and rumour channels contradict it and make things worse.
+- The liar check — how far the player's report may diverge from what merchants and rumour tell the Council before it triggers, and whether repeated honesty repairs trust.
+- Requested aid — what the Council actually sends when asked for help, how long it takes, and what strings come with it.
+- Conversation output — a direct read of traits and loyalty, or written events that give an *impression* (a boast, an evasion, a slip) the player must interpret? Or both, with the direct read rare?
+- Is the envoy the same character every month (a relationship to cultivate) or whoever the delegation ship carries?
 
 ## Architecture
 
