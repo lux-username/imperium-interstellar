@@ -3,7 +3,7 @@
  * she is, what she is, and where and when she was last seen. Newest word
  * first. A row opens her dossier, with every report that mentions her.
  */
-import { isHomeObservation, mentionsShip, type PlayerView, type ReportId, type ShipId } from '../sim/view'
+import { isGovernmentHouseObservation, mentionsShip, type PlayerView, type ReportId, type ShipId } from '../sim/view'
 import { ago, coloursOf, conditionText, hullKind, weekLabel, worldName } from './format'
 
 interface Props {
@@ -38,7 +38,7 @@ export function EnemyShips({ view, onSelect, onShowReport }: Props) {
             </div>
             <div className="line2 muted">
               {n} report{n === 1 ? '' : 's'} mention her
-              {!isHomeObservation(s.report) && (
+              {!isGovernmentHouseObservation(s.report) && (
                 <>
                   {' '}
                   ·{' '}

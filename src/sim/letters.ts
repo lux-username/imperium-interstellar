@@ -3,7 +3,7 @@
  * one sentence with the most important news — composed here when it is
  * written, from what the writer chose to say and which side they are on.
  * The wording is standard for now; later it varies with the writer's
- * character, which is why it is decided in the sim and not at the Home Office.
+ * character, which is why it is decided in the sim and not at Government House.
  *
  * The wording of single events lives here too, so the sim and the inbox
  * say the same thing about the same event.
@@ -22,7 +22,7 @@ export interface Heading {
 export type Occasion =
   /** A governor's letter home: something to mention, or nothing for a while. */
   | 'letter'
-  /** A governor answering the Home Office's request for a full report. */
+  /** A governor answering Government House's request for a full report. */
   | 'requested'
   /** A captain making port. */
   | 'arrival'

@@ -101,11 +101,11 @@ describe('ordered hulls', () => {
     const own = Object.values(s.mail).find((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-cmdr' && m.contents.report.observedAt === Z)!
     expect(own.status.kind).toBe('aboard')
     expect(own.contents.kind === 'report' && own.contents.report.observed).toBe(arrived)
-    // Set down at Y, re-routed, and both land on the Home Office by packet.
+    // Set down at Y, re-routed, and both land on Government House by packet.
     runUntil(s, () => stranded.status.kind === 'delivered' && own.status.kind === 'delivered', 30)
     expect(stranded.status.kind).toBe('delivered')
     expect(own.status.kind).toBe('delivered')
-    // The Home Office's word of Z is now at least as fresh as the scout's look (Zed's governor may have written since and had that letter carried too).
+    // Government House's word of Z is now at least as fresh as the scout's look (Zed's governor may have written since and had that letter carried too).
     const view = buildPlayerView(s)
     expect(view.known.worlds[Z].observed).toBeGreaterThanOrEqual(arrived)
     expect(view.inbox.some((r) => r.observer === 'c-cmdr' && r.observedAt === Z)).toBe(true)
@@ -124,7 +124,7 @@ describe('ordered hulls', () => {
     expect(patrol(s).order?.kind).toBe('hold')
   })
 
-  it('a new game starts with the fleet in port at the capital, on the books and seen from the Home Office', () => {
+  it('a new game starts with the fleet in port at the capital, on the books and seen from Government House', () => {
     const s = newGame(9)
     const view = buildPlayerView(s)
     expect(view.roster).toHaveLength(14)
@@ -142,14 +142,14 @@ describe('ordered hulls', () => {
     expect(s.ships[ship].order).toEqual({ kind: 'move', to: dest, then: null })
     advanceWeek(s)
     expect(s.ships[ship].location).toEqual({ kind: 'transit', from: s.capital, to: dest, arrives: 2 })
-    // The Home Office's last word of it is still "in port here": nothing has reported it since.
+    // Government House's last word of it is still "in port here": nothing has reported it since.
     expect(buildPlayerView(s).known.ships[ship].ship.at).toBe(s.capital)
     expect(buildPlayerView(s).outgoing[0].payload.kind).toBe('order')
   })
 
   it('an order can be addressed elsewhere than the last sighting, and carry new standing orders', () => {
     const s = fleet()
-    // The Home Office believes the hull is at C but sends the order to Y, where it is heading.
+    // Government House believes the hull is at C but sends the order to Y, where it is heading.
     patrol(s).order = { kind: 'move', to: Y, then: null }
     const mail = orderShip(s, 's-patrol' as ShipId, { kind: 'patrol', world: Y, weeks: 1, posture: 'always', then: null, began: null }, Y, { onContact: 'never', rally: X })
     expect(mail.status.kind).toBe('awaiting_carrier')
@@ -162,7 +162,7 @@ describe('ordered hulls', () => {
     expect(at(s)).toBe(X)
   })
 
-  it('a hull leaving a port the other way takes a copy of every letter waiting there; the Home Office reads each letter once', () => {
+  it('a hull leaving a port the other way takes a copy of every letter waiting there; Government House reads each letter once', () => {
     const s = fleet()
     for (const w of Object.values(s.worlds)) w.profile.population = 0
     advanceWeek(s) // week 1: the C–X packet has just left X; the next leaves on week 3

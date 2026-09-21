@@ -19,10 +19,10 @@ function spread(rng: Rng): number {
 }
 
 /**
- * An inherited governor or a serving officer, loyalty unknown to the Home Office.
- * About a quarter serve themselves, a quarter would follow the Home Office, and
+ * An inherited governor or a serving officer, loyalty unknown to Government House.
+ * About a quarter serve themselves, a quarter would follow Government House, and
  * the rest are the Empire's people — which is the same thing until the
- * Home Office and the Empire disagree.
+ * Government House and the Empire disagree.
  */
 export function rollTraits(rng: Rng): Traits {
   const l = roll(rng)
@@ -44,7 +44,7 @@ export function playerTraits(): Traits {
 /**
  * A new person with rolled traits, named and posted. The name comes from
  * one culture — the imperial core six times in ten, the wider world the
- * other four — and the same pool serves every side: the Home Office's officers,
+ * other four — and the same pool serves every side: Government House's officers,
  * the Warlord's, a pirate captain.
  */
 export function newCharacter(rng: Rng, id: CharacterId, faction: FactionId, post: Post): Character {

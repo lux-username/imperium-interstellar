@@ -88,7 +88,7 @@ export function expectedArrival(lanes: Record<LaneId, Lane>, path: WorldId[], we
 /**
  * Fewest-jumps path hex to hex for a hull that may leave the lanes: any
  * two worlds within `jump` parsecs are one jump apart. Positions are
- * public, so the Home Office can plan a courier's run with the same sums the sim
+ * public, so Government House can plan a courier's run with the same sums the sim
  * uses. Null if the hull cannot get there.
  */
 export function hexRoute(positions: Record<WorldId, { hex: Hex }>, from: WorldId, to: WorldId, jump: number): WorldId[] | null {

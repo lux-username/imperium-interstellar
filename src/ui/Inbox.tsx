@@ -1,5 +1,5 @@
 /**
- * The inbox: every report that has reached the Home Office. Each row starts
+ * The inbox: every report that has reached Government House. Each row starts
  * compressed — who wrote it, a subject line, when it was sent and when it
  * arrived — and opens on click to show the full stamps and the report.
  * This week's arrivals are highlighted. Sortable by arrival or observation.

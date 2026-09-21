@@ -358,7 +358,7 @@ export function afterActionReports(state: GameState): void {
 
 /**
  * Landing: a commander at any friendly port on the lanes writes home by
- * the next packet, so the Home Office can follow a hull from port to port. Off the
+ * the next packet, so Government House can follow a hull from port to port. Off the
  * lanes they write only where the order was taking them, and carry it.
  */
 function onArrival(state: GameState, ship: Ship, at: WorldId): void {

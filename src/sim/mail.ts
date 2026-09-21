@@ -91,7 +91,7 @@ function signature(state: GameState, observer: CharacterId): { title: Title; shi
 
 /**
  * An observer at `at` writes a report of `snapshot` addressed to their
- * faction's seat — the Home Office, for the player's people — and hands it to the
+ * faction's seat — Government House, for the player's people — and hands it to the
  * port. Returns the mail. If `at` is the seat itself the report is
  * delivered on the spot.
  */
@@ -186,7 +186,7 @@ function pathReaches(state: GameState, path: WorldId[], dest: WorldId): boolean 
  * A ship about to jump from `from` to `to` takes everything at `from` whose
  * next leg is that jump. A hull someone sent on purpose — with `path` the
  * run it is making — also takes a *copy* of every report lying at the port
- * for the Home Office (the original waits for its packet) and takes outright
+ * for Government House (the original waits for its packet) and takes outright
  * whatever has no scheduled way home; but only when its run calls at the
  * destination or at a port on lanes that reach it. A hull bound the wrong
  * way leaves the letters where they are.
@@ -270,7 +270,7 @@ export function unloadMail(state: GameState, ship: Ship, at: WorldId): void {
   }
 }
 
-/** Ports throw out reports nobody has collected beyond the newest few. The capital keeps everything: that is the Home Office's outgoing tray. */
+/** Ports throw out reports nobody has collected beyond the newest few. The capital keeps everything: that is Government House's outgoing tray. */
 export function pruneMail(state: GameState): void {
   const waiting: Record<string, Mail[]> = {}
   for (const mail of Object.values(state.mail)) {
@@ -301,7 +301,7 @@ export function characterLocation(state: GameState, character: CharacterId): Wor
  * Whether a dispatch can be handed over at `at`. A ship must actually be in
  * port. A person must be there too — except that a letter addressed to a
  * world's governor is delivered to the governor's office, whoever now sits
- * in it: the Home Office may not know the name has changed.
+ * in it: Government House may not know the name has changed.
  */
 function recipientAt(state: GameState, dispatch: Dispatch, at: WorldId): boolean {
   const { recipient, envelope: env } = dispatch
@@ -367,7 +367,7 @@ export function learn(state: GameState, reader: CharacterId, report: Report): vo
 }
 
 /**
- * A report that never travelled — talk heard at a port, the Home Office's own
+ * A report that never travelled — talk heard at a port, Government House's own
  * view from the window — is entered as delivered mail and read at once,
  * so the reader's pile of reports holds everything their picture rests on.
  */

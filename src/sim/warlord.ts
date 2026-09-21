@@ -9,7 +9,7 @@
  * *believes* to be weakly held, which can be wrong. His scouts are hulls
  * the player's people may see; a scout seen at a world is a warning that
  * it is being looked at. He grows by capturing worlds and by taking
- * prizes; tempting the Home Office's captains waits for money (bribes and fear
+ * prizes; tempting Government House's captains waits for money (bribes and fear
  * are a later system). There is no negotiating with him in this campaign.
  */
 import { hexRoute, neighbours, route } from './chart'
@@ -30,7 +30,7 @@ const WARLORD_FLEET: { role: keyof typeof HULLS; count: number }[] = [
   { role: 'scout', count: 2 },
 ]
 
-/** He decides once a month, on a week of his own so his moves do not stack with the Home Office's. */
+/** He decides once a month, on a week of his own so his moves do not stack with Government House's. */
 const DECISION_WEEK = 2
 
 /** Officers without a post at his seat when the game begins, and the most he keeps. He recruits one more every eight weeks. */
@@ -152,7 +152,7 @@ interface Picture {
   /** Hostile hulls seen recently, by world; pirates counted apart, since they raid but never land. */
   enemyAt: Record<WorldId, Sighted>
   piratesAt: Record<WorldId, Sighted>
-  /** How much losing a world would hurt the Home Office: chart facts, which he knows as well as anyone. */
+  /** How much losing a world would hurt Government House: chart facts, which he knows as well as anyone. */
   value: (w: World) => number
 }
 
@@ -201,7 +201,7 @@ function picture(state: GameState, seat: WorldId): Picture {
     book[at] = { strength: (book[at]?.strength ?? 0) + worth(sighting.ship.role), age: Math.min(book[at]?.age ?? age, age) }
   }
 
-  // Chart facts: lanes, port, and how many worlds the Home Office reaches its capital through this one.
+  // Chart facts: lanes, port, and how many worlds Government House reaches its capital through this one.
   const through: Record<WorldId, number> = {}
   for (const w of Object.values(state.worlds)) {
     const path = route(state.lanes, w.id, state.capital)
@@ -315,7 +315,7 @@ function dispatch(state: GameState, seat: WorldId, base: WorldId, to: WorldId, a
  * out fires on his own worlds; land on the enemy world that is worth most
  * and looks weakest; pick off enemy hulls he can take cheaply; and send
  * scouts where his picture is thinnest. Everything he sends is a hull the
- * Home Office's people may see, and everything he decides is decided on what has
+ * Government House's people may see, and everything he decides is decided on what has
  * reached him — which can be stale, or wrong.
  */
 export function warlordActs(state: GameState): void {
@@ -415,11 +415,11 @@ function nearestEnemy(p: Picture, world: World): number {
 }
 
 /**
- * A landing, on the world he believes he can take that would hurt the Home Office
+ * A landing, on the world he believes he can take that would hurt Government House
  * most to lose: a chokepoint, a busy port. He must believe his troops beat
  * the garrison and his escorts beat whatever warships were seen there,
  * under the port's guns if they are docked. Independent worlds are softer
- * and count for less, but he takes them when nothing of the Home Office's is
+ * and count for less, but he takes them when nothing of Government House's is
  * within his means — or now and then anyway, for the port.
  */
 function attack(state: GameState, p: Picture): void {
@@ -443,7 +443,7 @@ function attack(state: GameState, p: Picture): void {
   if (candidates.length === 0) return
   const ours = candidates.filter((c) => !c.independent)
   const independents = candidates.filter((c) => c.independent)
-  // The Home Office's worlds first; an independent one when that is all there is, or one month in four for its port.
+  // Government House's worlds first; an independent one when that is all there is, or one month in four for its port.
   const pick = ours.length === 0 || (independents.length > 0 && roll(state.rng) >= 10) ? (independents[0] ?? ours[0]) : ours[0]
   const troops = Math.min(pick.lift, pick.garrison + 3)
   const escorts = pick.warships > 0 ? pick.patrols : pick.patrols.slice(0, 2)
@@ -452,7 +452,7 @@ function attack(state: GameState, p: Picture): void {
 
 /**
  * Hulls seen lately that his idle patrols could take at favourable odds:
- * the Home Office's courier at a C port, a lone transport — and pirates, wherever
+ * Government House's courier at a C port, a lone transport — and pirates, wherever
  * they lie, his own ports included. Pirates are his enemies too, and his
  * corrupt governors breed them; when he has ships to spare he clears them
  * out, and a nest at one of his own havens comes first. Enemy hulls docked

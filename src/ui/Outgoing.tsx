@@ -1,5 +1,5 @@
 /**
- * Dispatches the player has sent. Their fate is unknown: the Home Office sees only
+ * Dispatches the player has sent. Their fate is unknown: Government House sees only
  * when they left and when the timetable says they should land.
  */
 import type { PlayerView, WorldId } from '../sim/view'

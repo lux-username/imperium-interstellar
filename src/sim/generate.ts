@@ -175,7 +175,7 @@ export function generateWorlds(rng: Rng): Generated {
     const rolled = Math.floor(world.profile.population / 2) + roll(rng) - 7
     world.garrison = world.profile.population === 0 ? 0 : rolled >= 1 ? rolled : roll(rng) <= 3 ? 0 : 1
     if (world === capital) {
-      // The capital's own garrison, plus the Home Office's reserve: 4 army and 2 marine detachments (spec.md → Starting position).
+      // The capital's own garrison, plus Government House's reserve: 4 army and 2 marine detachments (spec.md → Starting position).
       world.unrest = 0
       world.garrison = Math.max(world.garrison, 2) + 4
       world.marines = 2
@@ -190,7 +190,7 @@ export function generateWorlds(rng: Rng): Generated {
 
   const factions: Record<FactionId, Faction> = startingFactions(capital.id)
 
-  // A handful of officers without posts at the capital, for the Home Office to send out to seats and prizes.
+  // A handful of officers without posts at the capital, for Government House to send out to seats and prizes.
   for (let i = 1; i <= 4; i++) {
     const id = `c-officer-${i}` as CharacterId
     characters[id] = newCharacter(rng, id, ADMINISTRATION, { kind: 'unassigned', at: capital.id })

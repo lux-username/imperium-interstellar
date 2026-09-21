@@ -54,7 +54,7 @@ describe('revolt', () => {
     expect(s.characters[s.worlds[Y].governor as CharacterId].faction).toBe(REBELS)
   })
 
-  it('a garrisoned world fights it out week by week, and the Home Office can still hear from it meanwhile', () => {
+  it('a garrisoned world fights it out week by week, and Government House can still hear from it meanwhile', () => {
     const s = line()
     s.worlds[X].garrison = 4
     s.worlds[X].unrest = 10
@@ -92,7 +92,7 @@ describe('revolt', () => {
 
   it('a fallen world closes its port — but nobody knows yet, so the next packet sails in and is lost, and then the lane is silent', () => {
     const s = line()
-    // P2 is in port at X; Wye falls while she is there. Nothing has told the Home Office.
+    // P2 is in port at X; Wye falls while she is there. Nothing has told Government House.
     changeHands(s, s.worlds[Y], REBELS, { army: 2, marines: 0 })
     const packet = s.ships['s-xy' as ShipId]
     let arrivals = 0
@@ -104,7 +104,7 @@ describe('revolt', () => {
     expect(packet.faction).toBe(REBELS)
     expect(packet.order).toEqual({ kind: 'hold' }) // her lane is not wholly the rebels', so she lies idle
     expect(Object.values(s.events).some((e) => e.kind === 'ship_captured' && e.ship?.id === 's-xy')).toBe(true)
-    // No letter from Wye reaches the Home Office after the fall: the rebel governor writes to nobody the Home Office reads.
+    // No letter from Wye reaches Government House after the fall: the rebel governor writes to nobody Government House reads.
     const fromY = Object.values(s.mail).filter((m) => m.contents.kind === 'report' && m.contents.report.observedAt === Y && m.contents.report.channel === 'official' && m.status.kind === 'delivered')
     expect(fromY).toEqual([])
   })
@@ -118,7 +118,7 @@ describe('revolt', () => {
     for (let i = 0; i < 6; i++) advanceWeek(s)
     expect(Object.values(s.events).some((e) => e.kind === 'hull_arrived' && e.at === Y && e.ship?.faction === 'f-admin')).toBe(false)
     expect(s.ships['s-xy' as ShipId].faction).toBe('f-admin')
-    // What the Home Office believes is no use to a packet lying at Exe: only the capital's own packets read the Home Office's mind.
+    // What Government House believes is no use to a packet lying at Exe: only the capital's own packets read Government House's mind.
     const s2 = line()
     changeHands(s2, s2.worlds[Y], REBELS, { army: 2, marines: 0 })
     s2.beliefs[s2.player].worlds[Y] = { id: 'r-t' as never, channel: 'official', observer: s2.player, observerName: 'x', observerTitle: null, observerShip: null, observerShipId: null, subject: 'x', lede: 'x', observedAt: Y, observed: 0, snapshot: { kind: 'world', world: { id: Y, name: 'Wye', hex: s2.worlds[Y].hex, profile: s2.worlds[Y].profile, faction: REBELS, governor: null, governorName: null, unrest: 2, garrison: 2, marines: 0, contest: null, ships: [] } }, events: [], envelope: { origin: Y, destination: { kind: 'world', world: s2.capital }, sent: 0, route: [Y], eta: 0 }, delivered: 0 }
@@ -133,7 +133,7 @@ describe('revolt', () => {
     expect(s.worlds[Y].garrison).toBe(1 + Math.floor(s.worlds[Y].profile.population / 2))
   })
 
-  it('the capital falling is the end of the game: the Home Office is taken, and the weeks stop', () => {
+  it('the capital falling is the end of the game: Government House is taken, and the weeks stop', () => {
     const s = line()
     const C = s.capital
     s.worlds[C].garrison = 0

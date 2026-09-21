@@ -69,7 +69,7 @@ export function newGame(seed: number): GameState {
 }
 
 /**
- * The Home Office inherits a survey of the subsector from the previous
+ * Government House inherits a survey of the subsector from the previous
  * administration. Every world is on it, but the entries are old — a few
  * weeks for worlds on the capital's packet routes, a year or more for
  * worlds nobody visits — and the worlds have moved on since.
@@ -122,7 +122,7 @@ function surveyEntry(state: GameState, reader: CharacterId, home: WorldId, world
     envelope: { origin: world.id, destination: { kind: 'world', world: home }, sent: -age, route: path ?? [world.id], eta: 0 },
     delivered: 0,
   }
-  // The Home Office keeps its survey with its mail, so it can look back; the Warlord's is only his picture.
+  // Government House keeps its survey with its mail, so it can look back; the Warlord's is only his picture.
   if (reader === PLAYER) deliverDirect(state, reader, report)
   else learn(state, reader, report)
 }
@@ -173,7 +173,7 @@ export function advanceWeek(state: GameState): void {
  * roll and settles on a low one, more readily where the garrison is thin
  * and less readily while a fight is on; at the top of the scale the world
  * rises (see ./world.ts). Now and then a governor dies, resigns, or is
- * quietly replaced by their own council, and the Home Office hears of it only
+ * quietly replaced by their own council, and Government House hears of it only
  * when the new one writes.
  */
 export function driftWorld(state: GameState, world: World, record = true): void {
@@ -205,13 +205,13 @@ function replaceGovernor(state: GameState, world: World, record: boolean): void 
 
 /**
  * The player sits above the capital and sees it directly: no mail, no delay.
- * Kept with the reports rather than shown as news, so the Home Office can look
+ * Kept with the reports rather than shown as news, so Government House can look
  * back at what lay in port on any week.
  */
 function observeCapital(state: GameState): void {
   const capital = state.worlds[state.capital]
   const report: Report = {
-    id: `r-home-${state.week}` as ReportId,
+    id: `r-gh-${state.week}` as ReportId,
     channel: 'official',
     observer: PLAYER,
     observerName: state.characters[PLAYER].name,
@@ -219,7 +219,7 @@ function observeCapital(state: GameState): void {
     observerShip: null,
     observerShipId: null,
     subject: 'The capital',
-    lede: 'Seen from the Home Office.',
+    lede: 'Seen from Government House.',
     observedAt: capital.id,
     observed: state.week,
     snapshot: snapshotWorld(state, capital),
@@ -244,7 +244,7 @@ export function requestReport(state: GameState, world: WorldId, governor: Charac
 
 /**
  * Give a ship an order. The dispatch goes to `address` — by default where
- * the Home Office last saw the hull, the capital if nowhere else — and is held
+ * Government House last saw the hull, the capital if nowhere else — and is held
  * there until the ship turns up. A ship in port at the capital reads it at
  * once. New standing orders may ride along.
  */
@@ -272,7 +272,7 @@ export function sendByCourier(state: GameState, courier: ShipId, mail: Mail): bo
   if (!path) return false
   env.route = path
   env.eta = state.week + path.length // sails next week, one jump a week
-  // The run is an order like any other, so it shows on the Home Office's books; in port here, it is read at once.
+  // The run is an order like any other, so it shows on Government House's books; in port here, it is read at once.
   const run: Order = { kind: 'move', to: dest, then: { kind: 'world', world: state.capital } }
   postDispatch(state, { kind: 'ship', ship: courier }, state.capital, { kind: 'order', ship: courier, order: run })
   return true

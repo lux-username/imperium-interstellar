@@ -1,5 +1,5 @@
 /**
- * The Home Office. App holds the GameState only to hand it to the sim (advance a
+ * Government House. App holds the GameState only to hand it to the sim (advance a
  * week, post a letter, save); everything rendered comes from the PlayerView
  * the sim builds from delivered reports. The one exception is the dev-only
  * god view, loaded behind `import.meta.env.DEV` so production builds never
@@ -40,7 +40,7 @@ type GodModule = typeof import('./dev')
 type Tab = 'inbox' | 'rumours' | 'fleet' | 'officers' | 'enemy' | 'outgoing'
 
 /**
- * The picture as of an earlier week: the same reports the Home Office holds now,
+ * The picture as of an earlier week: the same reports Government House holds now,
  * folded with everything observed after that week left out. The map and
  * the dossiers read it in place of the present.
  */
@@ -209,7 +209,7 @@ export function App() {
         <section className="pane centre">
           <div className="scrubber">
             <label>
-              <span className={past ? 'warn' : ''}>{past ? `Week ${shown.week} — what the Home Office now knows of it` : `Week ${view.week} — the present`}</span>
+              <span className={past ? 'warn' : ''}>{past ? `Week ${shown.week} — what Government House now knows of it` : `Week ${view.week} — the present`}</span>
               <input type="range" min={0} max={view.week} value={asOf ?? view.week} onChange={(e) => setAsOf(Number.parseInt(e.target.value, 10))} disabled={view.week === 0} />
             </label>
             <button type="button" className="small" disabled={!past} onClick={() => setAsOf(null)}>
@@ -221,7 +221,7 @@ export function App() {
             <span className="loyal"><i className="swatch" />loyal</span> <span className="unrest"><i className="swatch" />unrest</span> <span className="revolt"><i className="swatch" />revolt</span>{' '}
             <span className="contested"><i className="swatch" />contested</span> <span className="independent"><i className="swatch" />independent</span> <span className="warlord"><i className="swatch" />Warlord</span>{' '}
             <span className="pirates"><i className="swatch ring" />pirate haven</span>{' '}
-            <span className="muted">— as the Home Office last heard; the badge says how long ago, a dashed ring means the word is old. Hulls where last seen:</span>{' '}
+            <span className="muted">— as Government House last heard; the badge says how long ago, a dashed ring means the word is old. Hulls where last seen:</span>{' '}
             <span className="own">▲ ours</span> <span className="warlord">▲ Warlord</span> <span className="pirates">▲ pirate</span> <span className="independent">▲ independent</span>{' '}
             <span className="muted">— click one for her dossier. Hover a lane for its packet.</span>
           </div>

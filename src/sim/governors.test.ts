@@ -107,7 +107,7 @@ describe('what a governor chooses to say', () => {
     expect(observed.sort((a, b) => a - b)).toEqual([3, 3 + gap])
   })
 
-  it('a letter from the Home Office forces a report, and even a self-serving governor tells unrest straight', () => {
+  it('a letter from Government House forces a report, and even a self-serving governor tells unrest straight', () => {
     const s = line()
     for (const w of Object.values(s.worlds)) w.profile.population = 0
     s.worlds[X].unrest = 6

@@ -7,7 +7,7 @@
  * `docks` if it has been through several mouths.
  *
  * A rumour is delivered to whoever reads reports at a world it reaches:
- * the Home Office at the capital now, the Warlord's and the Council's seats later.
+ * Government House at the capital now, the Warlord's and the Council's seats later.
  * The docks have no preference: good news and bad become talk alike.
  */
 import { neighbours } from './chart'
@@ -47,7 +47,7 @@ function degrade(state: GameState, event: Event): Event {
   const copy = JSON.parse(JSON.stringify(event)) as Event
   if (check(state.rng, 9)) copy.week -= nextInt(state.rng, 0, 2)
   if (check(state.rng, 11)) {
-    // Never the capital: the Home Office sees that for itself, and talk about it would only confuse.
+    // Never the capital: Government House sees that for itself, and talk about it would only confuse.
     const near = neighbours(state.lanes, event.at).filter((w) => w !== state.capital)
     if (near.length > 0) copy.at = near[nextInt(state.rng, 0, near.length - 1)]
   }

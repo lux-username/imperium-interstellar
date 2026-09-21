@@ -1,17 +1,17 @@
 /**
- * One world, as the Home Office knows it: the newest report, its age, who holds
+ * One world, as Government House knows it: the newest report, its age, who holds
  * the world in that telling, the hulls last seen there, every report ever
  * received about it, and the things the player can do — write to its
  * governor, or send a hull.
  */
 import { hexLabel } from '../sim/hex'
-import { expectedArrival, isHomeObservation, nextDeparture, route, type CharacterId, type PlayerView, type ReportId, type ShipId, type WorldId } from '../sim/view'
+import { expectedArrival, isGovernmentHouseObservation, nextDeparture, route, type CharacterId, type PlayerView, type ReportId, type ShipId, type WorldId } from '../sim/view'
 import { ago, conditionText, eventText, holderText, hullKind, profileString, sailsText, signature, stateOf, weekLabel, worldName } from './format'
 
 interface Props {
-  /** The picture being shown: the present, or what the Home Office now knows of an earlier week. */
+  /** The picture being shown: the present, or what Government House now knows of an earlier week. */
   view: PlayerView
-  /** The present, for the timetable and the Home Office's own mail, which are not a matter of belief. */
+  /** The present, for the timetable and Government House's own mail, which are not a matter of belief. */
   now: PlayerView
   world: WorldId
   onRequest: (world: WorldId, governor: CharacterId) => void
@@ -54,13 +54,13 @@ export function Dossier({ view, now, world, onRequest, onOrders, onSelectShip, o
         {haven && <span className="tag pirates">pirate haven</span>}
       </h3>
 
-      {!snap && <p className="empty">No report about this world has ever reached the Home Office.</p>}
+      {!snap && <p className="empty">No report about this world has ever reached Government House.</p>}
       {snap && report && (
         <>
           <p className="asof">
-            {isCapital && (report.observed === now.week ? 'Seen directly from the Home Office.' : `As seen from the Home Office, ${weekLabel(report.observed)}.`)}
-            {!isCapital && isHomeObservation(report.id) && `As of ${weekLabel(report.observed)} — ${ago(view.week, report.observed)}, from ${signature(report)}.`}
-            {!isCapital && !isHomeObservation(report.id) && (
+            {isCapital && (report.observed === now.week ? 'Seen directly from Government House.' : `As seen from Government House, ${weekLabel(report.observed)}.`)}
+            {!isCapital && isGovernmentHouseObservation(report.id) && `As of ${weekLabel(report.observed)} — ${ago(view.week, report.observed)}, from ${signature(report)}.`}
+            {!isCapital && !isGovernmentHouseObservation(report.id) && (
               <>
                 As of {weekLabel(report.observed)} — {ago(view.week, report.observed)}, reported by {signature(report)}
                 {report.channel === 'agent' ? ' (a scout’s watch: nothing shaded)' : ''}.{' '}
@@ -82,11 +82,11 @@ export function Dossier({ view, now, world, onRequest, onOrders, onSelectShip, o
             <dt>Garrison</dt>
             <dd>
               {snap.garrison} army{snap.marines > 0 ? `, ${snap.marines} marine` : ''} <span className="muted">detachments</span>
-              {isCapital && <span className="muted"> — the Home Office’s reserve; transports draw on it</span>}
+              {isCapital && <span className="muted"> — Government House’s reserve; transports draw on it</span>}
             </dd>
             <dt>Route</dt>
             <dd>
-              {isCapital && 'This is the Home Office.'}
+              {isCapital && 'This is Government House.'}
               {!isCapital && !path && <span className="warn">Off the lanes. No packet calls here; nothing will arrive unless a hull is sent.</span>}
               {!isCapital && path && (
                 <>
@@ -159,8 +159,8 @@ export function Dossier({ view, now, world, onRequest, onOrders, onSelectShip, o
                   ({hullKind(view, s.ship)}
                   {conditionText(s.ship)}) — {weekLabel(s.observed)}, {ago(view.week, s.observed)}
                 </span>{' '}
-                {isHomeObservation(s.report) ? (
-                  <span className="muted">(seen from the Home Office)</span>
+                {isGovernmentHouseObservation(s.report) ? (
+                  <span className="muted">(seen from Government House)</span>
                 ) : (
                   <button type="button" className="link" onClick={() => onShowReport(s.report)}>
                     show report

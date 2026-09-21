@@ -1,9 +1,9 @@
 /**
- * The Home Office's people: every officer it knows of, by post — waiting at the
+ * Government House's people: every officer it knows of, by post — waiting at the
  * capital for one, holding a governor's seal, or commanding a hull — with
- * where the Home Office last placed them and how many reports mention them or
+ * where Government House last placed them and how many reports mention them or
  * their charge. Governors are known only as the newest letter about each
- * world names them; commanders are on the Home Office's books; the pool is seen
+ * world names them; commanders are on Government House's books; the pool is seen
  * from the window. A row opens the world or the hull they are attached to.
  */
 import { Fragment } from 'react'

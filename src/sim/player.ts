@@ -6,7 +6,7 @@
 import { COMMANDABLE_ROLES, type GameState } from './types'
 import { fuelCapacity, troopCapacity } from './fleet'
 import { knownHavens } from './belief'
-import { isHomeObservation, isRumour, type ChartEntry, type Dispatch, type FactionEntry, type PlayerView, type PoolEntry, type Report, type RosterEntry } from './view'
+import { isGovernmentHouseObservation, isRumour, type ChartEntry, type Dispatch, type FactionEntry, type PlayerView, type PoolEntry, type Report, type RosterEntry } from './view'
 
 export function buildPlayerView(state: GameState): PlayerView {
   const chart: Record<string, ChartEntry> = {}
@@ -20,22 +20,22 @@ export function buildPlayerView(state: GameState): PlayerView {
     if (mail.contents.kind === 'report') {
       const report = mail.contents.report
       if (report.delivered === null || mail.status.kind !== 'delivered') continue
-      // Only what was addressed to the Home Office: the Warlord's seat reads its own mail.
+      // Only what was addressed to Government House: the Warlord's seat reads its own mail.
       if (report.envelope.destination.kind !== 'world' || report.envelope.destination.world !== state.capital) continue
       if (isRumour(report.channel)) rumours.push(report)
-      else if (isHomeObservation(report.id)) observations.push(report)
+      else if (isGovernmentHouseObservation(report.id)) observations.push(report)
       else inbox.push(report)
     } else if (mail.contents.dispatch.sender === state.player) {
       outgoing.push(mail.contents.dispatch)
     }
   }
-  // The Home Office's books list its own hulls and the officers it gave them to; nothing about where they are now.
+  // Government House's books list its own hulls and the officers it gave them to; nothing about where they are now.
   const playerFaction = state.characters[state.player].faction
   const roster: RosterEntry[] = Object.values(state.ships)
     .filter((s) => s.faction === playerFaction && COMMANDABLE_ROLES.includes(s.role))
     .map((s) => ({ id: s.id, name: s.name, role: s.role, jump: s.jump, commander: s.commander, commanderName: s.commander ? (state.characters[s.commander]?.name ?? null) : null, troops: troopCapacity(s.role), fuel: fuelCapacity(s.role) }))
     .sort((a, b) => (a.id < b.id ? -1 : 1))
-  // People and troops at the capital are seen from the Home Office's window, not learned by letter.
+  // People and troops at the capital are seen from Government House's window, not learned by letter.
   const pool: PoolEntry[] = Object.values(state.characters)
     .filter((c) => c.faction === playerFaction && c.post.kind === 'unassigned' && c.post.at === state.capital)
     .map((c) => ({ id: c.id, name: c.name }))

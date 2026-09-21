@@ -23,7 +23,7 @@ function raider(s: GameState, at: WorldId, id = 's-raider' as ShipId): void {
   s.ships[id].order = { kind: 'patrol', world: at, weeks: 4, posture: 'favourable', then: { kind: 'world', world: Y }, began: 0 }
 }
 
-/** A warship of the Home Office's at `at`. */
+/** A warship of Government House's at `at`. */
 function warship(s: GameState, at: WorldId, posture: 'never' | 'favourable' | 'always' = 'favourable', id = 's-war' as ShipId): void {
   const cid = `c-${id}` as CharacterId
   s.characters[cid] = { id: cid, name: 'Captain', faction: s.characters[s.player].faction, post: { kind: 'commander', ship: id }, traits: playerTraits() }

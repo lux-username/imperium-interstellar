@@ -39,7 +39,7 @@ export { expectedArrival, hexRoute, nextDeparture, route } from './chart'
 // anything a letter did not.
 export { UNREST_WORDS, eventLabel, eventText, unrestWord } from './letters'
 
-// The fold from reports to a picture, so the Home Office can ask what it now
+// The fold from reports to a picture, so Government House can ask what it now
 // knows about an earlier week with the same sums the sim uses.
 export { beliefFrom, knownHavens, mentionsShip } from './belief'
 
@@ -95,7 +95,7 @@ export interface WorldSnapshot {
   profile: WorldProfile
   faction: FactionId
   governor: CharacterId | null
-  /** As the observer knew it; carried in the snapshot so the Home Office learns a new name only when a report says so. */
+  /** As the observer knew it; carried in the snapshot so Government House learns a new name only when a report says so. */
   governorName: string | null
   unrest: number
   garrison: number
@@ -238,13 +238,13 @@ export function isRumour(channel: Channel): boolean {
   return channel === 'merchant' || channel === 'docks'
 }
 
-/** The office a writer holds. A governor writes for a world, a captain for a hull; a survey, the Home Office, a merchant and the docks hold none. */
+/** The office a writer holds. A governor writes for a world, a captain for a hull; a survey, Government House, a merchant and the docks hold none. */
 export type Title = 'governor' | 'captain' | null
 
-/** Reports the Home Office made itself — the capital seen from the window, the survey it inherited — have no letter behind them. */
-export function isHomeObservation(id: ReportId): boolean {
-  // 'r-desk-' is the prefix earlier saves used for the same thing.
-  return id.startsWith('r-home-') || id.startsWith('r-desk-') || id.startsWith('r-survey-')
+/** Reports Government House made itself — the capital seen from the window, the survey it inherited — have no letter behind them. */
+export function isGovernmentHouseObservation(id: ReportId): boolean {
+  // 'r-desk-' and 'r-home-' are the prefixes earlier saves used for the same thing.
+  return id.startsWith('r-gh-') || id.startsWith('r-desk-') || id.startsWith('r-home-') || id.startsWith('r-survey-')
 }
 
 export interface Report {
@@ -267,7 +267,7 @@ export interface Report {
   /** The events the writer chose to mention. A letter says what happened; the snapshot says how things stand. */
   events: Event[]
   envelope: Envelope
-  /** Set when it reaches the Home Office. Age at reading is `week - observed`. */
+  /** Set when it reaches Government House. Age at reading is `week - observed`. */
   delivered: Week | null
 }
 
@@ -319,7 +319,7 @@ export interface ChartEntry {
 }
 
 /**
- * A hull on the Home Office's books: what it is and who was given it. Where it is
+ * A hull on Government House's books: what it is and who was given it. Where it is
  * and what it is doing are belief, in `known.ships` and `outgoing`.
  */
 export interface RosterEntry {
@@ -336,7 +336,7 @@ export interface RosterEntry {
   fuel: number
 }
 
-/** An officer at the capital without a post, whom the Home Office can send out to a seat or a prize. */
+/** An officer at the capital without a post, whom Government House can send out to a seat or a prize. */
 export interface PoolEntry {
   id: CharacterId
   name: string
@@ -366,19 +366,19 @@ export interface PlayerView {
   /** The player's own faction, so the UI can tell a friendly snapshot from a hostile one. */
   faction: FactionId
   known: Belief
-  /** The hulls the Home Office commands, as listed on its books. Their whereabouts are in `known.ships`. */
+  /** The hulls Government House commands, as listed on its books. Their whereabouts are in `known.ships`. */
   roster: RosterEntry[]
-  /** Officers at the capital with nothing to do, seen directly from the Home Office. */
+  /** Officers at the capital with nothing to do, seen directly from Government House. */
   pool: PoolEntry[]
-  /** The names on the administration's rolls, by id: everyone the Home Office has ever appointed or could. Names only; where they are is belief. */
+  /** The names on the administration's rolls, by id: everyone Government House has ever appointed or could. Names only; where they are is belief. */
   names: Record<CharacterId, string>
-  /** Troops at the capital, seen directly from the Home Office. */
+  /** Troops at the capital, seen directly from Government House. */
   reserve: { army: number; marines: number }
-  /** Every official and agent report that has reached the Home Office, newest arrival first. This week's news is whatever has `delivered === week`. */
+  /** Every official and agent report that has reached Government House, newest arrival first. This week's news is whatever has `delivered === week`. */
   inbox: Report[]
-  /** What the Home Office saw for itself: the capital each week, and the survey it inherited. Not mail, but reports all the same, so a week gone by can be pictured. */
+  /** What Government House saw for itself: the capital each week, and the survey it inherited. Not mail, but reports all the same, so a week gone by can be pictured. */
   observations: Report[]
-  /** Worlds a letter has seen harbouring pirates, whose governor has not changed since as far as the Home Office knows. */
+  /** Worlds a letter has seen harbouring pirates, whose governor has not changed since as far as Government House knows. */
   havens: WorldId[]
   /** What the docks are saying: merchant and docks-channel reports, kept apart from the mail so the two piles are never confused. */
   rumours: Report[]

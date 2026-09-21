@@ -23,7 +23,7 @@ function havenAtY(s: GameState): ReturnType<typeof spawnPirate> {
   return pirate
 }
 
-/** A patrol craft of the Home Office's landing at `at` this week. */
+/** A patrol craft of Government House's landing at `at` this week. */
 function patrol(s: GameState, at: WorldId, id = 's-war' as ShipId): void {
   const cid = `c-${id}` as CharacterId
   const faction = s.characters[s.player].faction
@@ -118,7 +118,7 @@ describe('pirates seen to be harboured', () => {
     expect(Object.values(s.events).filter((e) => e.kind === 'pirates_harboured')).toHaveLength(2)
   })
 
-  it('is written home by the captain who saw it, whatever her temperament, and reaches the Home Office', () => {
+  it('is written home by the captain who saw it, whatever her temperament, and reaches Government House', () => {
     const s = line()
     const pirate = havenAtY(s)
     // The patrol craft lands at Y next week and finds the pirate docked there.
@@ -213,7 +213,7 @@ describe('pirates talk', () => {
     expect(other.havens).toEqual([X, Y]) // pooled from her neighbour, not from the talk at X
   })
 
-  it('a bold, self-serving governor at a haven puts it about that the port asks no questions; the Home Office hears it as talk and marks nothing', () => {
+  it('a bold, self-serving governor at a haven puts it about that the port asks no questions; Government House hears it as talk and marks nothing', () => {
     const s = line()
     havenAtY(s)
     const governor = s.characters['c-y' as CharacterId]
@@ -232,7 +232,7 @@ describe('pirates talk', () => {
     governor.traits.initiative = -2
     for (let i = 0; i < 100; i++) toutHavens(s)
     expect(s.rumours).toHaveLength(0)
-    // What reaches the Home Office is a rumour, and rumours mark no haven.
+    // What reaches Government House is a rumour, and rumours mark no haven.
     governor.traits.initiative = 2
     for (let i = 0; i < 20; i++) {
       s.week += 1
