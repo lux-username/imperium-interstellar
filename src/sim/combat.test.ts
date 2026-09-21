@@ -27,7 +27,7 @@ function warship(s: GameState, at: WorldId, posture: 'never' | 'favourable' | 'a
   const cid = `c-${id}` as CharacterId
   s.characters[cid] = { id: cid, name: 'Captain', faction: s.characters[s.player].faction, post: { kind: 'commander', ship: id }, traits: playerTraits() }
   s.ships[id] = newShip(id, 'Vigilant', HULLS.patrol, s.characters[s.player].faction, at, s.characters[cid])
-  s.ships[id].standing.onContact = posture
+  s.ships[id].standing = { rally: C, onContact: posture }
 }
 
 describe('a raider off a port', () => {
@@ -90,7 +90,7 @@ describe('warship against raider', () => {
     expect(outcomes.captured + outcomes.destroyed + outcomes.fled).toBeGreaterThan(10)
   })
 
-  it('a prize lies where she was taken, ours, with nobody in command, and her captain is gone', () => {
+  it('a prize is ours, her captain gone, and sails for the captor’s rendezvous under a prize crew to wait for an officer', () => {
     for (let seed = 1; seed <= 60; seed++) {
       const s = line()
       s.rng = createRng(seed)
@@ -104,9 +104,40 @@ describe('warship against raider', () => {
       expect(prize.commander).toBeNull()
       expect(prize.havens).toBeNull()
       expect(s.characters['c-s-raider' as CharacterId]).toBeUndefined()
+      expect(prize.order).toEqual({ kind: 'move', to: C, then: null }) // the warship's rally is the capital
+      advanceWeek(s) // she sails
+      expect(prize.location.kind).toBe('transit')
+      advanceWeek(s) // she lands and waits
+      expect(prize.location).toEqual({ kind: 'world', world: C })
+      advanceWeek(s)
+      expect(prize.order).toEqual({ kind: 'hold' })
+      expect(prize.location).toEqual({ kind: 'world', world: C })
       return
     }
     throw new Error('no capture in 60 seeds')
+  })
+
+  it('pirates who take an armed hull make her a pirate on the spot, with their own havens', () => {
+    for (let seed = 1; seed <= 80; seed++) {
+      const s = line()
+      s.rng = createRng(seed)
+      raider(s, X)
+      s.ships['s-raider' as ShipId].strength = 6
+      // A lone transport of ours coming in: armed, barely.
+      const cid = 'c-tr' as CharacterId
+      s.characters[cid] = { id: cid, name: 'Master', faction: 'f-admin' as never, post: { kind: 'commander', ship: 's-tr' as ShipId }, traits: playerTraits() }
+      s.ships['s-tr' as ShipId] = newShip('s-tr' as ShipId, 'Carrier', HULLS.transport, 'f-admin' as never, C, s.characters[cid])
+      s.ships['s-tr' as ShipId].location = { kind: 'transit', from: C, to: X, arrives: 1 }
+      s.ships['s-tr' as ShipId].standing.onContact = 'never'
+      advanceWeek(s)
+      const taken = s.ships['s-tr' as ShipId]
+      if (!taken || taken.faction !== PIRATES) continue
+      expect(taken.commander).not.toBeNull()
+      expect(taken.commander).not.toBe(cid)
+      expect(taken.havens).toEqual([Y])
+      return
+    }
+    throw new Error('no capture in 80 seeds')
   })
 
   it('a captain ordered never to engage sits tight at his own port and nothing happens', () => {

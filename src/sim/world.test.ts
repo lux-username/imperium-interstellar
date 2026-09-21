@@ -90,15 +90,34 @@ describe('revolt', () => {
     expect(packet.order).toEqual({ kind: 'hold' })
   })
 
-  it('a fallen world closes its port: packets stop calling and nothing more arrives from it', () => {
+  it('a fallen world closes its port — but nobody knows yet, so the next packet sails in and is lost, and then the lane is silent', () => {
     const s = line()
+    // P2 is in port at X; Wye falls while she is there. Nothing has told the desk.
     changeHands(s, s.worlds[Y], REBELS, { army: 2, marines: 0 })
-    const arrivalsAtY = () => Object.values(s.events).filter((e) => e.kind === 'hull_arrived' && e.at === Y && e.ship?.faction === 'f-admin').length
-    for (let i = 0; i < 12; i++) advanceWeek(s)
-    expect(arrivalsAtY()).toBe(0)
+    const packet = s.ships['s-xy' as ShipId]
+    let arrivals = 0
+    for (let i = 0; i < 12; i++) {
+      advanceWeek(s)
+      arrivals += Object.values(s.events).filter((e) => e.week === s.week && e.kind === 'hull_arrived' && e.at === Y && e.ship?.faction === 'f-admin').length
+    }
+    expect(arrivals).toBe(1)
+    expect(packet.faction).toBe(REBELS)
+    expect(packet.order).toEqual({ kind: 'hold' }) // her lane is not wholly the rebels', so she lies idle
+    expect(Object.values(s.events).some((e) => e.kind === 'ship_captured' && e.ship?.id === 's-xy')).toBe(true)
     // No letter from Wye reaches the desk after the fall: the rebel governor writes to nobody the desk reads.
     const fromY = Object.values(s.mail).filter((m) => m.contents.kind === 'report' && m.contents.report.observedAt === Y && m.contents.report.channel === 'official' && m.status.kind === 'delivered')
     expect(fromY).toEqual([])
+  })
+
+  it('once the desk has heard a port is closed, its packets are held back', () => {
+    const s = line()
+    changeHands(s, s.worlds[Y], REBELS, { army: 2, marines: 0 })
+    // Tell the desk directly, as a scout's letter would.
+    const known = s.beliefs[s.player].worlds
+    known[Y] = { id: 'r-t' as never, channel: 'official', observer: s.player, observerName: 'x', observedAt: Y, observed: 0, snapshot: { kind: 'world', world: { id: Y, name: 'Wye', hex: s.worlds[Y].hex, profile: s.worlds[Y].profile, faction: REBELS, governor: null, governorName: null, unrest: 2, garrison: 2, marines: 0, contest: null, ships: [] } }, events: [], envelope: { origin: Y, destination: { kind: 'world', world: s.capital }, sent: 0, route: [Y], eta: 0 }, delivered: 0 }
+    for (let i = 0; i < 12; i++) advanceWeek(s)
+    expect(Object.values(s.events).some((e) => e.kind === 'hull_arrived' && e.at === Y && e.ship?.faction === 'f-admin')).toBe(false)
+    expect(s.ships['s-xy' as ShipId].faction).toBe('f-admin')
   })
 
   it('an independent world regrows a garrison, slowly, up to a cap', () => {
@@ -108,15 +127,17 @@ describe('revolt', () => {
     expect(s.worlds[Y].garrison).toBe(1 + Math.floor(s.worlds[Y].profile.population / 2))
   })
 
-  it("a faction's seat does not fall in this campaign: the rising breaks on the palace guard", () => {
+  it('the capital falling is the end of the game: the desk is taken, and the weeks stop', () => {
     const s = line()
     const C = s.capital
     s.worlds[C].garrison = 0
     s.worlds[C].unrest = 10
     beginRevolt(s, s.worlds[C])
-    expect(s.worlds[C].faction).toBe('f-admin')
-    expect(s.worlds[C].contest).toBeNull()
-    expect(s.worlds[C].garrison).toBe(1)
+    expect(s.worlds[C].faction).toBe(REBELS)
+    expect(s.ending).toEqual({ kind: 'capital_fallen', by: REBELS, week: 0 })
+    expect(s.characters[s.player]).toBeDefined() // held, not killed
+    advanceWeek(s)
+    expect(s.week).toBe(0)
   })
 
   it('a rising is news most governors write home about at once, asking for help', () => {

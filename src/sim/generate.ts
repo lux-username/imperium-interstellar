@@ -178,7 +178,9 @@ export function generateWorlds(rng: Rng): Generated {
   for (const world of list) {
     // Starting unrest and garrison: mostly quiet, occasionally not.
     world.unrest = world.profile.population === 0 ? 0 : Math.max(0, roll(rng) - 9)
-    world.garrison = world.profile.population === 0 ? 0 : Math.max(0, Math.floor(world.profile.population / 2) + roll(rng) - 7)
+    // A world that rolls no garrison usually has one detachment after all; only a second low roll leaves it truly empty.
+    const rolled = Math.floor(world.profile.population / 2) + roll(rng) - 7
+    world.garrison = world.profile.population === 0 ? 0 : rolled >= 1 ? rolled : roll(rng) <= 3 ? 0 : 1
     if (world === capital) {
       // The capital's own garrison, plus the desk's reserve: 4 army and 2 marine detachments (spec.md → Starting position).
       world.unrest = 0

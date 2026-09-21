@@ -14,6 +14,7 @@ import type {
   Address,
   CharacterId,
   DispatchId,
+  Ending,
   EventId,
   FactionId,
   FactionKind,
@@ -40,6 +41,7 @@ export type {
   Address,
   CharacterId,
   DispatchId,
+  Ending,
   EventId,
   FactionId,
   Hex,
@@ -125,6 +127,8 @@ export type EventKind =
   | 'governor_killed'
   /** Troops came down. `level` is how many detachments landed; `ship` the transport. */
   | 'troops_landed'
+  /** Detachments that did not wake from the cryo passage. `level` is how many. */
+  | 'troops_lost'
   /** A landing was thrown back or a garrison overcome. `ship` null; `person` the new holder's name. */
   | 'world_taken'
   | 'landing_repulsed'
@@ -305,6 +309,8 @@ export interface FactionEntry {
 export interface PlayerView {
   week: Week
   capital: WorldId
+  /** Set once the game is over. */
+  ending: Ending | null
   /** The lane chart is public knowledge and never stale. */
   lanes: Lane[]
   /** Every world's name and position. What is *happening* there is only in `known`. */

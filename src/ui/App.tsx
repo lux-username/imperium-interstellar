@@ -107,7 +107,7 @@ export function App() {
         <h1>Imperium Interstellar</h1>
         <span className="seed muted">seed {state.seed}</span>
         <span className="week">Week {view.week}</span>
-        <button type="button" className="primary" onClick={() => mutate(advanceWeek)}>
+        <button type="button" className="primary" disabled={view.ending !== null} onClick={() => mutate(advanceWeek)}>
           Advance Week
         </button>
         <span className="controls">
@@ -129,6 +129,12 @@ export function App() {
           )}
         </span>
       </header>
+      {view.ending && (
+        <div className="ending">
+          <strong>The capital has fallen.</strong> Week {view.ending.week}: {view.factions[view.ending.by]?.name ?? 'the enemy'} hold the port and the palace, and you with them — for ransom, or for a show trial.
+          The term is over. Start a new game, or load a save.
+        </div>
+      )}
       <main className="panes">
         <section className="pane left">
           <div className="tabs">

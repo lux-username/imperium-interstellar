@@ -9,18 +9,22 @@
  * sorties if its posture says so and sits tight otherwise. Everyone else
  * in the system is in the open. A side that will not fight tries to break
  * off ship by ship — scouts almost always get away — and whatever is caught
- * with no guns is robbed (by pirates) or taken (by anyone else). Mail
- * aboard a hull that is taken or destroyed is lost with her (#43).
+ * with no guns is robbed (by pirates) or taken (by anyone else). A hull
+ * taken with her guns intact goes to the captor's rendezvous under a prize
+ * crew — or, taken by pirates, becomes a pirate on the spot. Mail aboard a
+ * hull that is taken or destroyed is lost with her (#43).
  *
  * Numbers are placeholders for the 1b playtest.
  */
 import { neighbours } from './chart'
 import { isBold, isCautious } from './characters'
 import { recordEvent } from './events'
-import { ADMINISTRATION, PIRATES, hostile } from './factions'
+import { ADMINISTRATION, PIRATES, capitalOf, hostile } from './factions'
 import { hexDistance } from './hex'
 import { shipsAt } from './mail'
+import { pirateFromPrize } from './pirates'
 import { check, nextInt, roll } from './rng'
+import { impound } from './world'
 import type { FactionId, GameState, Ship, ShipId, WorldId } from './types'
 import type { Posture } from './orders'
 import type { Valence } from './view'
@@ -134,27 +138,45 @@ function loseMail(state: GameState, ship: Ship): void {
 }
 
 /** A hull with no guns caught in the open: pirates rob her and let her go; anyone else takes her. */
-function overtaken(state: GameState, ship: Ship, at: WorldId, captor: FactionId): void {
-  if (captor === PIRATES) {
+function overtaken(state: GameState, ship: Ship, at: WorldId, by: Ship[]): void {
+  if (by[0].faction === PIRATES) {
     loseMail(state, ship)
     recordEvent(state, at, { kind: 'ship_robbed', valence: lossValence(ship.faction), severity: 2, ship })
     return
   }
-  capture(state, ship, at, captor)
+  capture(state, ship, at, by)
 }
 
-/** The hull becomes the captor's prize where she lies, without a crew of her own. Her people are lost to the game. */
-function capture(state: GameState, ship: Ship, at: WorldId, captor: FactionId): void {
+/**
+ * The hull is the captor's. Her people are lost to the game. Taken by
+ * pirates with her guns intact, she is a pirate from this week, with her
+ * captor's havens. Taken by anyone else, a packet is impounded (she needs
+ * no officer and runs for the holder if her lane is theirs); anything else
+ * sails for the captor's rendezvous under a prize crew and waits there for
+ * an officer.
+ */
+export function capture(state: GameState, ship: Ship, at: WorldId, by: Ship[]): void {
+  const captor = by[0].faction
   loseMail(state, ship)
   recordEvent(state, at, { kind: 'ship_captured', valence: lossValence(ship.faction), severity: 3, ship })
   if (ship.commander) delete state.characters[ship.commander]
   for (const p of ship.passengers) delete state.characters[p]
   ship.passengers = []
   ship.commander = null
+  if (captor === PIRATES && ship.strength > 0) {
+    pirateFromPrize(state, ship, by[0].havens ?? [])
+    return
+  }
+  if (ship.role === 'packet') {
+    impound(state, ship, captor)
+    return
+  }
+  const lead = [...by].sort((x, y) => effectiveStrength(y) - effectiveStrength(x) || (x.id < y.id ? -1 : 1))[0]
+  const home = lead.standing.rally ?? capitalOf(state, captor)
   ship.faction = captor
   ship.havens = null
-  ship.order = { kind: 'hold' }
-  ship.standing = { rally: null, onContact: 'never' }
+  ship.order = home && home !== at ? { kind: 'move', to: home, then: null } : { kind: 'hold' }
+  ship.standing = { rally: home, onContact: 'never' }
 }
 
 function destroy(state: GameState, ship: Ship, at: WorldId): void {
@@ -178,6 +200,9 @@ function destroy(state: GameState, ship: Ship, at: WorldId): void {
 function battle(state: GameState, at: WorldId, a: Ship[], b: Ship[]): void {
   const lead = (side: Ship[]) => [...side].sort((x, y) => effectiveStrength(y) - effectiveStrength(x) || (x.id < y.id ? -1 : 1))[0]
   recordEvent(state, at, { kind: 'battle', valence: 'bad', severity: 2, ship: lead(b) })
+  // Sides are who flew which flag when the action began: a hull taken mid-action leaves her side, and does not flee as a prize.
+  const flagA = a[0].faction
+  const flagB = b[0].faction
   let sideA = a
   let sideB = b
   for (let round = 0; round < 3; round++) {
@@ -189,8 +214,8 @@ function battle(state: GameState, at: WorldId, a: Ship[], b: Ship[]): void {
     const hitsB = check(state.rng, 8, -edge + leadCompetence(state, sideB))
     if (hitsA) hit(state, at, lead(sideB), sideA)
     if (hitsB) hit(state, at, lead(sideA), sideB)
-    sideA = sideA.filter((s) => state.ships[s.id] && s.location.kind === 'world' && s.faction === a[0].faction)
-    sideB = sideB.filter((s) => state.ships[s.id] && s.location.kind === 'world' && s.faction === b[0].faction)
+    sideA = sideA.filter((s) => state.ships[s.id] && s.location.kind === 'world' && s.faction === flagA)
+    sideB = sideB.filter((s) => state.ships[s.id] && s.location.kind === 'world' && s.faction === flagB)
     if (sideA.length === 0 || sideB.length === 0) break
     // Whoever no longer likes the odds tries to get clear.
     if (!engages(state, sideA, sideB)) sideA = sideA.filter((s) => !breakOff(state, s, at))
@@ -207,7 +232,7 @@ function hit(state: GameState, at: WorldId, ship: Ship, by: Ship[]): void {
     return
   }
   if (roll(state.rng) >= 9 || sideStrength(by) === 0) destroy(state, ship, at)
-  else capture(state, ship, at, by[0].faction)
+  else capture(state, ship, at, by)
 }
 
 /** Two hostile groups in one system decide what to do about each other. */
@@ -223,7 +248,7 @@ function encounter(state: GameState, at: WorldId, a: Ship[], b: Ship[], arriving
   const caught = quarry.filter((s) => !docked(state, s, at, arriving)).filter((s) => !breakOff(state, s, at))
   if (caught.length === 0) return
   if (sideStrength(caught) === 0) {
-    for (const s of caught) overtaken(state, s, at, hunters[0].faction)
+    for (const s of caught) overtaken(state, s, at, hunters)
     return
   }
   battle(state, at, hunters, caught)

@@ -48,6 +48,7 @@ export function buildPlayerView(state: GameState): PlayerView {
   return {
     week: state.week,
     capital: state.capital,
+    ending: state.ending,
     lanes: Object.values(state.lanes).sort((a, b) => (a.id < b.id ? -1 : 1)),
     chart,
     factions,

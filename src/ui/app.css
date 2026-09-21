@@ -672,3 +672,12 @@ svg.map {
 .modal .cargo label {
   display: block;
 }
+
+.ending {
+  margin: 0.5rem 1rem 0;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--revolt);
+  border-left-width: 4px;
+  background: #2a1414;
+  font-size: 0.95rem;
+}

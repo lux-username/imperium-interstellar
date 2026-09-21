@@ -105,18 +105,26 @@ describe('landings', () => {
     }
   })
 
-  it('behind a beachhead of marines the landing is clean', () => {
-    const s = withTransport()
-    changeHands(s, s.worlds[X], REBELS, { army: 2, marines: 0 })
-    s.worlds[C].marines = 3
-    // Force revival: nobody lost on the passage for this seed is not guaranteed, so check the landing rule directly.
-    orderShip(s, T, transport(X, { army: 1, marines: 2 }))
-    advanceWeek(s)
-    const carried = s.ships[T].troops.army + s.ships[T].troops.marines
-    advanceWeek(s)
-    const landed = Object.values(s.events).find((e) => e.kind === 'troops_landed' && e.at === X)
-    // With two marines aboard the only losses are on revival; with fewer there would be one more.
-    expect((landed?.level ?? 0) >= carried - 1).toBe(true)
+  it('behind a beachhead of marines the landing is clean, and cryo losses are an event of their own', () => {
+    let clean = 0
+    for (let seed = 1; seed <= 12; seed++) {
+      const s = withTransport()
+      s.rng = createRng(seed)
+      changeHands(s, s.worlds[X], REBELS, { army: 2, marines: 0 })
+      s.worlds[C].marines = 3
+      orderShip(s, T, transport(X, { army: 1, marines: 2 }))
+      advanceWeek(s)
+      const carried = s.ships[T].troops.army + s.ships[T].troops.marines
+      advanceWeek(s)
+      const landed = Object.values(s.events).find((e) => e.kind === 'troops_landed' && e.at === X)?.level ?? 0
+      const lost = Object.values(s.events).find((e) => e.kind === 'troops_lost' && e.at === X)?.level ?? 0
+      // Everyone who woke came down, when both marines woke; one more is lost on the way in when they did not.
+      if (lost === 0) {
+        expect(landed).toBe(carried)
+        clean += 1
+      } else expect(landed + lost).toBeGreaterThanOrEqual(carried - 1)
+    }
+    expect(clean).toBeGreaterThan(0)
   })
 
   it('on a world nobody is holding, the landing takes it outright', () => {

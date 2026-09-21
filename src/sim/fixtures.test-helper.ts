@@ -37,6 +37,7 @@ export function line(): GameState {
     nextId: 1,
     capital: C,
     player,
+    ending: null,
     worlds: { [C]: world(C, 'Capital', 1, player), [X]: world(X, 'Exe', 2, govX), [Y]: world(Y, 'Wye', 3, govY) },
     lanes: {
       [cx]: { id: cx, ends: [C, X], jumpDistance: 1, schedule: { interval: 2, phase: 0 } },

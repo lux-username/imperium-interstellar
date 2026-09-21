@@ -8,11 +8,13 @@
  * scouts and warships worth having. Fuel risk is Phase 1b.
  */
 import { hexRoute, laneBetween, nextDeparture, route } from './chart'
-import { eventsAt, hullArrivedEvent, hullDepartedEvent } from './events'
+import { eventsAt, hullArrivedEvent, hullDepartedEvent, recordEvent } from './events'
+import { lossValence } from './combat'
 import { capitalOf, hostile } from './factions'
 import { loadMail, snapshotWorld, unloadMail, writeReport } from './mail'
 import { watchReport } from './scouts'
 import { disembarkAtHome, loadCargo, takeOnWaiting, unloadCargo } from './troops'
+import { impound } from './world'
 import type { Address, GameState, Ship, ShipId, WorldId } from './types'
 import type { Order } from './orders'
 
@@ -112,6 +114,36 @@ export function portOpenTo(state: GameState, at: WorldId, faction: Ship['faction
   return world !== undefined && !hostile(world.faction, faction)
 }
 
+/**
+ * Whether this faction's seat *believes* a port is closed to it. Hulls do
+ * not know a world has fallen until word gets back: packets keep sailing
+ * in and being lost until a report reaches the seat. A faction with no
+ * seat believes nothing.
+ */
+export function believedClosed(state: GameState, at: WorldId, faction: Ship['faction']): boolean {
+  const leader = state.factions[faction]?.leader
+  const known = leader ? state.beliefs[leader]?.worlds[at] : undefined
+  if (!known || known.snapshot.kind !== 'world') return false
+  return hostile(known.snapshot.world.faction, faction)
+}
+
+/**
+ * An unarmed hull that docks at a port held against her side is taken at
+ * the quay: packets and couriers land; scouts and warships stay in orbit
+ * and are not. Runs on this week's arrivals after the encounters.
+ */
+export function impoundAtPorts(state: GameState, landed: readonly ShipId[]): void {
+  for (const id of landed) {
+    const ship = state.ships[id]
+    if (!ship || ship.location.kind !== 'world') continue
+    if (ship.role !== 'packet' && ship.role !== 'courier') continue
+    const world = state.worlds[ship.location.world]
+    if (!hostile(world.faction, ship.faction) || !world.actingGovernor) continue
+    recordEvent(state, world.id, { kind: 'ship_captured', valence: lossValence(ship.faction), severity: 2, ship })
+    impound(state, ship, world.faction)
+  }
+}
+
 /** A port where a hull of this faction can lie safely and hand mail to the packets for home. */
 export function friendlyPort(state: GameState, ship: Ship, at: WorldId): boolean {
   const world = state.worlds[at]
@@ -136,11 +168,13 @@ export function commanderReport(state: GameState, ship: Ship, at: WorldId): void
   if (wroteThisWeek(state, ship.commander)) return
   const world = state.worlds[at]
   const commander = state.characters[ship.commander]
-  // A self-serving commander leaves out the moments that reflect on them: their own hull breaking off or getting knocked about.
+  // A self-serving commander leaves out the moments that reflect on them: their own hull breaking off or getting
+  // knocked about, and the detachments that did not wake from a passage in their hold.
+  const own = (e: { ship: { id: string } | null }) => e.ship?.id === ship.id
   const seen = eventsAt(state, at, state.week, state.week)
-    .filter((e) => e.severity >= 2 || (e.ship?.id === ship.id && e.kind === 'ship_fled'))
+    .filter((e) => e.severity >= 2 || (own(e) && (e.kind === 'ship_fled' || e.kind === 'troops_landed' || e.kind === 'troops_lost')))
     .filter((e) => e.kind !== 'hull_arrived' && e.kind !== 'hull_departed')
-    .filter((e) => !(commander?.traits.loyalty === 'self' && e.ship?.id === ship.id && (e.kind === 'ship_fled' || e.kind === 'ship_damaged')))
+    .filter((e) => !(commander?.traits.loyalty === 'self' && own(e) && (e.kind === 'ship_fled' || e.kind === 'ship_damaged' || e.kind === 'troops_lost')))
   const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world), { events: seen })
   if (!friendlyPort(state, ship, at)) {
     mail.status = { kind: 'aboard', ship: ship.id }
@@ -221,8 +255,8 @@ export function departShips(state: GameState): void {
   for (const id of ids) {
     const ship = state.ships[id]
     if (ship.location.kind !== 'world') continue
-    // A prize without a crew, or a seized packet, goes nowhere until someone takes her over.
-    if (ship.commander === null && !(ship.role === 'packet' && ship.order?.kind === 'courier')) continue
+    // No officer aboard: a packet runs her lane regardless, a prize sails for the rendezvous under her prize crew, anything else waits.
+    if (ship.commander === null && !(ship.role === 'packet' && ship.order?.kind === 'courier') && ship.order?.kind !== 'move') continue
     const from = ship.location.world
     const wasPatrolling = ship.order?.kind === 'patrol' && ship.order.world === from && ship.order.began !== null
     const target = orderTarget(state, ship, from)
@@ -236,9 +270,10 @@ export function departShips(state: GameState): void {
     }
     const to = path[1]
     const lane = laneBetween(state.lanes, from, to)
-    // Packets keep the lane's timetable, and will not sail into a port that is closed to them; anything else sails as soon as it can.
+    // Packets keep the lane's timetable, and are held back only once their seat has heard the far port is closed to them;
+    // anything else sails as soon as it can.
     if (ship.role === 'packet' && lane && nextDeparture(lane, from, state.week) !== state.week) continue
-    if (ship.role === 'packet' && !portOpenTo(state, to, ship.faction)) continue
+    if (ship.role === 'packet' && believedClosed(state, to, ship.faction)) continue
     loadMail(state, ship, from, to, path)
     takeOnWaiting(state, ship, from)
     hullDepartedEvent(state, from, ship)

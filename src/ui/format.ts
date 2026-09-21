@@ -87,6 +87,8 @@ export function eventLabel(e: Event): string {
       return `Governor ${e.person ?? ''} killed`.replace('  ', ' ')
     case 'troops_landed':
       return `${e.level ?? 0} detachment${e.level === 1 ? '' : 's'} landed`
+    case 'troops_lost':
+      return `${e.level ?? 0} detachment${e.level === 1 ? '' : 's'} lost in cryo`
     case 'world_taken':
       return `the world taken by ${e.person ?? 'force'}`
     case 'landing_repulsed':
@@ -143,6 +145,8 @@ export function eventText(e: Event): string {
       return `Governor ${e.person ?? ''} was killed when the palace fell.`.replace('  ', ' ')
     case 'troops_landed':
       return `${e.level ?? 0} detachment${e.level === 1 ? '' : 's'} came down from ${e.ship?.name ?? 'a transport'}.`
+    case 'troops_lost':
+      return `${e.level ?? 0} detachment${e.level === 1 ? '' : 's'} did not wake from the passage aboard ${e.ship?.name ?? 'the transport'}.`
     case 'world_taken':
       return `The world is in the hands of ${e.person ?? 'the attackers'}.`
     case 'landing_repulsed':

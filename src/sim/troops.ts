@@ -45,12 +45,14 @@ export function loadCargo(state: GameState, ship: Ship, at: WorldId, order: Tran
   }
 }
 
-/** Revival after the cryo passage: each detachment has its chance of not waking. */
-function revive(state: GameState, troops: Troops): Troops {
+/** Revival after the cryo passage: each detachment has its chance of not waking. The losses are an event the commander may or may not mention. */
+function revive(state: GameState, ship: Ship, at: WorldId, troops: Troops): Troops {
   let army = 0
   let marines = 0
   for (let i = 0; i < troops.army; i++) if (nextFloat(state.rng) >= CRYO_LOSS) army += 1
   for (let i = 0; i < troops.marines; i++) if (nextFloat(state.rng) >= CRYO_LOSS) marines += 1
+  const lost = troopStrength(troops) - army - marines
+  if (lost > 0) recordEvent(state, at, { kind: 'troops_lost', valence: 'bad', severity: 1, ship, level: lost })
   return { army, marines }
 }
 
@@ -58,7 +60,7 @@ function revive(state: GameState, troops: Troops): Troops {
 export function unloadCargo(state: GameState, ship: Ship, at: WorldId, order: Transport): void {
   const world = state.worlds[at]
   if (troopStrength(ship.troops) > 0) {
-    const revived = revive(state, ship.troops)
+    const revived = revive(state, ship, at, ship.troops)
     ship.troops = { army: 0, marines: 0 }
     if (hostile(world.faction, ship.faction)) assault(state, ship, at, revived)
     else {

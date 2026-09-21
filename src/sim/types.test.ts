@@ -59,6 +59,7 @@ function fixture(): GameState {
     rng: createRng(42),
     capital,
     player,
+    ending: null,
     worlds: {
       [capital]: {
         id: capital,

@@ -19,7 +19,7 @@ import { check, nextFloat, nextInt } from './rng'
 import type { CharacterId, GameState, Ship, ShipId, World, WorldId } from './types'
 
 /** Chance per haven per week of a new hull putting out. Small: catching the ones at large should be enough to keep piracy down. */
-export const SPAWN_CHANCE = 0.015
+export const SPAWN_CHANCE = 0.01
 
 /** How many are at large when the game begins (spec.md → Starting position). */
 export const STARTING_PIRATES = 5
@@ -38,21 +38,38 @@ export function havens(state: GameState): World[] {
     .sort((a, b) => (a.id < b.id ? -1 : 1))
 }
 
+/** A pirate captain: one of the crew steps up. */
+function pirateCaptain(state: GameState, ship: ShipId): CharacterId {
+  const cid = `c-pirate-${state.nextId}` as CharacterId
+  state.nextId += 1
+  const captain = newCharacter(state.rng, cid, PIRATES, { kind: 'commander', ship })
+  captain.traits.loyalty = 'self'
+  state.characters[cid] = captain
+  return cid
+}
+
 /** A new raider at `home`, with a captain and whatever other havens she has heard of. */
 export function spawnPirate(state: GameState, home: World): Ship {
   const n = state.nextId
   state.nextId += 1
   const id = `s-pirate-${n}` as ShipId
-  const cid = `c-pirate-${n}` as CharacterId
-  const captain = newCharacter(state.rng, cid, PIRATES, { kind: 'commander', ship: id })
-  captain.traits.loyalty = 'self'
-  state.characters[cid] = captain
   const taken = new Set(Object.values(state.ships).map((s) => s.name))
-  const ship = newShip(id, shipName(state.rng, taken), HULLS.raider, PIRATES, home.id, captain)
+  const ship = newShip(id, shipName(state.rng, taken), HULLS.raider, PIRATES, home.id, null)
+  ship.commander = pirateCaptain(state, id)
   ship.standing = { rally: null, onContact: 'favourable' }
   ship.havens = [home.id, ...havens(state).filter((w) => w.id !== home.id && check(state.rng, 9)).map((w) => w.id)]
   state.ships[id] = ship
   return ship
+}
+
+/** An armed hull taken by pirates is a pirate from this week: a captain from the boarding party, her captor's havens, and a course for the nearest of them to refit. */
+export function pirateFromPrize(state: GameState, ship: Ship, havensKnown: WorldId[]): void {
+  ship.faction = PIRATES
+  ship.commander = pirateCaptain(state, ship.id)
+  ship.havens = [...havensKnown]
+  ship.standing = { rally: null, onContact: 'favourable' }
+  const home = ship.location.kind === 'world' ? nearestHaven(state, ship, ship.location.world) : null
+  ship.order = home && ship.location.kind === 'world' && home !== ship.location.world ? { kind: 'move', to: home, then: null } : { kind: 'hold' }
 }
 
 /**
@@ -99,8 +116,9 @@ function huntingGrounds(state: GameState, ship: Ship, from: WorldId): WorldId[] 
   })
 }
 
+/** The nearest haven she *knows of*. She sails on her knowledge, not the truth: a haven cleaned up since she heard of it will seize her. */
 function nearestHaven(state: GameState, ship: Ship, from: WorldId): WorldId | null {
-  const known = (ship.havens ?? []).filter((h) => state.worlds[h] && isHaven(state, state.worlds[h]))
+  const known = (ship.havens ?? []).filter((h) => state.worlds[h])
   if (known.length === 0) return null
   const here = state.worlds[from]
   return [...known].sort((a, b) => hexDistance(state.worlds[a].hex, here.hex) - hexDistance(state.worlds[b].hex, here.hex) || (a < b ? -1 : 1))[0]

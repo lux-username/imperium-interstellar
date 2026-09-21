@@ -2,7 +2,6 @@
  * Orders are data records with a few parameters and a rendezvous, never
  * scripts. Progress lives on the order itself (a courier's leg, a patrol's
  * start week) so a ship handed a fresh order starts it from the beginning.
- * Escort and blockade are still to come.
  *
  * Every variant carries a `kind` literal; CLAUDE.md derives the list of
  * implemented order types by grepping this file for them.

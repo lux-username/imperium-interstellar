@@ -10,7 +10,7 @@ import { chartLanes, packetShips } from './lanes'
 import { deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
 import { governorsWrite } from './governors'
 import { spawnRumours, spreadRumours } from './rumours'
-import { afterActionReports, departShips, landShips, shipRoute, unloadArrivals } from './ships'
+import { afterActionReports, departShips, impoundAtPorts, landShips, shipRoute, unloadArrivals } from './ships'
 import { fightAtWorlds, repairShips } from './combat'
 import { pirateOrders, placePirates, seizePirates, spawnPirates } from './pirates'
 import { placeWarlord, warlordActs } from './warlord'
@@ -44,6 +44,7 @@ export function newGame(seed: number): GameState {
     nextId: 1,
     capital,
     player: PLAYER,
+    ending: null,
     worlds,
     lanes,
     ships,
@@ -130,11 +131,13 @@ function surveyEntry(state: GameState, reader: CharacterId, home: WorldId, world
  * changes before governors write, so a report describes this week.
  */
 export function advanceWeek(state: GameState): void {
+  if (state.ending) return
   state.week += 1
   forgetOldEvents(state)
   const landed = landShips(state)
   fightAtWorlds(state, landed)
   seizePirates(state)
+  impoundAtPorts(state, landed)
   unloadArrivals(state, landed)
   afterActionReports(state)
   deliverHeld(state)
@@ -172,7 +175,9 @@ export function driftWorld(state: GameState, world: World, record = true): void 
   // A point either way within the same mood is not news; a change of mood, or either end of the scale, is.
   if (record && unrestIsNews(state, world.id, before, world.unrest)) unrestEvent(state, world.id, world.unrest, world.unrest > before)
   if (world.unrest >= 10 && !world.contest) beginRevolt(state, world)
-  if (world.id === state.capital || world.contest) return
+  // Nobody's council quietly replaces the holder of a faction's seat.
+  const isSeat = Object.values(state.factions).some((f) => f.capital === world.id)
+  if (isSeat || world.contest) return
   if (roll(state.rng) === 2 && roll(state.rng) >= 9) replaceGovernor(state, world, record)
 }
 

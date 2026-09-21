@@ -158,9 +158,20 @@ export function warlordActs(state: GameState): void {
     targets.splice(targets.indexOf(target), 1)
   }
 
-  // A landing, on the frontier world he believes weakest — if he believes he can take it.
+  // Prizes that have reached his seat get an officer he recruits on the spot.
+  for (const prize of Object.values(state.ships).sort((a, b) => (a.id < b.id ? -1 : 1))) {
+    if (prize.faction !== WARLORD || prize.commander !== null || prize.role === 'packet' || prize.location.kind !== 'world' || prize.location.world !== seat) continue
+    const cid = `c-wl-${state.nextId}` as CharacterId
+    state.nextId += 1
+    state.characters[cid] = newCharacter(state.rng, cid, WARLORD, { kind: 'commander', ship: prize.id })
+    prize.commander = cid
+    prize.standing = { rally: seat, onContact: 'favourable' }
+    prize.order = null
+  }
+
+  // A landing, on the frontier world he believes weakest — if he believes he can take it. He keeps his own seat held.
   const transports = idleAt(state, seat, 'transport')
-  const spare = Math.max(0, home.garrison - 3)
+  const spare = Math.max(0, home.garrison - 4)
   const lift = Math.min(spare, transports.length * troopCapacity('transport'))
   if (lift > 0) {
     const known = frontier(state)

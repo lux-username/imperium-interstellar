@@ -262,6 +262,9 @@ export interface Mail {
 // ---------------------------------------------------------------------------
 // The whole game
 
+/** How the game ended, if it has. The capital falling is the one ending 1b knows; the rest are 1c. */
+export type Ending = { kind: 'capital_fallen'; by: FactionId; week: Week }
+
 export interface GameState {
   /** The seed the game was generated from; with `rng` it reproduces everything. */
   seed: number
@@ -272,6 +275,7 @@ export interface GameState {
   capital: WorldId
   /** The character the player governs as. Their belief state is the source of the PlayerView. */
   player: CharacterId
+  ending: Ending | null
   worlds: Record<WorldId, World>
   lanes: Record<LaneId, Lane>
   ships: Record<ShipId, Ship>

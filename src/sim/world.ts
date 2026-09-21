@@ -12,11 +12,11 @@
 import { hexLabel } from './hex'
 import { newCharacter } from './characters'
 import { recordEvent } from './events'
-import { ADMINISTRATION, REBELS, WARLORD, hostile } from './factions'
+import { ADMINISTRATION, REBELS, WARLORD, capitalOf, hostile } from './factions'
 import { groundRound, troopStrength } from './ground'
 import { shipsAt } from './mail'
 import { check, nextInt } from './rng'
-import type { CharacterId, FactionId, GameState, Troops, World, WorldId } from './types'
+import type { CharacterId, FactionId, GameState, Ship, Troops, World, WorldId } from './types'
 
 // ---------------------------------------------------------------------------
 // Revolt
@@ -82,23 +82,27 @@ export function fightContests(state: GameState): void {
  * The garrison is gone. The governor gets off to a friendly hull in orbit
  * if there is one and is killed if there is not; unarmed hulls in port are
  * seized; whoever won holds the port and the palace with what they have
- * left. A faction's own seat cannot fall this way in this campaign — the
- * rising is broken on the palace guard instead — since losing the capital
- * is an ending, and endings are Phase 1c.
+ * left. The player's own seat falling is the end of the game — the desk is
+ * taken, for ransom or a show trial; the Warlord's seat falling finishes
+ * him as a power, and his governors have nobody left to write to.
  */
 export function changeHands(state: GameState, world: World, winner: FactionId, troops: Troops): void {
   const loser = world.faction
   world.contest = null
-  if (Object.values(state.factions).some((f) => f.capital === world.id)) {
-    recordEvent(state, world.id, { kind: winner === REBELS ? 'revolt_crushed' : 'landing_repulsed', valence: 'good', severity: 2 })
-    world.garrison = Math.max(world.garrison, 1)
-    world.unrest = Math.min(world.unrest, 7)
-    return
+  if (world.id === state.capital) {
+    state.ending = { kind: 'capital_fallen', by: winner, week: state.week }
+  }
+  for (const f of Object.values(state.factions)) {
+    if (f.capital === world.id && f.id !== ADMINISTRATION) {
+      f.capital = null
+      if (f.leader) delete state.characters[f.leader]
+      f.leader = null
+    }
   }
 
-  // The governor's fate.
+  // The governor's fate. The player is not killed: the desk is taken, and the game ends with it.
   const governor = world.actingGovernor
-  if (governor && governor !== state.player) {
+  if (governor && governor !== state.player && state.characters[governor]) {
     const refuge = shipsAt(state, world.id).find((s) => s.faction === loser && s.commander !== null)
     const name = state.characters[governor]?.name ?? null
     if (refuge) {
@@ -113,14 +117,7 @@ export function changeHands(state: GameState, world: World, winner: FactionId, t
 
   // Hulls that cannot fight are taken at their moorings; the rest are in orbit and keep their freedom.
   for (const ship of shipsAt(state, world.id)) {
-    if (ship.faction === loser && ship.strength === 0) {
-      ship.faction = winner
-      ship.order = { kind: 'hold' }
-      if (ship.commander) {
-        state.characters[ship.commander].post = { kind: 'unassigned', at: world.id }
-        ship.commander = null
-      }
-    }
+    if (ship.faction === loser && ship.strength === 0) impound(state, ship, winner)
   }
 
   world.faction = winner
@@ -141,6 +138,30 @@ export function changeHands(state: GameState, world: World, winner: FactionId, t
     const good = winner === ADMINISTRATION
     recordEvent(state, world.id, { kind: 'world_taken', valence: good ? 'good' : 'bad', severity: 3, person: state.factions[winner]?.name ?? winner })
   }
+}
+
+/**
+ * An unarmed hull taken at a port: she is the holder's now. A packet keeps
+ * her run if both ends of her lane are the holder's — packets need no
+ * officer, a nameless junior takes her — and lies idle otherwise; anything
+ * else waits for the holder to crew her. Her mail is lost either way.
+ */
+export function impound(state: GameState, ship: Ship, holder: FactionId): void {
+  for (const m of ship.mailbag) if (state.mail[m]) state.mail[m].status = { kind: 'lost', week: state.week }
+  ship.mailbag = []
+  if (ship.commander) {
+    const c = state.characters[ship.commander]
+    if (c && ship.location.kind === 'world') c.post = { kind: 'unassigned', at: ship.location.world }
+    ship.commander = null
+  }
+  ship.faction = holder
+  ship.havens = null
+  if (ship.role === 'packet' && ship.order?.kind === 'courier') {
+    if (!ship.order.route.every((w) => state.worlds[w]?.faction === holder)) ship.order = { kind: 'hold' }
+  } else {
+    ship.order = { kind: 'hold' }
+  }
+  ship.standing = { rally: capitalOf(state, holder), onContact: 'never' }
 }
 
 // ---------------------------------------------------------------------------
