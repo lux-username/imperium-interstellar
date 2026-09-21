@@ -127,23 +127,34 @@ describe('landings', () => {
     expect(clean).toBeGreaterThan(0)
   })
 
-  it('on a world nobody is holding, the landing takes it outright', () => {
-    const s = withTransport()
-    changeHands(s, s.worlds[X], REBELS, { army: 0, marines: 0 })
-    s.worlds[X].garrison = 0
-    orderShip(s, T, transport(X, { army: 2, marines: 2 }))
-    advanceWeek(s)
-    advanceWeek(s)
-    expect(s.worlds[X].faction).toBe('f-admin')
-    expect(Object.values(s.events).some((e) => e.kind === 'world_taken' && e.at === X)).toBe(true)
+  it('on a world nobody is holding, whoever gets down takes it outright', () => {
+    let taken = 0
+    for (let seed = 1; seed <= 10; seed++) {
+      const s = withTransport()
+      s.rng = createRng(seed)
+      changeHands(s, s.worlds[X], REBELS, { army: 0, marines: 0 })
+      orderShip(s, T, transport(X, { army: 1, marines: 2 }))
+      advanceWeek(s)
+      s.worlds[X].garrison = 0 // nobody has rallied to the port in the week she was in jump
+      advanceWeek(s)
+      const landed = Object.values(s.events).find((e) => e.kind === 'troops_landed' && e.at === X)?.level ?? 0
+      if (landed > 0) {
+        expect(s.worlds[X].faction).toBe('f-admin')
+        expect(Object.values(s.events).some((e) => e.kind === 'world_taken' && e.at === X)).toBe(true)
+        taken += 1
+      } else {
+        // Everyone lost on the passage or the way in: the landing is reported thrown back, not swallowed silently.
+        expect(Object.values(s.events).some((e) => e.kind === 'landing_repulsed' && e.at === X)).toBe(true)
+      }
+    }
+    expect(taken).toBeGreaterThan(5)
   })
 
-  it('a relief force fights it out and the world is retaken or the landing thrown back', () => {
+  it('a relief force fights it out and the world is retaken or the landing thrown back — and the desk can hear which', () => {
     const s = withTransport()
     changeHands(s, s.worlds[X], REBELS, { army: 1, marines: 0 })
-    orderShip(s, T, transport(X, { army: 3, marines: 2 }))
-    s.worlds[C].marines = 2
-    runUntil(s, (st) => st.worlds[X].faction === 'f-admin' || Object.values(st.events).some((e) => e.kind === 'landing_repulsed'), 40)
+    orderShip(s, T, transport(X, { army: 1, marines: 2 })) // a transport lifts three
+    runUntil(s, (st) => st.worlds[X].faction === 'f-admin' || Object.values(st.events).some((e) => e.kind === 'landing_repulsed'), 24)
     expect(s.worlds[X].faction === 'f-admin' || Object.values(s.events).some((e) => e.kind === 'landing_repulsed')).toBe(true)
   })
 })

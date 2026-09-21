@@ -52,7 +52,7 @@ function revive(state: GameState, ship: Ship, at: WorldId, troops: Troops): Troo
   for (let i = 0; i < troops.army; i++) if (nextFloat(state.rng) >= CRYO_LOSS) army += 1
   for (let i = 0; i < troops.marines; i++) if (nextFloat(state.rng) >= CRYO_LOSS) marines += 1
   const lost = troopStrength(troops) - army - marines
-  if (lost > 0) recordEvent(state, at, { kind: 'troops_lost', valence: 'bad', severity: 1, ship, level: lost })
+  if (lost > 0) recordEvent(state, at, { kind: 'troops_lost', valence: 'neutral', against: ship.faction, severity: 1, ship, level: lost })
   return { army, marines }
 }
 
@@ -66,7 +66,7 @@ export function unloadCargo(state: GameState, ship: Ship, at: WorldId, order: Tr
     else {
       world.garrison += revived.army
       world.marines += revived.marines
-      recordEvent(state, at, { kind: 'troops_landed', valence: 'good', severity: 1, ship, level: troopStrength(revived) })
+      recordEvent(state, at, { kind: 'troops_landed', valence: 'neutral', favours: ship.faction, severity: 1, ship, level: troopStrength(revived) })
     }
   }
   const passenger = order.passenger && ship.passengers.includes(order.passenger) ? state.characters[order.passenger] : null
@@ -83,14 +83,14 @@ export function unloadCargo(state: GameState, ship: Ship, at: WorldId, order: Tr
     passenger.post = { kind: 'commander', ship: prize.id }
     prize.commander = passenger.id
     prize.standing = { rally: capitalOf(state, ship.faction), onContact: 'favourable' }
-    recordEvent(state, at, { kind: 'officer_took_command', valence: 'good', severity: 1, ship: prize, person: passenger.name })
+    recordEvent(state, at, { kind: 'officer_took_command', valence: 'neutral', favours: ship.faction, severity: 1, ship: prize, person: passenger.name })
     return
   }
   if (order.purpose === 'appoint' && world.faction === ship.faction) {
     const incumbent = world.actingGovernor ? state.characters[world.actingGovernor] : null
     const willing = !incumbent || incumbent.traits.loyalty === 'player' || incumbent.id === state.player
     if (!willing && world.marines === 0) {
-      recordEvent(state, at, { kind: 'appointment_refused', valence: 'bad', severity: 2, person: incumbent.name })
+      recordEvent(state, at, { kind: 'appointment_refused', valence: 'neutral', against: ship.faction, severity: 2, person: incumbent.name })
       return
     }
     disembark()
@@ -99,7 +99,7 @@ export function unloadCargo(state: GameState, ship: Ship, at: WorldId, order: Tr
     world.governor = passenger.id
     world.actingGovernor = passenger.id
     world.lastLetter = state.week
-    recordEvent(state, at, { kind: 'appointment_made', valence: 'good', severity: 1, person: passenger.name })
+    recordEvent(state, at, { kind: 'appointment_made', valence: 'neutral', favours: ship.faction, severity: 1, person: passenger.name })
   }
 }
 
@@ -112,8 +112,12 @@ export function unloadCargo(state: GameState, ship: Ship, at: WorldId, order: Tr
 function assault(state: GameState, ship: Ship, at: WorldId, troops: Troops): void {
   const world = state.worlds[at]
   const { landed } = landUnderFire(troops)
-  recordEvent(state, at, { kind: 'troops_landed', valence: hostile(ship.faction, world.faction) ? 'bad' : 'good', severity: 2, ship, level: troopStrength(landed) })
-  if (troopStrength(landed) === 0) return
+  recordEvent(state, at, { kind: 'troops_landed', valence: 'neutral', against: world.faction, favours: ship.faction, severity: 2, ship, level: troopStrength(landed) })
+  if (troopStrength(landed) === 0) {
+    // Shot to pieces on the way in: a landing thrown back before it began.
+    recordEvent(state, at, { kind: 'landing_repulsed', valence: 'neutral', favours: world.faction, against: ship.faction, severity: 2 })
+    return
+  }
   const defenders = world.garrison + world.marines
   if (defenders === 0) {
     changeHands(state, world, ship.faction, landed)

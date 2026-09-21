@@ -148,7 +148,7 @@ export type EventKind =
   | 'appointment_refused'
   | 'officer_took_command'
 
-/** Good or bad for whoever hears it; neutral is routine traffic nobody writes home about. */
+/** Good or bad news. On an event this is the reading for a bystander; a party to it reads it by `against` and `favours`. */
 export type Valence = 'good' | 'bad' | 'neutral'
 
 /**
@@ -161,7 +161,12 @@ export interface Event {
   at: WorldId
   week: Week
   kind: EventKind
+  /** How it reads to someone with no side in it; parties read it through `against` and `favours` (see valenceFor in ./events.ts). */
   valence: Valence
+  /** The side it went against, if any: whoever lost the hull, the world, the fight, the argument. */
+  against: FactionId | null
+  /** The side it favoured, if any. */
+  favours: FactionId | null
   /** 0 (nothing) to 3 (serious). Drives whether a governor mentions it and how far a rumour travels. */
   severity: number
   /** The hull concerned, if any, as it appeared. */

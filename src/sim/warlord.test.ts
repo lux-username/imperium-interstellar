@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { playerTraits } from './characters'
-import { THE_WARLORD, WARLORD } from './factions'
+import { REBELS, THE_WARLORD, WARLORD } from './factions'
 import { HULLS, newShip } from './fleet'
 import { advanceWeek, newGame } from './game'
 import { hexDistance } from './hex'
-import { createRng } from './rng'
+import { learn, snapshotWorld } from './mail'
+import type { Order } from './orders'
 import type { CharacterId, GameState, ShipId, WorldId } from './types'
+import type { Report, WorldSnapshot } from './view'
 import { WARLORD_WORLDS, warlordActs } from './warlord'
 import { line } from './fixtures.test-helper'
 
@@ -64,63 +66,133 @@ describe('the Warlord at the start', () => {
   })
 })
 
-describe('defection', () => {
-  /** The line with Wye as the Warlord's seat and a self-serving, ambitious captain of ours lying at Exe next door. */
-  function tempted(seed: number, initiative = 0): GameState {
+describe('what the Warlord does with what he knows', () => {
+  const C = 'w-c' as WorldId
+  const X = 'w-x' as WorldId
+  const Y = 'w-y' as WorldId
+
+  /** The line with Wye as his seat (garrison 8, two transports, two patrols, a scout) and Exe as whatever the test needs. */
+  function court(): GameState {
     const s = line()
-    s.rng = createRng(seed)
-    const Y = 'w-y' as WorldId
-    const X = 'w-x' as WorldId
+    s.week = 2
     s.worlds[Y].faction = WARLORD
+    s.worlds[Y].garrison = 8
+    s.worlds[Y].profile.starport = 'A'
     s.factions[WARLORD].capital = Y
     s.characters[THE_WARLORD] = { id: THE_WARLORD, name: 'The Warlord', faction: WARLORD, post: { kind: 'governor', world: Y }, traits: playerTraits() }
     s.worlds[Y].governor = THE_WARLORD
     s.worlds[Y].actingGovernor = THE_WARLORD
     s.beliefs[THE_WARLORD] = { worlds: {}, ships: {} }
-    const cid = 'c-cap' as CharacterId
-    s.characters[cid] = { id: cid, name: 'Grasping', faction: 'f-admin' as never, post: { kind: 'commander', ship: 's-cap' as ShipId }, traits: { ...playerTraits(), loyalty: 'self', ambition: 3, initiative } }
-    s.ships['s-cap' as ShipId] = newShip('s-cap' as ShipId, 'Fickle', HULLS.patrol, 'f-admin' as never, X, s.characters[cid])
-    s.week = 2
+    let n = 0
+    for (const role of ['transport', 'transport', 'patrol', 'patrol', 'scout'] as const) {
+      n += 1
+      const id = `s-wl-${n}` as ShipId
+      const cid = `c-wl-${n}` as CharacterId
+      s.characters[cid] = { id: cid, name: `Officer ${n}`, faction: WARLORD, post: { kind: 'commander', ship: id }, traits: playerTraits() }
+      s.ships[id] = newShip(id, `Hull ${n}`, HULLS[role], WARLORD, Y, s.characters[cid])
+      s.ships[id].standing = { rally: Y, onContact: 'favourable' }
+    }
     return s
   }
 
-  it('a self-serving, ambitious captain within reach of his border sometimes goes over, ship and all', () => {
-    let defected = 0
-    for (let seed = 1; seed <= 30; seed++) {
-      const s = tempted(seed)
-      warlordActs(s)
-      if (s.ships['s-cap' as ShipId].faction === WARLORD) {
-        defected += 1
-        expect(s.characters['c-cap' as CharacterId].faction).toBe(WARLORD)
-        expect(Object.values(s.events).some((e) => e.kind === 'defection' && e.ship?.id === 's-cap')).toBe(true)
-      }
-    }
-    expect(defected).toBeGreaterThanOrEqual(2) // 2d6 ≥ 10 a month for the most ambitious: about one in six
-    expect(defected).toBeLessThan(20)
+  /** Put a report about `world` into his head, as his people would have written it, with whatever the test says. */
+  function heTinks(s: GameState, world: WorldId, observed: number, tweak: (w: WorldSnapshot) => void): void {
+    const snap = snapshotWorld(s, s.worlds[world])
+    if (snap.kind !== 'world') throw new Error('world')
+    tweak(snap.world)
+    const report: Report = { id: `r-wl-${world}-${observed}` as never, channel: 'official', observer: THE_WARLORD, observerName: 'x', observedAt: world, observed, snapshot: snap, events: [], envelope: { origin: world, destination: { kind: 'world', world: Y }, sent: observed, route: [world, Y], eta: observed }, delivered: observed }
+    learn(s, THE_WARLORD, report)
+  }
+
+  const ordersOf = (s: GameState) => Object.values(s.ships).filter((x) => x.faction === WARLORD && x.order && x.order.kind !== 'hold').map((x) => ({ id: x.id, role: x.role, order: x.order as Order }))
+
+  it('reinforces a world of his that his governor says is in revolt, before anything else', () => {
+    const s = court()
+    s.worlds[X].faction = WARLORD
+    heTinks(s, X, 1, (w) => {
+      w.faction = WARLORD
+      w.garrison = 1
+      w.contest = { attacker: REBELS, strength: 2 }
+    })
+    warlordActs(s)
+    const lifts = ordersOf(s).filter((o) => o.order.kind === 'transport' && o.order.to === X)
+    expect(lifts.length).toBeGreaterThan(0)
+    const army = lifts.reduce((n, o) => n + (o.order.kind === 'transport' ? o.order.army : 0), 0)
+    expect(army).toBe(3) // strength 2 against, held by 1: he wants it back to 4
   })
 
-  it('a cautious one sends a letter of resignation to the desk first', () => {
-    for (let seed = 1; seed <= 40; seed++) {
-      const s = tempted(seed, -1)
-      warlordActs(s)
-      if (s.ships['s-cap' as ShipId].faction !== WARLORD) continue
-      const letter = Object.values(s.mail).find((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-cap')
-      expect(letter).toBeDefined()
-      if (letter?.contents.kind === 'report') {
-        expect(letter.contents.report.envelope.destination).toEqual({ kind: 'world', world: s.capital })
-        expect(letter.contents.report.events[0]?.kind).toBe('defection')
-      }
-      return
+  it('will not land where he has seen warships his escorts cannot beat under the port’s guns', () => {
+    const s = court()
+    heTinks(s, X, 1, (w) => {
+      w.garrison = 0
+    })
+    // A patrol craft of ours seen docked at Exe (a B port): 3 + 2 guns, against his two patrols' 6 — he goes. Two of ours: 6 + 2 — he does not.
+    const seen = (n: number) => {
+      const belief = s.beliefs[THE_WARLORD]
+      belief.ships = {}
+      for (let i = 0; i < n; i++) belief.ships[`s-ours-${i}` as ShipId] = { ship: { id: `s-ours-${i}` as ShipId, name: 'V', role: 'patrol', faction: 'f-admin' as never, at: X, commander: null, damaged: false }, observed: 1, report: 'r' as never }
     }
-    throw new Error('no defection in 40 seeds')
+    seen(2)
+    warlordActs(s)
+    expect(ordersOf(s).filter((o) => o.order.kind === 'transport')).toEqual([])
+    const s2 = court()
+    heTinks(s2, X, 1, (w) => {
+      w.garrison = 0
+    })
+    s2.beliefs[THE_WARLORD].ships['s-ours-0' as ShipId] = { ship: { id: 's-ours-0' as ShipId, name: 'V', role: 'patrol', faction: 'f-admin' as never, at: X, commander: null, damaged: false }, observed: 1, report: 'r' as never }
+    warlordActs(s2)
+    const landing = ordersOf(s2).filter((o) => o.order.kind === 'transport' && o.order.to === X)
+    expect(landing.length).toBeGreaterThan(0)
+    // And he sends every patrol he has as escort when he knows warships are there.
+    expect(ordersOf(s2).filter((o) => o.role === 'patrol' && o.order.kind === 'move' && o.order.to === X).length).toBe(2)
   })
 
-  it('a loyal captain is never tempted', () => {
-    for (let seed = 1; seed <= 20; seed++) {
-      const s = tempted(seed)
-      s.characters['c-cap' as CharacterId].traits.loyalty = 'empire'
+  it('sends patrols after a courier of ours he has heard lies at a weak port', () => {
+    const s = court()
+    s.worlds[X].profile.starport = 'C'
+    heTinks(s, X, 1, (w) => {
+      w.profile.starport = 'C'
+      w.garrison = 5 // not worth a landing
+    })
+    s.beliefs[THE_WARLORD].ships['s-swift' as ShipId] = { ship: { id: 's-swift' as ShipId, name: 'Swift', role: 'courier', faction: 'f-admin' as never, at: X, commander: null, damaged: false }, observed: 1, report: 'r' as never }
+    warlordActs(s)
+    const hunters = ordersOf(s).filter((o) => o.role === 'patrol' && o.order.kind === 'patrol' && o.order.world === X)
+    expect(hunters.length).toBe(1) // one patrol craft is favourable against a courier under one gun
+  })
+
+  it('sends a scout to a world of his whose governor has gone quiet, ahead of the enemy worlds', () => {
+    const s = court()
+    s.worlds[X].faction = WARLORD
+    heTinks(s, X, -12, (w) => {
+      w.faction = WARLORD
+    }) // fourteen weeks of silence
+    heTinks(s, C, 1, () => {}) // the enemy capital is fresh in his mind
+    warlordActs(s)
+    const scout = ordersOf(s).find((o) => o.role === 'scout')
+    expect(scout?.order.kind === 'scout' && scout.order.world).toBe(X)
+  })
+
+  it('takes an independent world when nothing of the desk’s is within his means', () => {
+    const s = court()
+    s.worlds[X].faction = REBELS
+    heTinks(s, X, 1, (w) => {
+      w.faction = REBELS
+      w.garrison = 1
+    })
+    warlordActs(s)
+    const landing = ordersOf(s).filter((o) => o.order.kind === 'transport' && o.order.to === X)
+    expect(landing.length).toBeGreaterThan(0)
+  })
+
+  it('never tempts anyone: treason waits for money', () => {
+    const s = court()
+    const cid = 'c-cap' as CharacterId
+    s.characters[cid] = { id: cid, name: 'Grasping', faction: 'f-admin' as never, post: { kind: 'commander', ship: 's-cap' as ShipId }, traits: { ...playerTraits(), loyalty: 'self', ambition: 3 } }
+    s.ships['s-cap' as ShipId] = newShip('s-cap' as ShipId, 'Fickle', HULLS.patrol, 'f-admin' as never, X, s.characters[cid])
+    for (let i = 0; i < 12; i++) {
+      s.week = 2 + i * 4
       warlordActs(s)
-      expect(s.ships['s-cap' as ShipId].faction).toBe('f-admin')
     }
+    expect(s.ships['s-cap' as ShipId].faction).toBe('f-admin')
   })
 })

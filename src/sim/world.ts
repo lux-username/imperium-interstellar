@@ -12,7 +12,7 @@
 import { hexLabel } from './hex'
 import { newCharacter } from './characters'
 import { recordEvent } from './events'
-import { ADMINISTRATION, REBELS, WARLORD, capitalOf, hostile } from './factions'
+import { ADMINISTRATION, REBELS, WARLORD, capitalOf } from './factions'
 import { groundRound, troopStrength } from './ground'
 import { shipsAt } from './mail'
 import { check, nextInt } from './rng'
@@ -34,7 +34,7 @@ function risingStrength(state: GameState, world: World): number {
 export function beginRevolt(state: GameState, world: World): void {
   if (world.contest || world.profile.population === 0) return
   const rebels: Troops = { army: risingStrength(state, world), marines: 0 }
-  recordEvent(state, world.id, { kind: 'revolt_began', valence: 'bad', severity: 3, level: rebels.army })
+  recordEvent(state, world.id, { kind: 'revolt_began', valence: 'neutral', against: world.faction, favours: REBELS, severity: 3, level: rebels.army })
   if (troopStrength(garrisonOf(world)) === 0) {
     changeHands(state, world, REBELS, rebels)
     return
@@ -66,10 +66,10 @@ export function fightContests(state: GameState): void {
     } else if (troopStrength(result.attackers) === 0) {
       world.contest = null
       if (contest.attacker === REBELS) {
-        recordEvent(state, world.id, { kind: 'revolt_crushed', valence: 'good', severity: 2 })
+        recordEvent(state, world.id, { kind: 'revolt_crushed', valence: 'neutral', favours: world.faction, against: REBELS, severity: 2 })
         world.unrest = Math.max(0, world.unrest - 4)
       } else {
-        recordEvent(state, world.id, { kind: 'landing_repulsed', valence: hostile(contest.attacker, ADMINISTRATION) ? 'good' : 'bad', severity: 2 })
+        recordEvent(state, world.id, { kind: 'landing_repulsed', valence: 'neutral', favours: world.faction, against: contest.attacker, severity: 2 })
       }
     }
   }
@@ -108,10 +108,10 @@ export function changeHands(state: GameState, world: World, winner: FactionId, t
     if (refuge) {
       state.characters[governor].post = { kind: 'passenger', ship: refuge.id }
       refuge.passengers.push(governor)
-      recordEvent(state, world.id, { kind: 'governor_fled', valence: 'bad', severity: 2, person: name, ship: refuge })
+      recordEvent(state, world.id, { kind: 'governor_fled', valence: 'neutral', against: loser, severity: 2, person: name, ship: refuge })
     } else {
       delete state.characters[governor]
-      recordEvent(state, world.id, { kind: 'governor_killed', valence: 'bad', severity: 3, person: name })
+      recordEvent(state, world.id, { kind: 'governor_killed', valence: 'neutral', against: loser, severity: 3, person: name })
     }
   }
 
@@ -132,11 +132,10 @@ export function changeHands(state: GameState, world: World, winner: FactionId, t
 
   if (winner === REBELS) {
     world.unrest = 2
-    recordEvent(state, world.id, { kind: 'world_fell', valence: 'bad', severity: 3, person: state.characters[id].name })
+    recordEvent(state, world.id, { kind: 'world_fell', valence: 'neutral', against: loser, favours: REBELS, severity: 3, person: state.characters[id].name })
   } else {
     world.unrest = Math.min(world.unrest, 5)
-    const good = winner === ADMINISTRATION
-    recordEvent(state, world.id, { kind: 'world_taken', valence: good ? 'good' : 'bad', severity: 3, person: state.factions[winner]?.name ?? winner })
+    recordEvent(state, world.id, { kind: 'world_taken', valence: 'neutral', against: loser, favours: winner, severity: 3, person: state.factions[winner]?.name ?? winner })
   }
 }
 

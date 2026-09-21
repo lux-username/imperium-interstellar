@@ -11,7 +11,7 @@
  * Bad news travels best.
  */
 import { neighbours } from './chart'
-import { EVENT_MEMORY } from './events'
+import { EVENT_MEMORY, valenceFor } from './events'
 import { learn } from './mail'
 import { personName } from './names'
 import { raided } from './pirates'
@@ -51,11 +51,12 @@ function degrade(state: GameState, event: Event): Event {
 
 /** This week's events at ports may become rumours. Bad news does so more readily than good; routine traffic never. */
 export function spawnRumours(state: GameState): void {
+  // The docks tell it as the port's own side would hear it.
   const events = Object.values(state.events)
-    .filter((e) => e.week === state.week && e.valence !== 'neutral' && e.severity >= 1 && e.at !== state.capital && hasPort(state, e.at))
+    .filter((e) => e.week === state.week && valenceFor(e, state.worlds[e.at].faction) !== 'neutral' && e.severity >= 1 && e.at !== state.capital && hasPort(state, e.at))
     .sort((a, b) => (a.id < b.id ? -1 : 1))
   for (const e of events) {
-    if (!check(state.rng, e.valence === 'bad' ? 7 : 9)) continue
+    if (!check(state.rng, valenceFor(e, state.worlds[e.at].faction) === 'bad' ? 7 : 9)) continue
     state.rumours.push({ event: degrade(state, e), origin: e.at, born: state.week, heard: { [e.at]: 0 } })
   }
 }

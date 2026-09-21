@@ -10,7 +10,7 @@
  * Council is selective in exactly this way (Phase 1c).
  */
 import { isBold, isCautious } from './characters'
-import { eventsAt } from './events'
+import { eventsAt, valenceFor } from './events'
 import { snapshotWorld, writeReport } from './mail'
 import { check, type Rng } from './rng'
 import type { Character, GameState, Mail, World, WorldId } from './types'
@@ -39,8 +39,9 @@ function asksForHelp(event: Event): boolean {
  * can handle it, a cautious one writes early and asks for troops.
  */
 export function discloses(rng: Rng, governor: Character, event: Event): boolean {
-  if (event.valence === 'good') return true
-  if (event.valence === 'neutral') return event.kind === 'governor_changed'
+  const valence = valenceFor(event, governor.faction)
+  if (valence === 'good') return true
+  if (valence === 'neutral') return event.kind === 'governor_changed'
   let dm = event.severity
   if (governor.traits.loyalty === 'self' && implicates(event)) dm -= 3
   if (asksForHelp(event)) {

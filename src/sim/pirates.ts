@@ -178,7 +178,7 @@ export function seizePirates(state: GameState): void {
     const staying = !order || order.kind === 'hold' || (order.kind === 'move' && order.to === at)
     if (!staying) continue
     if (!world.actingGovernor || world.faction === PIRATES) continue
-    recordEvent(state, at, { kind: 'pirate_seized', valence: 'good', severity: 2, ship })
+    recordEvent(state, at, { kind: 'pirate_seized', valence: 'neutral', against: PIRATES, favours: world.faction, severity: 2, ship })
     if (ship.commander) delete state.characters[ship.commander]
     ship.commander = null
     ship.faction = world.faction

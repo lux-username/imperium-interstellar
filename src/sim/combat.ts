@@ -22,7 +22,7 @@
 import { neighbours } from './chart'
 import { isBold, isCautious } from './characters'
 import { recordEvent } from './events'
-import { ADMINISTRATION, PIRATES, capitalOf, hostile } from './factions'
+import { PIRATES, capitalOf, hostile } from './factions'
 import { hexDistance } from './hex'
 import { shipsAt } from './mail'
 import { pirateFromPrize } from './pirates'
@@ -30,7 +30,6 @@ import { check, nextInt, roll } from './rng'
 import { impound } from './world'
 import type { FactionId, GameState, Ship, ShipId, WorldId } from './types'
 import type { Posture } from './orders'
-import type { Valence } from './view'
 
 /** What a hull can still bring to a fight. */
 export function effectiveStrength(ship: Ship): number {
@@ -57,11 +56,6 @@ function sideStrength(state: GameState, ships: Ship[], scene: Scene): number {
   const hulls = hullStrength(ships)
   const underGuns = ships.some((s) => docked(state, s, scene.at, scene.arriving))
   return hulls + (underGuns ? portGuns(state.worlds[scene.at]?.profile.starport ?? 'X') : 0)
-}
-
-/** How news of a loss reads at the desk: bad if the hull was ours, good if she was theirs. */
-export function lossValence(faction: FactionId): Valence {
-  return hostile(faction, ADMINISTRATION) ? 'good' : 'bad'
 }
 
 const POSTURES: Posture[] = ['never', 'overwhelming', 'favourable', 'even', 'always']
@@ -145,7 +139,7 @@ function breakOff(state: GameState, ship: Ship, at: WorldId): boolean {
   if (!check(state.rng, target, commander?.traits.competence.naval ?? 0)) return false
   const to = refuge(state, ship, at)
   if (!to) return false
-  recordEvent(state, at, { kind: 'ship_fled', valence: 'neutral', severity: 1, ship })
+  recordEvent(state, at, { kind: 'ship_fled', valence: 'neutral', against: ship.faction, severity: 1, ship })
   ship.location = { kind: 'transit', from: at, to, arrives: state.week + 1 }
   return true
 }
@@ -178,7 +172,7 @@ function loseMail(state: GameState, ship: Ship): void {
 function overtaken(state: GameState, ship: Ship, at: WorldId, by: Ship[]): void {
   if (by[0].faction === PIRATES) {
     loseMail(state, ship)
-    recordEvent(state, at, { kind: 'ship_robbed', valence: lossValence(ship.faction), severity: 2, ship })
+    recordEvent(state, at, { kind: 'ship_robbed', valence: 'neutral', against: ship.faction, favours: PIRATES, severity: 2, ship })
     return
   }
   capture(state, ship, at, by)
@@ -195,7 +189,7 @@ function overtaken(state: GameState, ship: Ship, at: WorldId, by: Ship[]): void 
 export function capture(state: GameState, ship: Ship, at: WorldId, by: Ship[]): void {
   const captor = by[0].faction
   loseMail(state, ship)
-  recordEvent(state, at, { kind: 'ship_captured', valence: lossValence(ship.faction), severity: 3, ship })
+  recordEvent(state, at, { kind: 'ship_captured', valence: 'neutral', against: ship.faction, favours: captor, severity: 3, ship })
   if (ship.commander) delete state.characters[ship.commander]
   for (const p of ship.passengers) delete state.characters[p]
   ship.passengers = []
@@ -216,9 +210,9 @@ export function capture(state: GameState, ship: Ship, at: WorldId, by: Ship[]): 
   ship.standing = { rally: home, onContact: 'never' }
 }
 
-function destroy(state: GameState, ship: Ship, at: WorldId): void {
+function destroy(state: GameState, ship: Ship, at: WorldId, by: FactionId): void {
   loseMail(state, ship)
-  recordEvent(state, at, { kind: 'ship_destroyed', valence: lossValence(ship.faction), severity: 3, ship })
+  recordEvent(state, at, { kind: 'ship_destroyed', valence: 'neutral', against: ship.faction, favours: by, severity: 3, ship })
   if (ship.commander) delete state.characters[ship.commander]
   for (const p of ship.passengers) delete state.characters[p]
   delete state.ships[ship.id]
@@ -266,7 +260,7 @@ function battle(state: GameState, scene: Scene, a: Ship[], b: Ship[]): void {
 function hit(state: GameState, at: WorldId, ship: Ship, by: Ship[]): void {
   ship.damage += 1
   if (effectiveStrength(ship) > 0) {
-    recordEvent(state, at, { kind: 'ship_damaged', valence: lossValence(ship.faction), severity: 1, ship })
+    recordEvent(state, at, { kind: 'ship_damaged', valence: 'neutral', against: ship.faction, favours: by[0].faction, severity: 1, ship })
     return
   }
   if (ship.strength === 0 && by[0].faction === PIRATES) {
@@ -274,7 +268,7 @@ function hit(state: GameState, at: WorldId, ship: Ship, by: Ship[]): void {
     overtaken(state, ship, at, by)
     return
   }
-  if (roll(state.rng) >= 9 || hullStrength(by) === 0) destroy(state, ship, at)
+  if (roll(state.rng) >= 9 || hullStrength(by) === 0) destroy(state, ship, at, by[0].faction)
   else capture(state, ship, at, by)
 }
 

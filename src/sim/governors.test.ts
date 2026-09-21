@@ -22,7 +22,7 @@ function person(traits: Partial<Traits>): Character {
 }
 
 function event(kind: Event['kind'], valence: Event['valence'], severity: number, level: number | null = null): Event {
-  return { id: 'e-t' as EventId, at: X, week: 1, kind, valence, severity, ship: null, person: null, level }
+  return { id: 'e-t' as EventId, at: X, week: 1, kind, valence, against: null, favours: null, severity, ship: null, person: null, level }
 }
 
 /** How often a governor discloses an event, over many rolls. */
@@ -91,7 +91,7 @@ describe('what a governor chooses to say', () => {
     advanceWeek(s) // week 1
     advanceWeek(s) // week 2
     s.week = 3
-    recordEvent(s, X, { kind: 'unrest_fell', valence: 'good', severity: 1, level: 1 })
+    recordEvent(s, X, { kind: 'unrest_fell', valence: 'good', against: null, favours: null, severity: 1, level: 1 })
     s.week = 2
     advanceWeek(s) // week 3: the event is this week's
     const letter = Object.values(s.mail).find((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-x')!

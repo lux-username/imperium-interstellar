@@ -9,7 +9,6 @@
  */
 import { hexRoute, laneBetween, nextDeparture, route } from './chart'
 import { eventsAt, hullArrivedEvent, hullDepartedEvent, recordEvent } from './events'
-import { lossValence } from './combat'
 import { capitalOf, hostile } from './factions'
 import { loadMail, snapshotWorld, unloadMail, writeReport } from './mail'
 import { watchReport } from './scouts'
@@ -142,7 +141,7 @@ export function impoundAtPorts(state: GameState, landed: readonly ShipId[]): voi
     if (ship.role !== 'packet' && ship.role !== 'courier') continue
     const world = state.worlds[ship.location.world]
     if (!hostile(world.faction, ship.faction) || !world.actingGovernor) continue
-    recordEvent(state, world.id, { kind: 'ship_captured', valence: lossValence(ship.faction), severity: 2, ship })
+    recordEvent(state, world.id, { kind: 'ship_captured', valence: 'neutral', against: ship.faction, favours: world.faction, severity: 2, ship })
     impound(state, ship, world.faction)
   }
 }
