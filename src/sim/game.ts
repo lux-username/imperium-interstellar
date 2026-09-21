@@ -134,7 +134,7 @@ export function driftWorld(state: GameState, world: World, record = true): void 
 
 function replaceGovernor(state: GameState, world: World, record: boolean): void {
   const old = world.governor
-  if (old && state.characters[old]) state.characters[old].post = { kind: 'unassigned' }
+  if (old && state.characters[old]) state.characters[old].post = { kind: 'unassigned', at: world.id }
   const id = `c-gov-${hexLabel(world.hex)}-${state.nextId}` as CharacterId
   state.nextId += 1
   state.characters[id] = newCharacter(state.rng, id, world.faction, { kind: 'governor', world: world.id })

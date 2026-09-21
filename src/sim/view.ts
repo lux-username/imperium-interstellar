@@ -9,13 +9,14 @@
  * real thing.
  */
 import type { Hex } from './hex'
-import type { Order, Posture } from './orders'
+import type { Order, Posture, Purpose } from './orders'
 import type {
   Address,
   CharacterId,
   DispatchId,
   EventId,
   FactionId,
+  FactionKind,
   Lane,
   LaneId,
   Post,
@@ -47,6 +48,7 @@ export type {
   Order,
   Post,
   Posture,
+  Purpose,
   ReportId,
   ShipId,
   ShipRole,
@@ -68,6 +70,8 @@ export interface ShipSnapshot {
   /** The world it was seen at. A ship in jump is seen by nobody. */
   at: WorldId
   commander: CharacterId | null
+  /** Whether she looked knocked about. */
+  damaged: boolean
 }
 
 export interface WorldSnapshot {
@@ -81,14 +85,53 @@ export interface WorldSnapshot {
   governorName: string | null
   unrest: number
   garrison: number
+  marines: number
+  /** A fight on the ground, if one was under way: who was attacking and with how much. */
+  contest: { attacker: FactionId; strength: number } | null
   /** Hulls in port when the observation was made. One report carries the world and its traffic together. */
   ships: ShipSnapshot[]
 }
 
+/** How a world stands, as far as a snapshot can say. Loyal means held by the administration and quiet. */
+export type WorldState = 'loyal' | 'unrest' | 'revolt' | 'contested' | 'independent' | 'warlord'
+
 // ---------------------------------------------------------------------------
 // Events: something that happened, as it may be told.
 
-export type EventKind = 'unrest_rose' | 'unrest_fell' | 'governor_changed' | 'hull_arrived' | 'hull_departed' | 'dispatch_received'
+export type EventKind =
+  | 'unrest_rose'
+  | 'unrest_fell'
+  | 'governor_changed'
+  | 'hull_arrived'
+  | 'hull_departed'
+  | 'dispatch_received'
+  /** The world rose; the garrison is fighting it. */
+  | 'revolt_began'
+  | 'revolt_crushed'
+  /** The garrison is gone and the world has declared itself independent. `person` is the governor's fate. */
+  | 'world_fell'
+  | 'governor_fled'
+  | 'governor_killed'
+  /** Troops came down. `level` is how many detachments landed; `ship` the transport. */
+  | 'troops_landed'
+  /** A landing was thrown back or a garrison overcome. `ship` null; `person` the new holder's name. */
+  | 'world_taken'
+  | 'landing_repulsed'
+  /** Hulls fought here. `ship` is the enemy's lead hull. */
+  | 'battle'
+  | 'ship_fled'
+  | 'ship_damaged'
+  | 'ship_destroyed'
+  | 'ship_captured'
+  /** A packet or courier was stopped and her bag taken. The mail is gone. */
+  | 'ship_robbed'
+  /** A pirate put in where she was not welcome and the port seized her. */
+  | 'pirate_seized'
+  /** A ship's officers took her over to the Warlord. */
+  | 'defection'
+  | 'appointment_made'
+  | 'appointment_refused'
+  | 'officer_took_command'
 
 /** Good or bad for whoever hears it; neutral is routine traffic nobody writes home about. */
 export type Valence = 'good' | 'bad' | 'neutral'
@@ -227,7 +270,22 @@ export interface RosterEntry {
   name: string
   role: ShipRole
   jump: number
+  /** Null for a prize: taken in action and waiting for an officer to be sent out to her. */
   commanderName: string | null
+}
+
+/** Someone at the capital the desk can send somewhere: an officer without a post, or an agent. */
+export interface PoolEntry {
+  id: CharacterId
+  name: string
+  agent: boolean
+}
+
+/** A faction as the chart names it. Public: everyone knows who the Warlord is. */
+export interface FactionEntry {
+  id: FactionId
+  name: string
+  kind: FactionKind
 }
 
 /**
@@ -241,9 +299,16 @@ export interface PlayerView {
   lanes: Lane[]
   /** Every world's name and position. What is *happening* there is only in `known`. */
   chart: Record<WorldId, ChartEntry>
+  factions: Record<FactionId, FactionEntry>
+  /** The player's own faction, so the UI can tell a friendly snapshot from a hostile one. */
+  faction: FactionId
   known: Belief
   /** The hulls the desk commands, as listed on its books. Their whereabouts are in `known.ships`. */
   roster: RosterEntry[]
+  /** Officers and agents at the capital with nothing to do, seen directly from the desk. */
+  pool: PoolEntry[]
+  /** Troops at the capital, seen directly from the desk. */
+  reserve: { army: number; marines: number }
   /** Every official and agent report that has reached the desk, newest arrival first. This week's news is whatever has `delivered === week`. */
   inbox: Report[]
   /** What the docks are saying: merchant and docks-channel reports, kept apart from the mail so the two piles are never confused. */

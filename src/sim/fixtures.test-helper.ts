@@ -6,6 +6,7 @@ import { advanceWeek } from './game'
 import { departShips } from './ships'
 import { playerTraits } from './characters'
 import { createRng } from './rng'
+import { startingFactions } from './factions'
 import type { CharacterId, FactionId, GameState, LaneId, ShipId, WorldId } from './types'
 
 /**
@@ -23,7 +24,7 @@ export function line(): GameState {
   const govY = 'c-y' as CharacterId
   const profile = { starport: 'B' as const, size: 5, atmosphere: 6, hydrographics: 5, population: 5, government: 5, law: 5, tech: 9 }
   const world = (id: WorldId, name: string, col: number, gov: CharacterId) => ({
-    id, name, hex: { col, row: 5 }, profile: { ...profile }, faction: admin, governor: gov, actingGovernor: gov, unrest: 0, garrison: 5, lastLetter: 0,
+    id, name, hex: { col, row: 5 }, profile: { ...profile }, faction: admin, governor: gov, actingGovernor: gov, unrest: 0, garrison: 5, marines: 0, contest: null, lastLetter: 0, traffic: [],
   })
   const cx = 'l-c-x' as LaneId
   const xy = 'l-x-y' as LaneId
@@ -42,15 +43,15 @@ export function line(): GameState {
       [xy]: { id: xy, ends: [X, Y], jumpDistance: 1, schedule: { interval: 4, phase: 1 } },
     },
     ships: {
-      [pcx]: { id: pcx, name: 'P1', role: 'packet', faction: admin, jump: 1, strength: 0, location: { kind: 'world', world: C }, commander: null, order: { kind: 'courier', route: [C, X], then: null, repeat: true, leg: 1 }, standing: { rally: null, onContact: 'favourable' }, mailbag: [] },
-      [pxy]: { id: pxy, name: 'P2', role: 'packet', faction: admin, jump: 1, strength: 0, location: { kind: 'world', world: X }, commander: null, order: { kind: 'courier', route: [X, Y], then: null, repeat: true, leg: 1 }, standing: { rally: null, onContact: 'favourable' }, mailbag: [] },
+      [pcx]: { id: pcx, name: 'P1', role: 'packet', faction: admin, jump: 1, strength: 0, damage: 0, location: { kind: 'world', world: C }, commander: null, troops: { army: 0, marines: 0 }, passengers: [], havens: null, order: { kind: 'courier', route: [C, X], then: null, repeat: true, leg: 1 }, standing: { rally: null, onContact: 'never' }, mailbag: [] },
+      [pxy]: { id: pxy, name: 'P2', role: 'packet', faction: admin, jump: 1, strength: 0, damage: 0, location: { kind: 'world', world: X }, commander: null, troops: { army: 0, marines: 0 }, passengers: [], havens: null, order: { kind: 'courier', route: [X, Y], then: null, repeat: true, leg: 1 }, standing: { rally: null, onContact: 'never' }, mailbag: [] },
     },
     characters: {
-      [player]: { id: player, name: 'Gov', faction: admin, post: { kind: 'governor', world: C }, traits: playerTraits() },
-      [govX]: { id: govX, name: 'Ex', faction: admin, post: { kind: 'governor', world: X }, traits: playerTraits() },
-      [govY]: { id: govY, name: 'Wy', faction: admin, post: { kind: 'governor', world: Y }, traits: playerTraits() },
+      [player]: { id: player, name: 'Gov', faction: admin, post: { kind: 'governor', world: C }, traits: playerTraits(), agent: false },
+      [govX]: { id: govX, name: 'Ex', faction: admin, post: { kind: 'governor', world: X }, traits: playerTraits(), agent: false },
+      [govY]: { id: govY, name: 'Wy', faction: admin, post: { kind: 'governor', world: Y }, traits: playerTraits(), agent: false },
     },
-    factions: { [admin]: { id: admin, name: 'Admin', kind: 'administration' } },
+    factions: startingFactions(C),
     mail: {},
     events: {},
     rumours: [],

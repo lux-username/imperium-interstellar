@@ -9,7 +9,7 @@ import { word } from './names'
 import { nextInt, type Rng } from './rng'
 import type { Character, CharacterId, FactionId, Ship, ShipId, ShipRole, WorldId } from './types'
 
-interface HullClass {
+export interface HullClass {
   role: ShipRole
   jump: number
   strength: number
@@ -22,6 +22,12 @@ export const HULLS: Record<Exclude<ShipRole, 'packet' | 'merchant'>, HullClass> 
   transport: { role: 'transport', jump: 2, strength: 1 },
   courier: { role: 'courier', jump: 2, strength: 0 },
   scout: { role: 'scout', jump: 2, strength: 0 },
+  raider: { role: 'raider', jump: 2, strength: 2 },
+}
+
+/** How many detachments a hull can carry. Only transports carry troops in numbers; anything else takes a passenger or two. */
+export function troopCapacity(role: ShipRole): number {
+  return role === 'transport' ? 3 : 0
 }
 
 /** Hulls in port at the capital on week 0. */
@@ -35,7 +41,7 @@ export const STARTING_FLEET: { role: keyof typeof HULLS; count: number }[] = [
 
 const PREFIXES = ['Vigilant', 'Steadfast', 'Resolute', 'Wayfarer', 'Sentinel', 'Harbinger', 'Lantern', 'Kestrel']
 
-function shipName(rng: Rng, taken: Set<string>): string {
+export function shipName(rng: Rng, taken: Set<string>): string {
   for (;;) {
     const name = nextInt(rng, 1, 3) === 1 ? PREFIXES[nextInt(rng, 0, PREFIXES.length - 1)] : word(rng)
     if (!taken.has(name)) {
@@ -46,7 +52,7 @@ function shipName(rng: Rng, taken: Set<string>): string {
 }
 
 /** One hull of a class, with a freshly rolled commander, in port at `at`. */
-export function newShip(id: ShipId, name: string, cls: HullClass, faction: FactionId, at: WorldId, commander: Character): Ship {
+export function newShip(id: ShipId, name: string, cls: HullClass, faction: FactionId, at: WorldId, commander: Character | null): Ship {
   return {
     id,
     name,
@@ -54,8 +60,12 @@ export function newShip(id: ShipId, name: string, cls: HullClass, faction: Facti
     faction,
     jump: cls.jump,
     strength: cls.strength,
+    damage: 0,
     location: { kind: 'world', world: at },
-    commander: commander.id,
+    commander: commander?.id ?? null,
+    troops: { army: 0, marines: 0 },
+    passengers: [],
+    havens: null,
     order: null,
     standing: { rally: at, onContact: 'favourable' },
     mailbag: [],

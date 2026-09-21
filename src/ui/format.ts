@@ -43,6 +43,44 @@ export function eventLabel(e: Event): string {
       return `${e.ship?.name ?? 'a hull'} sailed`
     case 'dispatch_received':
       return 'your letter received'
+    case 'revolt_began':
+      return 'the world has risen'
+    case 'revolt_crushed':
+      return 'the rising put down'
+    case 'world_fell':
+      return 'the world is lost'
+    case 'governor_fled':
+      return `Governor ${e.person ?? ''} fled`.replace('  ', ' ')
+    case 'governor_killed':
+      return `Governor ${e.person ?? ''} killed`.replace('  ', ' ')
+    case 'troops_landed':
+      return `${e.level ?? 0} detachment${e.level === 1 ? '' : 's'} landed`
+    case 'world_taken':
+      return `the world taken by ${e.person ?? 'force'}`
+    case 'landing_repulsed':
+      return 'a landing thrown back'
+    case 'battle':
+      return `action against ${e.ship?.name ?? 'hostile hulls'}`
+    case 'ship_fled':
+      return `${e.ship?.name ?? 'a hull'} broke off`
+    case 'ship_damaged':
+      return `${e.ship?.name ?? 'a hull'} damaged`
+    case 'ship_destroyed':
+      return `${e.ship?.name ?? 'a hull'} destroyed`
+    case 'ship_captured':
+      return `${e.ship?.name ?? 'a hull'} taken`
+    case 'ship_robbed':
+      return `${e.ship?.name ?? 'a hull'} stopped and robbed`
+    case 'pirate_seized':
+      return `pirate ${e.ship?.name ?? ''} seized in port`.replace('  ', ' ')
+    case 'defection':
+      return `${e.ship?.name ?? 'a hull'} gone over to the Warlord`
+    case 'appointment_made':
+      return `${e.person ?? 'a new governor'} installed`
+    case 'appointment_refused':
+      return `${e.person ?? 'the incumbent'} refuses to go`
+    case 'officer_took_command':
+      return `${e.person ?? 'an officer'} took command of ${e.ship?.name ?? 'a prize'}`
   }
 }
 
@@ -61,6 +99,44 @@ export function eventText(e: Event): string {
       return `${e.ship?.name ?? 'A hull'} sailed.`
     case 'dispatch_received':
       return 'Your dispatch was received.'
+    case 'revolt_began':
+      return 'The world has risen against us. The garrison holds the port and the palace and is fighting for both; send troops.'
+    case 'revolt_crushed':
+      return 'The rising has been put down. The garrison holds.'
+    case 'world_fell':
+      return 'The garrison is gone. The world has declared itself independent; the port is closed to us.'
+    case 'governor_fled':
+      return `Governor ${e.person ?? ''} got off to a ship in orbit as the palace fell.`.replace('  ', ' ')
+    case 'governor_killed':
+      return `Governor ${e.person ?? ''} was killed when the palace fell.`.replace('  ', ' ')
+    case 'troops_landed':
+      return `${e.level ?? 0} detachment${e.level === 1 ? '' : 's'} came down from ${e.ship?.name ?? 'a transport'}.`
+    case 'world_taken':
+      return `The world is in the hands of ${e.person ?? 'the attackers'}.`
+    case 'landing_repulsed':
+      return 'A landing was thrown back; the garrison holds.'
+    case 'battle':
+      return `Action was fought here against ${e.ship?.name ?? 'hostile hulls'}${e.ship ? ` (${e.ship.role})` : ''}.`
+    case 'ship_fled':
+      return `${e.ship?.name ?? 'A hull'} broke off and jumped clear.`
+    case 'ship_damaged':
+      return `${e.ship?.name ?? 'A hull'} took damage.`
+    case 'ship_destroyed':
+      return `${e.ship?.name ?? 'A hull'} was destroyed.`
+    case 'ship_captured':
+      return `${e.ship?.name ?? 'A hull'} was taken as a prize.`
+    case 'ship_robbed':
+      return `${e.ship?.name ?? 'A hull'} was stopped and her mail bag taken. Everything aboard is lost.`
+    case 'pirate_seized':
+      return `The pirate ${e.ship?.name ?? ''} put in here and was seized by the port.`.replace('  ', ' ')
+    case 'defection':
+      return `${e.ship?.name ?? 'A hull'} has gone over to the Warlord with her officers.`
+    case 'appointment_made':
+      return `${e.person ?? 'The new governor'} has taken the seal.`
+    case 'appointment_refused':
+      return `${e.person ?? 'The incumbent'} has read the appointment and declines to hand over the seal.`
+    case 'officer_took_command':
+      return `${e.person ?? 'An officer'} has taken command of ${e.ship?.name ?? 'the prize'}.`
   }
 }
 
@@ -81,7 +157,7 @@ export function unrestWord(n: number): string {
 
 /** An order as the desk would write it. */
 export function orderText(view: PlayerView, order: Order): string {
-  const target = order.kind === 'move' ? order.to : order.kind === 'patrol' || order.kind === 'scout' ? order.world : null
+  const target = order.kind === 'move' || order.kind === 'transport' ? order.to : order.kind === 'patrol' || order.kind === 'scout' ? order.world : null
   const then = 'then' in order && order.then?.kind === 'world' && order.then.world !== target ? `, then ${worldName(view, order.then.world)}` : ''
   switch (order.kind) {
     case 'hold':
@@ -94,7 +170,18 @@ export function orderText(view: PlayerView, order: Order): string {
       return `scout ${worldName(view, order.world)} and report${then}`
     case 'courier':
       return `run mail ${order.route.map((w) => worldName(view, w)).join(' → ')}${order.repeat ? ' and repeat' : ''}${then}`
+    case 'transport':
+      return `${transportCargo(order)} to ${worldName(view, order.to)}${then}`
   }
+}
+
+/** "carry 2 army and 1 marine detachments", "carry an officer to take the seal", etc. */
+function transportCargo(order: Extract<Order, { kind: 'transport' }>): string {
+  const troops = [order.army > 0 ? `${order.army} army` : '', order.marines > 0 ? `${order.marines} marine` : ''].filter(Boolean).join(' and ')
+  const troopText = troops ? `${troops} detachment${order.army + order.marines === 1 ? '' : 's'}` : ''
+  const person =
+    order.purpose === 'appoint' ? 'an officer to take the seal' : order.purpose === 'watch' ? `an agent to watch ${order.weeks} wk` : order.purpose === 'command' ? 'an officer to take command of the prize' : ''
+  return `carry ${[troopText, person].filter(Boolean).join(' and ') || 'nothing'}`
 }
 
 /** The newest order the desk has sent to a ship, if any. */

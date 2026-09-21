@@ -79,8 +79,8 @@ describe('dispatches', () => {
     const X = 'w-x' as WorldId
     const mail = requestReport(s, X, 'c-x' as CharacterId)
     // The governor the player wrote to is gone before the letter lands.
-    s.characters['c-x' as CharacterId].post = { kind: 'unassigned' }
-    s.characters['c-x2' as CharacterId] = { id: 'c-x2' as CharacterId, name: 'New', faction: 'f-admin' as FactionId, post: { kind: 'governor', world: X }, traits: playerTraits() }
+    s.characters['c-x' as CharacterId].post = { kind: 'unassigned', at: X }
+    s.characters['c-x2' as CharacterId] = { id: 'c-x2' as CharacterId, name: 'New', faction: 'f-admin' as FactionId, post: { kind: 'governor', world: X }, traits: playerTraits(), agent: false }
     s.worlds[X].governor = 'c-x2' as CharacterId
     s.worlds[X].actingGovernor = 'c-x2' as CharacterId
     runUntil(s, () => mail.status.kind !== 'awaiting_carrier' && mail.status.kind !== 'aboard')
@@ -181,7 +181,7 @@ describe('a generated game', () => {
     const s = newGame(4)
     advanceWeek(s)
     const view = buildPlayerView(s)
-    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'inbox', 'known', 'lanes', 'outgoing', 'roster', 'rumours', 'week'])
+    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'faction', 'factions', 'inbox', 'known', 'lanes', 'outgoing', 'pool', 'reserve', 'roster', 'rumours', 'week'])
     // The view is independent of the state it came from: mutating truth doesn't move it.
     const copy = clone(s)
     for (const w of Object.values(copy.worlds)) w.unrest = 10

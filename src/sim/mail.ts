@@ -43,15 +43,16 @@ function envelope(state: GameState, origin: WorldId, destination: WorldId, sent:
 
 export function snapshotShip(ship: Ship, at: WorldId): ShipSnapshot {
   const { id, name, role, faction, commander } = ship
-  return { id, name, role, faction, at, commander }
+  return { id, name, role, faction, at, commander, damaged: ship.damage > 0 }
 }
 
 /** A world as seen from its own port this week: its state and every hull lying there. */
 export function snapshotWorld(state: GameState, world: World): Snapshot {
-  const { id, name, hex, profile, faction, governor, unrest, garrison } = world
+  const { id, name, hex, profile, faction, governor, unrest, garrison, marines } = world
   const governorName = governor ? (state.characters[governor]?.name ?? null) : null
   const ships = shipsAt(state, id).map((s) => snapshotShip(s, id))
-  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, faction, governor, governorName, unrest, garrison, ships } }
+  const contest = world.contest ? { attacker: world.contest.attacker, strength: world.contest.attackers.army + world.contest.attackers.marines } : null
+  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, faction, governor, governorName, unrest, garrison, marines, contest, ships } }
 }
 
 /** Ships in port at a world right now. */
@@ -253,12 +254,10 @@ export function pruneMail(state: GameState): void {
 export function characterLocation(state: GameState, character: CharacterId): WorldId | null {
   const c = state.characters[character]
   if (!c) return null
-  if (c.post.kind === 'governor') return c.post.world
-  if (c.post.kind === 'commander') {
-    const loc = state.ships[c.post.ship]?.location
-    return loc?.kind === 'world' ? loc.world : null
-  }
-  return null
+  if (c.post.kind === 'governor' || c.post.kind === 'watching') return c.post.world
+  if (c.post.kind === 'unassigned') return c.post.at
+  const loc = state.ships[c.post.ship]?.location
+  return loc?.kind === 'world' ? loc.world : null
 }
 
 /**

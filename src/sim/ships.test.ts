@@ -18,7 +18,7 @@ function fleet(): GameState {
   const s = line()
   const cmdr = 'c-cmdr' as CharacterId
   const ship = 's-patrol' as ShipId
-  s.characters[cmdr] = { id: cmdr, name: 'Cmdr', faction: s.characters[s.player].faction, post: { kind: 'commander', ship }, traits: playerTraits() }
+  s.characters[cmdr] = { id: cmdr, name: 'Cmdr', faction: s.characters[s.player].faction, post: { kind: 'commander', ship }, traits: playerTraits(), agent: false }
   s.ships[ship] = {
     id: ship,
     name: 'Vigilant',
@@ -26,15 +26,19 @@ function fleet(): GameState {
     faction: s.characters[s.player].faction,
     jump: 2,
     strength: 3,
+    damage: 0,
     location: { kind: 'world', world: C },
     commander: cmdr,
+    troops: { army: 0, marines: 0 },
+    passengers: [],
+    havens: null,
     order: null,
     standing: { rally: C, onContact: 'favourable' },
     mailbag: [],
   }
   const govZ = 'c-z' as CharacterId
   s.worlds[Z] = { ...s.worlds[Y], id: Z, name: 'Zed', hex: { col: 5, row: 5 }, governor: govZ, actingGovernor: govZ, profile: { ...s.worlds[Y].profile, starport: 'D' } }
-  s.characters[govZ] = { id: govZ, name: 'Zee', faction: s.characters[s.player].faction, post: { kind: 'governor', world: Z }, traits: playerTraits() }
+  s.characters[govZ] = { id: govZ, name: 'Zee', faction: s.characters[s.player].faction, post: { kind: 'governor', world: Z }, traits: playerTraits(), agent: false }
   return s
 }
 

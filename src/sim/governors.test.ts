@@ -18,6 +18,7 @@ function person(traits: Partial<Traits>): Character {
     faction: 'f-admin' as Character['faction'],
     post: { kind: 'governor', world: X },
     traits: { loyalty: 'player', initiative: 0, competence: { administrative: 0, naval: 0, diplomatic: 0 }, ambition: 0, ...traits },
+    agent: false,
   }
 }
 

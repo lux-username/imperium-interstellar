@@ -6,7 +6,7 @@
 import type { GameState } from './types'
 
 const FORMAT = 'imperium-interstellar/save'
-const VERSION = 2
+const VERSION = 3
 
 interface SaveFile {
   format: typeof FORMAT
