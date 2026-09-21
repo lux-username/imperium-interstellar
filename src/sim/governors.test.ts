@@ -120,7 +120,7 @@ describe('what a governor chooses to say', () => {
     expect(s.worlds[X].lastLetter).toBe(s.week)
   })
 
-  it('in a generated game, letters mention only what happened where they were written, and never routine traffic', () => {
+  it('in a generated game, letters mention only what happened where they were written — bar a general report, which sums up a run — and never routine traffic', () => {
     const s = newGame(5)
     for (let i = 0; i < 30; i++) advanceWeek(s)
     const view = buildPlayerView(s)
@@ -128,7 +128,8 @@ describe('what a governor chooses to say', () => {
     expect(letters.length).toBeGreaterThan(0)
     for (const r of letters) {
       for (const e of r.events) {
-        expect(e.at).toBe(r.observedAt)
+        // A general report sums up a run, and prisoners name havens elsewhere; anything else happened where the letter was written.
+        if (!r.subject.startsWith('General report') && e.kind !== 'haven_named') expect(e.at).toBe(r.observedAt)
         // Routine traffic is never news; a hull of another faction making port is.
         if (e.kind === 'hull_arrived') expect(e.ship?.faction).not.toBe(view.faction)
         expect(e.kind === 'hull_departed').toBe(false)

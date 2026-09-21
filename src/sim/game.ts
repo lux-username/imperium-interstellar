@@ -6,7 +6,7 @@
  */
 import { hexLabel } from './hex'
 import { route } from './chart'
-import { chartLanes, packetShips } from './lanes'
+import { packetShips } from './lanes'
 import { deliverDirect, deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
 import { governorsWrite } from './governors'
 import { spawnRumours, spreadRumours } from './rumours'
@@ -20,7 +20,7 @@ import { forgetOldEvents, governorChangedEvent, unrestEvent, unrestIsNews } from
 import { beginRevolt, fightContests, regrowGarrisons } from './world'
 import { newCharacter } from './characters'
 import { createRng, roll } from './rng'
-import { generateWorlds, ADMINISTRATION, PLAYER } from './generate'
+import { generateSubsector, ADMINISTRATION, PLAYER } from './generate'
 import { startingFleet } from './fleet'
 import type { CharacterId, GameState, Mail, ShipId, StandingOrders, World, WorldId } from './types'
 import type { Order } from './orders'
@@ -31,8 +31,7 @@ import type { Report, ReportId } from './view'
 
 export function newGame(seed: number): GameState {
   const rng = createRng(seed)
-  const { worlds, characters, factions, capital } = generateWorlds(rng)
-  const lanes = chartLanes(rng, worlds)
+  const { worlds, characters, factions, capital, lanes } = generateSubsector(rng)
   const ships = packetShips(rng, lanes)
   const fleet = startingFleet(rng, ADMINISTRATION, capital)
   Object.assign(ships, fleet.ships)

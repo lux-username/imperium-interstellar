@@ -13,12 +13,12 @@ import { nextInt, roll, type Rng } from './rng'
 import type { Lane, LaneId, PacketSchedule, Ship, ShipId, World, WorldId } from './types'
 import { laneId } from './chart'
 import { shipName } from './fleet'
-import { ADMINISTRATION } from './generate'
+import { ADMINISTRATION } from './factions'
 
 // ---------------------------------------------------------------------------
 // Charting
 
-/** Ports that regular traffic calls at. C ports join the chart only as a short hop off a real port. */
+/** Ports that regular traffic calls at. C ports join the chart only as a spur off a charted world within two parsecs. */
 function isPort(w: World): boolean {
   return w.profile.starport === 'A' || w.profile.starport === 'B'
 }
@@ -39,11 +39,12 @@ function schedule(rng: Rng, a: World, b: World): PacketSchedule {
  * Lay lanes over a generated set of worlds.
  *
  * 1. Every pair of A/B ports within two parsecs is joined (J-1 and J-2 are common).
- * 2. A C port one parsec from any charted world gets a spur.
- * 3. Separate clusters are bridged by the shortest gap of three parsecs or
- *    less (J-3 is uncommon but a charted lane can justify it). Anything
- *    further apart stays separate: two charts, one of which the capital's
- *    packets never reach.
+ * 2. A C port within two parsecs of a charted world gets a spur to the nearest.
+ * 3. Separate clusters — and lone C ports — are bridged by the shortest gap
+ *    of three parsecs or less (J-3 is uncommon but a charted lane can
+ *    justify it). Anything further apart stays separate: two charts, one
+ *    of which the capital's packets never reach. Worlds with no working
+ *    port are never charted: they are dark until a hull is sent.
  */
 export function chartLanes(rng: Rng, worlds: Record<WorldId, World>): Record<LaneId, Lane> {
   const lanes: Record<LaneId, Lane> = {}
@@ -67,14 +68,14 @@ export function chartLanes(rng: Rng, worlds: Record<WorldId, World>): Record<Lan
   for (const w of all) {
     if (w.profile.starport !== 'C') continue
     const on = charted()
-    const near = all.find((o) => on.has(o.id) && hexDistance(o.hex, w.hex) === 1)
+    const near = all.filter((o) => on.has(o.id) && hexDistance(o.hex, w.hex) <= 2).sort((a, b) => hexDistance(a.hex, w.hex) - hexDistance(b.hex, w.hex) || (a.id < b.id ? -1 : 1))[0]
     if (near) add(near, w)
   }
 
-  // Bridge clusters. Only worlds already on the chart (plus lone ports) count.
+  // Bridge clusters. Only worlds already on the chart, and lone worlds with a working port, count.
   for (;;) {
     const on = charted()
-    const nodes = all.filter((w) => on.has(w.id) || isPort(w))
+    const nodes = all.filter((w) => on.has(w.id) || isPort(w) || w.profile.starport === 'C')
     const comp = components(nodes.map((w) => w.id), Object.values(lanes))
     let best: [World, World] | null = null
     let bestD = 4
