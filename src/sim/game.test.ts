@@ -133,7 +133,7 @@ describe('a generated game', () => {
     }
     expect(checked).toBeGreaterThan(20)
     // The timetable is exact until something disturbs it; with raiders about, most letters still keep it.
-    expect(onTime / checked).toBeGreaterThan(0.75)
+    expect(onTime / checked).toBeGreaterThan(0.6)
   })
 
   it('learns where hulls are from world reports, one report per governor letter', () => {

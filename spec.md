@@ -216,7 +216,20 @@ Things this campaign requires beyond what *Requirements* already lists:
 
 ### Open questions
 
-None at present. The four from the 2026-09-20 design session (starting scale, aid amounts, parade threshold, agents and rumour) were resolved on 2026-09-20 and folded into *Starting position*, *Tribute and the envoy's visit*, *Endings*, and *Information model → Agents*.
+Raised while building 1b (2026-09-20), for the 1b playtest to settle. Each was decided one way to get the prototype running; the decision is in the code and in `decisions.md`, and can be changed.
+
+1. **Marines in a ground round.** A marine detachment counts one point of strength, the same as army; marines matter only for the beachhead and for enforcing an appointment. Should they hit harder, or hold better, than army?
+2. **Cryo loss granularity.** One in ten *detachments* is lost outright on revival (rolled per detachment), so a force of three arrives at three or two, never "2.7". Fine for detachments as the unit; wrong if detachments should have internal strength.
+3. **Starting garrisons.** About a fifth of populated worlds start with no garrison at all, so most risings fall the week they begin; in eight 80-week soaks with a passive desk no rising was crushed by its garrison. Is that the intended world — the Empire thinly spread — or should every populated world start with at least one detachment?
+4. **A faction's seat cannot fall** (revolt or landing breaks on the palace guard, garrison floored at one). Losing the capital is an ending, and endings are 1c. Confirm, or decide what a fallen capital means before 1c.
+5. **Port closure cuts the lane beyond.** A packet will not sail into a port held against it, so when a world in the middle of a chain falls, worlds beyond it go silent too — the chart's routing does not know to go round. True to the fiction (the post does not detour), but it can black out a whole arm of the subsector until the world is retaken or the desk sends hulls.
+6. **Warlord patrols take packets as prizes.** Pirates rob an unarmed hull and let her go; the Warlord (and the desk) take her. A Warlord patrol lying off a port therefore eats the packet service there in a few weeks, which is a strong silence signal and also grows his fleet. Should he rob, like pirates, or take, as now?
+7. **Raiding rates.** Five raiders and a 1.5%-per-haven-per-week spawn hold pirate numbers roughly level against a passive desk, but robberies run 25–100 per 80 weeks depending on the map — the packets on a raided lane are stopped most weeks. Too much noise, or exactly the pressure the player is meant to answer?
+8. **After-action letters from every commander.** Each surviving commander in a system writes their own letter about an action, so four hulls in company produce four letters saying the same thing. The spec asks for this (self-serving accounts can differ); the inbox may want it folded to one row.
+9. **Prizes lie where taken.** A captured hull waits, crewless, at the world where the action was — including a hostile one — until an officer is transported out. Should a prize be sailed to the nearest friendly port by a prize crew instead?
+10. **Escort and blockade orders** are not built (issue #11 lists them). Nothing in 1b needed them; do they belong in 1b's playtest or later?
+11. **Valence is the administration's.** Every event's good/bad is judged from the desk's side; the Warlord's governors use the same disclosure rules, so they write home about "bad news" that is good for him. Harmless until his belief state needs to weigh news; note for Phase 2.
+12. **Extractive taxation** is in the spec as a governor order but not built: there is no money until 1c (#35). It will need a governor-order dispatch payload.
 
 ## Architecture
 

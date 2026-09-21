@@ -86,12 +86,13 @@ export function spawnPirates(state: GameState): void {
 // ---------------------------------------------------------------------------
 // What a raider does
 
-/** Ports worth lying off: charted A/B ports with traffic, hostile to pirates, not a haven she means to keep. */
+/** Ports worth lying off: charted A/B ports with traffic, hostile to pirates, not a haven she means to keep, and never a faction's seat — that is where the fleet lies. */
 function huntingGrounds(state: GameState, ship: Ship, from: WorldId): WorldId[] {
   const here = state.worlds[from]
+  const seats = new Set(Object.values(state.factions).map((f) => f.capital))
   return (Object.keys(state.worlds).sort() as WorldId[]).filter((id) => {
     const w = state.worlds[id]
-    if (id === from || ship.havens?.includes(id)) return false
+    if (id === from || ship.havens?.includes(id) || seats.has(id)) return false
     if (w.profile.starport !== 'A' && w.profile.starport !== 'B') return false
     if (!hostile(w.faction, PIRATES) || neighbours(state.lanes, id).length === 0) return false
     return hexDistance(w.hex, here.hex) <= ship.jump * 2
@@ -144,7 +145,8 @@ export function pirateOrders(state: GameState): void {
  * A pirate who puts in at a port she does not know to be a haven — because
  * she fled there, or the haven has since changed hands — is seized by the
  * port's governor and becomes their prize. Lying off a port to raid is not
- * putting in.
+ * putting in, and neither is passing through on the way somewhere else:
+ * only a hull that means to stay is taken.
  */
 export function seizePirates(state: GameState): void {
   const ids = Object.keys(state.ships).sort() as ShipId[]
@@ -154,7 +156,9 @@ export function seizePirates(state: GameState): void {
     const at = ship.location.world
     const world = state.worlds[at]
     if (ship.havens?.includes(at) && isHaven(state, world)) continue
-    if (ship.order?.kind === 'patrol' && ship.order.world === at) continue
+    const order = ship.order
+    const staying = !order || order.kind === 'hold' || (order.kind === 'move' && order.to === at)
+    if (!staying) continue
     if (!world.actingGovernor || world.faction === PIRATES) continue
     recordEvent(state, at, { kind: 'pirate_seized', valence: 'good', severity: 2, ship })
     if (ship.commander) delete state.characters[ship.commander]
