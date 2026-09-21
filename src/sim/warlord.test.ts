@@ -103,7 +103,7 @@ describe('what the Warlord does with what he knows', () => {
     const snap = snapshotWorld(s, s.worlds[world])
     if (snap.kind !== 'world') throw new Error('world')
     tweak(snap.world)
-    const report: Report = { id: `r-wl-${world}-${observed}` as never, channel: 'official', observer: THE_WARLORD, observerName: 'x', observerTitle: null, observerShip: null, subject: 'x', lede: 'x', observedAt: world, observed, snapshot: snap, events: [], envelope: { origin: world, destination: { kind: 'world', world: Y }, sent: observed, route: [world, Y], eta: observed }, delivered: observed }
+    const report: Report = { id: `r-wl-${world}-${observed}` as never, channel: 'official', observer: THE_WARLORD, observerName: 'x', observerTitle: null, observerShip: null, observerShipId: null, subject: 'x', lede: 'x', observedAt: world, observed, snapshot: snap, events: [], envelope: { origin: world, destination: { kind: 'world', world: Y }, sent: observed, route: [world, Y], eta: observed }, delivered: observed }
     learn(s, THE_WARLORD, report)
   }
 

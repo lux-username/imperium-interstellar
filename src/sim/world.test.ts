@@ -121,7 +121,7 @@ describe('revolt', () => {
     // What the desk believes is no use to a packet lying at Exe: only the capital's own packets read the desk's mind.
     const s2 = line()
     changeHands(s2, s2.worlds[Y], REBELS, { army: 2, marines: 0 })
-    s2.beliefs[s2.player].worlds[Y] = { id: 'r-t' as never, channel: 'official', observer: s2.player, observerName: 'x', observerTitle: null, observerShip: null, subject: 'x', lede: 'x', observedAt: Y, observed: 0, snapshot: { kind: 'world', world: { id: Y, name: 'Wye', hex: s2.worlds[Y].hex, profile: s2.worlds[Y].profile, faction: REBELS, governor: null, governorName: null, unrest: 2, garrison: 2, marines: 0, contest: null, ships: [] } }, events: [], envelope: { origin: Y, destination: { kind: 'world', world: s2.capital }, sent: 0, route: [Y], eta: 0 }, delivered: 0 }
+    s2.beliefs[s2.player].worlds[Y] = { id: 'r-t' as never, channel: 'official', observer: s2.player, observerName: 'x', observerTitle: null, observerShip: null, observerShipId: null, subject: 'x', lede: 'x', observedAt: Y, observed: 0, snapshot: { kind: 'world', world: { id: Y, name: 'Wye', hex: s2.worlds[Y].hex, profile: s2.worlds[Y].profile, faction: REBELS, governor: null, governorName: null, unrest: 2, garrison: 2, marines: 0, contest: null, ships: [] } }, events: [], envelope: { origin: Y, destination: { kind: 'world', world: s2.capital }, sent: 0, route: [Y], eta: 0 }, delivered: 0 }
     for (let i = 0; i < 6; i++) advanceWeek(s2)
     expect(s2.ships['s-xy' as ShipId].faction).toBe(REBELS) // she sailed in regardless, and was taken
   })

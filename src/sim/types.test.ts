@@ -30,7 +30,7 @@ function fixture(): GameState {
     observer: governor,
     observerName: 'Governor of Outpost',
     observerTitle: 'governor',
-    observerShip: null,
+    observerShip: null, observerShipId: null,
     subject: 'All quiet',
     lede: 'The world is quiet.',
     observedAt: outpost,

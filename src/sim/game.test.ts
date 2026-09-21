@@ -6,7 +6,7 @@ import { buildPlayerView } from './player'
 import { playerTraits } from './characters'
 import { clone, deserialize, serialize } from './save'
 import type { CharacterId, FactionId, WorldId } from './types'
-import { isRumour } from './view'
+import { isDeskObservation, isRumour, mentionsShip } from './view'
 import { line, runUntil } from './fixtures.test-helper'
 
 describe('report propagation', () => {
@@ -153,9 +153,9 @@ describe('a generated game', () => {
         continue
       }
       fromMail++
-      const cited = source.snapshot.kind === 'world' ? source.snapshot.world.ships.some((sh) => sh.id === sighting.ship.id) : source.snapshot.kind === 'ship' && source.snapshot.ship.id === sighting.ship.id
-      expect(cited).toBe(true)
-      expect(sighting.observed).toBe(source.observed)
+      // The letter listed the hull in port, was about her, or told of something that befell her — on the week it did.
+      expect(mentionsShip(source, sighting.ship.id)).toBe(true)
+      expect(sighting.observed).toBeLessThanOrEqual(source.observed)
     }
     expect(fromMail).toBeGreaterThan(0)
   })
@@ -168,7 +168,7 @@ describe('a generated game', () => {
     for (let i = 0; i < 30; i++) advanceWeek(s)
     for (const w of offLane) {
       for (const m of Object.values(s.mail)) {
-        if (m.contents.kind !== 'report' || m.contents.report.observedAt !== w.id) continue
+        if (m.contents.kind !== 'report' || m.contents.report.observedAt !== w.id || isDeskObservation(m.contents.report.id)) continue
         const dest = m.contents.report.envelope.destination
         if (dest.kind !== 'world' || dest.world !== s.capital) continue // the Warlord's people write to his seat
         expect(m.status).toEqual({ kind: 'awaiting_carrier', at: w.id })
@@ -193,7 +193,7 @@ describe('a generated game', () => {
     const s = newGame(4)
     advanceWeek(s)
     const view = buildPlayerView(s)
-    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'ending', 'faction', 'factions', 'inbox', 'known', 'lanes', 'outgoing', 'pool', 'reserve', 'roster', 'rumours', 'week'])
+    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'ending', 'faction', 'factions', 'havens', 'inbox', 'known', 'lanes', 'observations', 'outgoing', 'pool', 'reserve', 'roster', 'rumours', 'week'])
     // The view is independent of the state it came from: mutating truth doesn't move it.
     const copy = clone(s)
     for (const w of Object.values(copy.worlds)) w.unrest = 10

@@ -10,6 +10,7 @@
 import type { CharacterId, DispatchId, GameState, Mail, MailId, ReportId, Ship, ShipId, Week, World, WorldId } from './types'
 import type { Order } from './orders'
 import type { Channel, Dispatch, DispatchPayload, Envelope, Event, Recipient, Report, ShipSnapshot, Snapshot, Title } from './view'
+import { absorb, emptyBelief } from './belief'
 import { expectedArrival, route } from './chart'
 import { dispatchReceivedEvent } from './events'
 import { capitalOf, hostile } from './factions'
@@ -107,6 +108,7 @@ export function writeReport(state: GameState, observer: CharacterId, at: WorldId
     observerName: writing.observerName ?? state.characters[observer]?.name ?? 'Unknown',
     observerTitle: who.title,
     observerShip: who.shipName,
+    observerShipId: who.ship,
     subject: head.subject,
     lede: head.lede,
     observedAt: at,
@@ -359,26 +361,22 @@ export function deliverHeld(state: GameState): void {
   }
 }
 
-/**
- * A report enters a reader's belief where it is newer than what they already
- * know. A world report updates the world and every hull it lists in port.
- */
+/** A report enters a reader's belief where it is newer than what they already know (see ./belief.ts). */
 export function learn(state: GameState, reader: CharacterId, report: Report): void {
-  const belief = (state.beliefs[reader] ??= { worlds: {}, ships: {} })
-  const sight = (ship: ShipSnapshot) => {
-    const known = belief.ships[ship.id]
-    if (!known || report.observed >= known.observed) belief.ships[ship.id] = { ship, observed: report.observed, report: report.id }
-  }
-  if (report.snapshot.kind === 'ship') {
-    sight(report.snapshot.ship)
-    return
-  }
-  // Talk is not knowledge: a rumour goes in the rumours pile and nowhere else, so the map never rests on it.
-  if (report.snapshot.kind === 'event') return
-  const world = report.snapshot.world
-  const known = belief.worlds[world.id]
-  if (!known || report.observed >= known.observed) belief.worlds[world.id] = report
-  for (const ship of world.ships) sight(ship)
+  absorb((state.beliefs[reader] ??= emptyBelief()), report)
+}
+
+/**
+ * A report that never travelled — talk heard at a port, the desk's own
+ * view from the window — is entered as delivered mail and read at once,
+ * so the reader's pile of reports holds everything their picture rests on.
+ */
+export function deliverDirect(state: GameState, reader: CharacterId, report: Report): Mail {
+  report.delivered = state.week
+  const mail: Mail = { id: mint<MailId>(state, 'm'), contents: { kind: 'report', report }, status: { kind: 'delivered', week: state.week } }
+  state.mail[mail.id] = mail
+  learn(state, reader, report)
+  return mail
 }
 
 /**

@@ -39,6 +39,10 @@ export { expectedArrival, hexRoute, nextDeparture, route } from './chart'
 // anything a letter did not.
 export { UNREST_WORDS, eventLabel, eventText, unrestWord } from './letters'
 
+// The fold from reports to a picture, so the desk can ask what it now
+// knows about an earlier week with the same sums the sim uses.
+export { beliefFrom, knownHavens, mentionsShip } from './belief'
+
 // The public-knowledge primitives the UI needs, re-exported so it never has
 // a reason to reach into types.ts.
 export type {
@@ -233,6 +237,11 @@ export function isRumour(channel: Channel): boolean {
 /** The office a writer holds. A governor writes for a world, a captain for a hull; a survey, the desk, a merchant and the docks hold none. */
 export type Title = 'governor' | 'captain' | null
 
+/** Reports the desk made itself — the capital seen from the window, the survey it inherited — have no letter behind them. */
+export function isDeskObservation(id: ReportId): boolean {
+  return id.startsWith('r-desk-') || id.startsWith('r-survey-')
+}
+
 export interface Report {
   id: ReportId
   channel: Channel
@@ -241,6 +250,7 @@ export interface Report {
   observerTitle: Title
   /** The hull a captain writes from, by name. */
   observerShip: string | null
+  observerShipId: ShipId | null
   /** What the letter is about, in a few words, as the writer put it. */
   subject: string
   /** The first sentence: the most important news, in the writer's words. */
@@ -313,6 +323,7 @@ export interface RosterEntry {
   role: ShipRole
   jump: number
   /** Null for a prize: taken in action and waiting for an officer to be sent out to her. */
+  commander: CharacterId | null
   commanderName: string | null
   /** Detachments she can carry; a fact of her class. */
   troops: number
@@ -358,6 +369,10 @@ export interface PlayerView {
   reserve: { army: number; marines: number }
   /** Every official and agent report that has reached the desk, newest arrival first. This week's news is whatever has `delivered === week`. */
   inbox: Report[]
+  /** What the desk saw for itself: the capital each week, and the survey it inherited. Not mail, but reports all the same, so a week gone by can be pictured. */
+  observations: Report[]
+  /** Worlds a letter has seen harbouring pirates, whose governor has not changed since as far as the desk knows. */
+  havens: WorldId[]
   /** What the docks are saying: merchant and docks-channel reports, kept apart from the mail so the two piles are never confused. */
   rumours: Report[]
   /** Dispatches the player has sent, newest first. Their fate is unknown until a report says otherwise. */

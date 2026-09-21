@@ -13,11 +13,11 @@
 import { neighbours } from './chart'
 import { EVENT_MEMORY, valenceFor } from './events'
 import { capitalise, eventLabel, eventText } from './letters'
-import { learn } from './mail'
+import { deliverDirect } from './mail'
 import { personName, rollSex } from './names'
 import { raided } from './pirates'
 import { check, nextInt } from './rng'
-import type { CharacterId, GameState, Mail, MailId, ReportId, Week, WorldId } from './types'
+import type { CharacterId, GameState, ReportId, Week, WorldId } from './types'
 import type { Event, Report } from './view'
 
 /** Nobody in particular: the observer of a rumour that came off the docks. */
@@ -112,6 +112,7 @@ function hearRumour(state: GameState, rumour: Rumour, at: WorldId): void {
     observerName: channel === 'merchant' ? merchantName(state, at) : 'the docks',
     observerTitle: null,
     observerShip: null,
+    observerShipId: null,
     subject: capitalise(eventLabel(rumour.event)),
     lede: eventText(rumour.event),
     observedAt: rumour.event.at,
@@ -122,8 +123,5 @@ function hearRumour(state: GameState, rumour: Rumour, at: WorldId): void {
     delivered: state.week,
   }
   state.nextId += 1
-  const mail: Mail = { id: `m-${state.nextId}` as MailId, contents: { kind: 'report', report }, status: { kind: 'delivered', week: state.week } }
-  state.nextId += 1
-  state.mail[mail.id] = mail
-  learn(state, reader, report)
+  deliverDirect(state, reader, report)
 }

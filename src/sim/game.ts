@@ -7,7 +7,7 @@
 import { hexLabel } from './hex'
 import { route } from './chart'
 import { chartLanes, packetShips } from './lanes'
-import { deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
+import { deliverDirect, deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
 import { governorsWrite } from './governors'
 import { spawnRumours, spreadRumours } from './rumours'
 import { afterActionReports, departShips, impoundAtPorts, landShips, logWitnessed, shipRoute, unloadArrivals } from './ships'
@@ -112,6 +112,7 @@ function surveyEntry(state: GameState, reader: CharacterId, home: WorldId, world
     observerName: world.governor ? state.characters[world.governor].name : 'Survey of the previous administration',
     observerTitle: world.governor ? 'governor' : null,
     observerShip: null,
+    observerShipId: null,
     subject: 'Survey entry',
     lede: 'An entry from the survey of the previous administration.',
     observedAt: world.id,
@@ -121,7 +122,9 @@ function surveyEntry(state: GameState, reader: CharacterId, home: WorldId, world
     envelope: { origin: world.id, destination: { kind: 'world', world: home }, sent: -age, route: path ?? [world.id], eta: 0 },
     delivered: 0,
   }
-  learn(state, reader, report)
+  // The desk keeps its survey with its mail, so it can look back; the Warlord's is only his picture.
+  if (reader === PLAYER) deliverDirect(state, reader, report)
+  else learn(state, reader, report)
 }
 
 // ---------------------------------------------------------------------------
@@ -200,7 +203,8 @@ function replaceGovernor(state: GameState, world: World, record: boolean): void 
 
 /**
  * The player sits above the capital and sees it directly: no mail, no delay.
- * Recorded straight into belief rather than the inbox, since it is not news.
+ * Kept with the reports rather than shown as news, so the desk can look
+ * back at what lay in port on any week.
  */
 function observeCapital(state: GameState): void {
   const capital = state.worlds[state.capital]
@@ -211,6 +215,7 @@ function observeCapital(state: GameState): void {
     observerName: state.characters[PLAYER].name,
     observerTitle: null,
     observerShip: null,
+    observerShipId: null,
     subject: 'The capital',
     lede: 'Seen from the desk.',
     observedAt: capital.id,
@@ -220,7 +225,7 @@ function observeCapital(state: GameState): void {
     envelope: { origin: capital.id, destination: { kind: 'world', world: capital.id }, sent: state.week, route: [capital.id], eta: state.week },
     delivered: state.week,
   }
-  learn(state, PLAYER, report)
+  deliverDirect(state, PLAYER, report)
 }
 
 // ---------------------------------------------------------------------------
