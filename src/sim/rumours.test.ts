@@ -13,14 +13,15 @@ describe('rumour', () => {
   it('spawns from bad or good events at ports, never from routine traffic or events at the capital', () => {
     const s = line()
     s.week = 1
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 100; i++) {
       recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 2, level: 6 })
       recordEvent(s, Y, { kind: 'hull_arrived', valence: 'neutral', against: null, favours: null, severity: 0 })
       recordEvent(s, s.capital, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 3, level: 8 })
     }
     spawnRumours(s)
-    expect(s.rumours.length).toBeGreaterThan(10)
-    expect(s.rumours.length).toBeLessThan(40)
+    // Bad news becomes talk on 2d6 ≥ 9: a bit over a quarter of the time.
+    expect(s.rumours.length).toBeGreaterThan(15)
+    expect(s.rumours.length).toBeLessThan(45)
     for (const r of s.rumours) {
       expect(r.origin).toBe(Y)
       expect(r.event.kind).toBe('unrest_rose')
@@ -74,7 +75,9 @@ describe('rumour', () => {
     let movedWeek = 0
     let movedWorld = 0
     for (const r of s.rumours) {
-      expect(Math.abs(r.event.week - 5)).toBeLessThanOrEqual(2)
+      // Talk may make it older than it was, never newer.
+      expect(r.event.week).toBeLessThanOrEqual(5)
+      expect(r.event.week).toBeGreaterThanOrEqual(3)
       if (r.event.week !== 5) movedWeek++
       if (r.event.at !== Y) {
         movedWorld++
@@ -85,6 +88,20 @@ describe('rumour', () => {
     expect(movedWeek).toBeGreaterThan(0)
     expect(movedWorld).toBeGreaterThan(0)
     expect(movedWorld).toBeLessThan(movedWeek)
+  })
+
+  it('goes no faster than a hull: nothing is heard of the week it happens, and a lane away takes a week', () => {
+    const s = line()
+    s.week = 1
+    const e = recordEvent(s, 'w-x' as WorldId, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 3, level: 8 })
+    for (let i = 0; i < 50; i++) s.rumours.push({ event: { ...e }, origin: e.at, born: 1, heard: { [e.at]: 0 } })
+    spreadRumours(s)
+    expect(s.rumours.every((r) => !(s.capital in r.heard))).toBe(true)
+    expect(buildPlayerView(s).rumours).toHaveLength(0)
+    s.week = 2
+    spreadRumours(s)
+    expect(s.rumours.some((r) => s.capital in r.heard)).toBe(true)
+    expect(buildPlayerView(s).rumours.every((r) => r.delivered === 2 && r.observed <= 1)).toBe(true)
   })
 
   it('a rumour of a hull puts nothing on the map', () => {

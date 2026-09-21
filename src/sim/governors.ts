@@ -11,7 +11,9 @@
  */
 import { isBold, isCautious } from './characters'
 import { eventsAt, valenceFor } from './events'
+import { PIRATES } from './factions'
 import { snapshotWorld, writeReport } from './mail'
+import { isHaven } from './pirates'
 import { check, type Rng } from './rng'
 import type { Character, GameState, Mail, World, WorldId } from './types'
 import type { Event, Snapshot } from './view'
@@ -24,6 +26,22 @@ export function quietInterval(world: World): number {
 /** Bad news that reflects on the governor's own handling of their world. */
 function implicates(event: Event): boolean {
   return event.kind === 'unrest_rose'
+}
+
+/** Whether an event is about a pirate hull: her comings and goings, or the port's failure to seize her. */
+function aboutPirates(event: Event): boolean {
+  if (event.kind === 'pirates_harboured') return true
+  return (event.kind === 'hull_arrived' || event.kind === 'hull_departed') && event.ship?.faction === PIRATES
+}
+
+/**
+ * A governor who lets pirates use their port says nothing of them: not
+ * their coming and going, and never that they lay there unmolested —
+ * to do so would be to inform on themselves. A battle in orbit they may
+ * still report, since silence about that would look worse.
+ */
+export function harbours(governor: Character): boolean {
+  return governor.traits.loyalty === 'self'
 }
 
 /** Bad news whose natural letter is a request for help. */
@@ -42,6 +60,7 @@ export function discloses(rng: Rng, governor: Character, event: Event): boolean 
   const valence = valenceFor(event, governor.faction)
   if (valence === 'good') return true
   if (valence === 'neutral') return event.kind === 'governor_changed'
+  if (harbours(governor) && aboutPirates(event)) return false
   let dm = event.severity
   if (governor.traits.loyalty === 'self' && implicates(event)) dm -= 3
   if (asksForHelp(event)) {
@@ -56,10 +75,13 @@ function shading(governor: Character): number {
   return governor.traits.loyalty === 'self' ? 2 : 0
 }
 
-/** A copy of the world as the governor describes it, not quite as it is. */
+/** A copy of the world as the governor describes it, not quite as it is: calmer, and with no pirates in port if theirs is a haven. */
 export function colouredSnapshot(state: GameState, world: World, governor: Character): Snapshot {
   const snapshot = snapshotWorld(state, world)
-  if (snapshot.kind === 'world') snapshot.world.unrest = Math.max(0, snapshot.world.unrest - shading(governor))
+  if (snapshot.kind === 'world') {
+    snapshot.world.unrest = Math.max(0, snapshot.world.unrest - shading(governor))
+    if (harbours(governor) && isHaven(state, world)) snapshot.world.ships = snapshot.world.ships.filter((s) => s.faction !== PIRATES)
+  }
   return snapshot
 }
 

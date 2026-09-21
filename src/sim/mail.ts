@@ -13,6 +13,7 @@ import type { Channel, Dispatch, DispatchPayload, Envelope, Event, Recipient, Re
 import { expectedArrival, route } from './chart'
 import { dispatchReceivedEvent } from './events'
 import { capitalOf, hostile } from './factions'
+import { burnsFuel } from './fleet'
 import { heading, type Occasion } from './letters'
 
 // ---------------------------------------------------------------------------
@@ -45,7 +46,7 @@ function envelope(state: GameState, origin: WorldId, destination: WorldId, sent:
 
 export function snapshotShip(ship: Ship, at: WorldId, holder?: Ship['faction']): ShipSnapshot {
   const { id, name, role, faction, commander } = ship
-  const fuel = holder === faction && role !== 'packet' && role !== 'merchant' ? ship.fuel : null
+  const fuel = holder === faction && burnsFuel(role) ? ship.fuel : null
   return { id, name, role, faction, at, commander, damaged: ship.damage > 0, fuel }
 }
 

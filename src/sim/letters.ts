@@ -166,6 +166,8 @@ export function eventLabel(e: Event): string {
       return `${e.person ?? 'an officer'} took command of ${e.ship?.name ?? 'a prize'}`
     case 'haven_named':
       return `named as a pirate haven`
+    case 'pirates_harboured':
+      return `${plural(e.level ?? 1, 'pirate hull')} harboured in port`
   }
 }
 
@@ -226,6 +228,8 @@ export function eventText(e: Event): string {
       return `${e.person ?? 'An officer'} has taken command of ${e.ship?.name ?? 'the prize'}.`
     case 'haven_named':
       return `Under questioning, ${e.person ?? 'the prisoners'} named this world as a haven where pirates put in.`
+    case 'pirates_harboured':
+      return `${e.ship?.name ? `The pirate ${e.ship.name}` : 'A pirate hull'}${(e.level ?? 1) > 1 ? ` and ${plural((e.level ?? 1) - 1, 'other')}` : ''} lay docked at the port unmolested; ${e.person ? `Governor ${e.person}` : 'the port'} made no move to seize ${(e.level ?? 1) > 1 ? 'them' : 'her'}.`
   }
 }
 
@@ -337,6 +341,8 @@ export function eventHeading(state: GameState, e: Event, events: readonly Event[
       return { subject: 'Prize under command', lede: eventText(e) }
     case 'haven_named':
       return { subject: 'Pirate haven named', lede: eventText(e) }
+    case 'pirates_harboured':
+      return { subject: 'Pirates harboured in port!', lede: `${e.person ? `Governor ${e.person} harbours pirates` : 'The port harbours pirates'}: ${uncapitalise(eventText(e))}` }
     case 'dispatch_received':
       return { subject: 'Your letter received', lede: eventText(e) }
     case 'hull_departed':

@@ -21,10 +21,10 @@ import type { CharacterId, GameState, Ship, ShipId, World, WorldId } from './typ
 import type { Event, EventId } from './view'
 
 /** Chance per haven per week of a new hull putting out. Small: catching the ones at large should be enough to keep piracy down. */
-export const SPAWN_CHANCE = 0.01
+export const SPAWN_CHANCE = 0.005
 
 /** How many are at large when the game begins (spec.md → Starting position). */
-export const STARTING_PIRATES = 5
+export const STARTING_PIRATES = 3
 
 export function isHaven(state: GameState, world: World): boolean {
   const port = world.profile.starport
@@ -235,6 +235,33 @@ export function seizePirates(state: GameState): void {
     ship.standing = { rally: null, onContact: 'never' }
     for (const m of ship.mailbag) if (state.mail[m]) state.mail[m].status = { kind: 'lost', week: state.week }
     ship.mailbag = []
+  }
+}
+
+/**
+ * A pirate who docks at a haven and is not seized has been seen to be
+ * harboured, and so has one already lying there when another hull makes
+ * port and finds her. Either is entered in the record: once per world for
+ * the week, naming the governor who let it pass. Runs after the port has
+ * had its chance to seize her. A captain who sees it writes home about
+ * the governor; a scout's watch carries it; the docks may talk of it.
+ */
+export function harbourPirates(state: GameState, landed: readonly ShipId[]): void {
+  const arrived = new Set(landed)
+  const ids = Object.keys(state.worlds).sort() as WorldId[]
+  for (const at of ids) {
+    const world = state.worlds[at]
+    if (!isHaven(state, world)) continue
+    const here = Object.values(state.ships)
+      .filter((s) => s.location.kind === 'world' && s.location.world === at)
+      .sort((a, b) => (a.id < b.id ? -1 : 1))
+    const sheltered = here.filter((s) => s.faction === PIRATES && s.havens?.includes(at))
+    if (sheltered.length === 0) continue
+    const newlyDocked = sheltered.some((s) => arrived.has(s.id))
+    const witnessArrived = here.some((s) => s.faction !== PIRATES && s.commander !== null && arrived.has(s.id))
+    if (!newlyDocked && !witnessArrived) continue
+    const governor = world.actingGovernor ? state.characters[world.actingGovernor] : null
+    recordEvent(state, at, { kind: 'pirates_harboured', valence: 'bad', favours: PIRATES, severity: 3, ship: sheltered[0], level: sheltered.length, person: governor?.name ?? null })
   }
 }
 

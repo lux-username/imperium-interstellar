@@ -22,13 +22,15 @@ export interface HullClass {
 /**
  * What each kind of hull is: patrol craft fight, escorts shepherd,
  * transports carry troops in numbers, scouts run and watch. A warship
- * takes a detachment in her spare berths; a scout has none.
+ * takes a detachment in her spare berths; a scout has none. A scout
+ * carries fuel scoops and skims what she burns, so her tanks are never
+ * on the books.
  */
 export const HULLS: Record<Exclude<ShipRole, 'packet' | 'merchant'>, HullClass> = {
   patrol: { role: 'patrol', jump: 2, strength: 3, fuel: 4, troops: 1 },
   escort: { role: 'escort', jump: 2, strength: 2, fuel: 4, troops: 1 },
   transport: { role: 'transport', jump: 2, strength: 1, fuel: 4, troops: 3 },
-  scout: { role: 'scout', jump: 2, strength: 0, fuel: 6, troops: 0 },
+  scout: { role: 'scout', jump: 2, strength: 0, fuel: 0, troops: 0 },
   raider: { role: 'raider', jump: 2, strength: 2, fuel: 4, troops: 1 },
 }
 
@@ -37,14 +39,14 @@ export function troopCapacity(role: ShipRole): number {
   return role === 'packet' || role === 'merchant' ? 0 : HULLS[role].troops
 }
 
-/** How many jumps a full tank gives a hull of this class. Packets carry none on the books: the lanes they serve keep them fuelled. */
+/** How many jumps a full tank gives a hull of this class. Packets carry none on the books: the lanes they serve keep them fuelled; scouts scoop their own. */
 export function fuelCapacity(role: ShipRole): number {
-  return role === 'packet' || role === 'merchant' ? 0 : HULLS[role].fuel
+  return burnsFuel(role) ? HULLS[role as keyof typeof HULLS].fuel : 0
 }
 
-/** Whether a hull of this class burns fuel at all. */
+/** Whether a hull of this class burns fuel at all. Packets are kept fuelled by their lanes; scouts have scoops. */
 export function burnsFuel(role: ShipRole): boolean {
-  return role !== 'packet' && role !== 'merchant'
+  return role !== 'packet' && role !== 'merchant' && role !== 'scout'
 }
 
 /** Hulls in port at the capital on week 0. */

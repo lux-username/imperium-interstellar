@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { playerTraits } from './characters'
 import { PIRATES } from './factions'
-import { HULLS, newShip } from './fleet'
+import { HULLS, burnsFuel, fuelCapacity, newShip } from './fleet'
 import { advanceWeek, orderShip } from './game'
+import { buildPlayerView } from './player'
 import { refuelsAt } from './ships'
 import type { CharacterId, GameState, ShipId, WorldId } from './types'
 import { line } from './fixtures.test-helper'
@@ -92,5 +93,21 @@ describe('fuel', () => {
     for (let i = 0; i < 8; i++) advanceWeek(s)
     for (const p of Object.values(s.ships).filter((x) => x.role === 'packet')) expect(p.fuel).toBe(0)
     expect(Object.values(s.events).filter((e) => e.kind === 'hull_departed').length).toBeGreaterThan(4)
+  })
+
+  it('a scout has fuel scoops: she crosses dry ports without a thought and her tanks are never on the books', () => {
+    const s = thirsty()
+    const id = 's-scout' as ShipId
+    s.characters['c-sc' as CharacterId] = { id: 'c-sc' as CharacterId, name: 'S', faction: 'f-admin' as never, post: { kind: 'commander', ship: id }, traits: playerTraits() }
+    s.ships[id] = newShip(id, 'Wren', HULLS.scout, 'f-admin' as never, C, s.characters['c-sc' as CharacterId])
+    expect(burnsFuel('scout')).toBe(false)
+    expect(fuelCapacity('scout')).toBe(0)
+    orderShip(s, id, { kind: 'move', to: Y, then: { kind: 'world', world: C } })
+    for (let i = 0; i < 6; i++) advanceWeek(s)
+    // Out to Wye through two dry ports and back again, where a patrol craft would have stuck at Exe.
+    expect(s.ships[id].location).toEqual({ kind: 'world', world: C })
+    const view = buildPlayerView(s)
+    expect(view.roster.find((r) => r.id === id)?.fuel).toBe(0)
+    expect(view.known.ships[id]?.ship.fuel).toBeNull()
   })
 })

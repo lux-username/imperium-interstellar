@@ -86,9 +86,18 @@ function odds(posture: Posture, own: number, enemy: number): boolean {
   }
 }
 
+/**
+ * Pirates at a haven they know are guests, and keep the peace: no robbery
+ * at the port that shelters them, whatever comes in. They still fight back
+ * if someone starts it.
+ */
+function keepsPeace(us: Ship[], at: WorldId): boolean {
+  return us.length > 0 && us[0].faction === PIRATES && us.every((s) => s.havens?.includes(at))
+}
+
 /** Whether a side, taken all together and with its port, would come out and fight. A port's guns never sortie on their own. */
 function wouldSortie(state: GameState, us: Ship[], them: Ship[], scene: Scene): boolean {
-  if (hullStrength(us) === 0) return false
+  if (hullStrength(us) === 0 || keepsPeace(us, scene.at)) return false
   return odds(postureOf(state, us), sideStrength(state, us, scene), sideStrength(state, them, scene))
 }
 
@@ -99,7 +108,7 @@ function wouldSortie(state: GameState, us: Ship[], them: Ship[], scene: Scene): 
  * only if those would actually come out to meet her.
  */
 function engages(state: GameState, us: Ship[], them: Ship[], scene: Scene): boolean {
-  if (hullStrength(us) === 0) return false
+  if (hullStrength(us) === 0 || keepsPeace(us, scene.at)) return false
   const own = sideStrength(state, us, scene)
   const open = them.filter((s) => !docked(state, s, scene.at, scene.arriving))
   const enemy = wouldSortie(state, them, us, scene) ? sideStrength(state, them, scene) : hullStrength(open)

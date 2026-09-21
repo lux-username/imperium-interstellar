@@ -229,8 +229,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
           </label>
           <label>
             <input type="radio" name="task" checked={task === 'watch'} onChange={() => setTask('watch')} /> lie off and watch for{' '}
-            <input type="number" min={2} max={20} value={watchWeeks} onChange={(e) => setWatchWeeks(Math.min(20, Math.max(2, Number.parseInt(e.target.value, 10) || 2)))} /> wk, then send the full
-            truth
+            <input type="number" min={2} max={20} value={watchWeeks} onChange={(e) => setWatchWeeks(Math.min(20, Math.max(2, Number.parseInt(e.target.value, 10) || 2)))} /> wk, then send a report
             {entry && entry.role !== 'scout' && <small className="muted"> (any hull can watch; only a scout is likely to get clear if warships come)</small>}
           </label>
           <label>

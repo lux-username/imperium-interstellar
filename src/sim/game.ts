@@ -12,7 +12,7 @@ import { governorsWrite } from './governors'
 import { spawnRumours, spreadRumours } from './rumours'
 import { afterActionReports, departShips, impoundAtPorts, landShips, logWitnessed, shipRoute, unloadArrivals } from './ships'
 import { fightAtWorlds, repairShips } from './combat'
-import { pirateOrders, placePirates, seizePirates, spawnPirates } from './pirates'
+import { harbourPirates, pirateOrders, placePirates, seizePirates, spawnPirates } from './pirates'
 import { placeWarlord, warlordActs } from './warlord'
 import { THE_WARLORD, WARLORD, capitalOf } from './factions'
 import { hexDistance } from './hex'
@@ -141,6 +141,7 @@ export function advanceWeek(state: GameState): void {
   const landed = landShips(state)
   fightAtWorlds(state, landed)
   seizePirates(state)
+  harbourPirates(state, landed)
   impoundAtPorts(state, landed)
   unloadArrivals(state, landed)
   afterActionReports(state)

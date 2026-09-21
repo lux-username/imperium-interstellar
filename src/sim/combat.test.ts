@@ -4,7 +4,7 @@ import { advanceWeek, newGame, requestReport } from './game'
 import { PIRATES } from './factions'
 import { HULLS, newShip } from './fleet'
 import { playerTraits } from './characters'
-import { isHaven, raided, seizePirates, spawnPirate } from './pirates'
+import { STARTING_PIRATES, isHaven, raided, seizePirates, spawnPirate } from './pirates'
 import { createRng } from './rng'
 import type { CharacterId, GameState, ShipId, WorldId } from './types'
 import { line } from './fixtures.test-helper'
@@ -211,7 +211,7 @@ describe('havens', () => {
     for (const seed of [1, 2, 3, 4]) {
       const s = newGame(seed)
       const pirates = Object.values(s.ships).filter((x) => x.faction === PIRATES)
-      expect(pirates.length).toBeGreaterThanOrEqual(5)
+      expect(pirates.length).toBe(STARTING_PIRATES)
       for (const p of pirates) expect(p.havens?.length).toBeGreaterThan(0)
       let seen = false
       for (let i = 0; i < 40; i++) {

@@ -155,6 +155,8 @@ export type EventKind =
   | 'officer_took_command'
   /** Under questioning a captured pirate named the world as a haven. `person` is the pirate; `at` the world named. Not always true. */
   | 'haven_named'
+  /** A pirate lay docked at the port and the port made no move to seize her. `ship` is the pirate, `level` how many, `person` the governor who let it pass. */
+  | 'pirates_harboured'
 
 /** Good or bad news. On an event this is the reading for a bystander; a party to it reads it by `against` and `favours`. */
 export type Valence = 'good' | 'bad' | 'neutral'
