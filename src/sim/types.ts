@@ -11,7 +11,7 @@ import type { Hex } from './hex'
 import type { Order, Posture } from './orders'
 import type { Rng } from './rng'
 import type { Rumour } from './rumours'
-import type { Belief, Dispatch, Event, Report, ShipSnapshot } from './view'
+import type { Belief, Dispatch, Event, Report } from './view'
 
 // ---------------------------------------------------------------------------
 // Identity and time
@@ -91,13 +91,6 @@ export interface GroundContest {
   attackers: Troops
 }
 
-/** One line of a world's traffic log: a hull that called, and when. What a scout lying off the world for a while reads back to the desk (see ./scouts.ts). */
-export interface TrafficEntry {
-  ship: ShipSnapshot
-  arrived: Week
-  left: Week | null
-}
-
 export interface World {
   id: WorldId
   name: string
@@ -119,8 +112,6 @@ export interface World {
   contest: GroundContest | null
   /** When the governor's office last wrote to the desk. Drives the "all quiet" letter. */
   lastLetter: Week
-  /** Hulls that called recently, newest last. Bounded (see ./scouts.ts). */
-  traffic: TrafficEntry[]
 }
 
 /** When packets leave each end of a lane. */
@@ -287,7 +278,7 @@ export interface GameState {
   characters: Record<CharacterId, Character>
   factions: Record<FactionId, Faction>
   mail: Record<MailId, Mail>
-  /** What has happened, by week and world: the unit of news. Forgotten after EVENT_MEMORY weeks (see ./events.ts). */
+  /** What has happened, by week and world: the unit of news, and every world's traffic log. Forgotten after EVENT_MEMORY weeks (see ./events.ts). */
   events: Record<EventId, Event>
   /** Talk in transit along the lanes (see ./rumours.ts). */
   rumours: Rumour[]

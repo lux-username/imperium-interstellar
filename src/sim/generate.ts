@@ -139,7 +139,6 @@ export function generateWorlds(rng: Rng): Generated {
       marines: 0,
       contest: null,
       lastLetter: nextInt(rng, -7, 0),
-      traffic: [],
     }
     worlds[id] = world
     list.push(world)
@@ -165,7 +164,6 @@ export function generateWorlds(rng: Rng): Generated {
       marines: 0,
       contest: null,
       lastLetter: nextInt(rng, -7, 0),
-      traffic: [],
     }
     worlds[id] = world
     list.push(world)

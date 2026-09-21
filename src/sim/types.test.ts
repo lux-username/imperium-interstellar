@@ -73,7 +73,6 @@ function fixture(): GameState {
         marines: 0,
         contest: null,
         lastLetter: 0,
-        traffic: [],
       },
       [outpost]: {
         id: outpost,
@@ -88,7 +87,6 @@ function fixture(): GameState {
         marines: 0,
         contest: null,
         lastLetter: 0,
-        traffic: [],
       },
     },
     lanes: { [lane]: { id: lane, ends: [capital, outpost], jumpDistance: 2, schedule: { interval: 2, phase: 1 } } },

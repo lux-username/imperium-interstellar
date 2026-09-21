@@ -11,6 +11,7 @@ import { hexRoute, laneBetween, nextDeparture, route } from './chart'
 import { eventsAt, hullArrivedEvent, hullDepartedEvent } from './events'
 import { capitalOf, hostile } from './factions'
 import { loadMail, snapshotWorld, unloadMail, writeReport } from './mail'
+import { watchReport } from './scouts'
 import { disembarkAtHome, loadCargo, takeOnWaiting, unloadCargo } from './troops'
 import type { Address, GameState, Ship, ShipId, WorldId } from './types'
 import type { Order } from './orders'
@@ -69,15 +70,19 @@ export function orderTarget(state: GameState, ship: Ship, at: WorldId): WorldId 
         if (state.week < order.began + order.weeks) return null
         ship.order = afterwards(ship, order.then)
         continue
-      case 'scout':
+      case 'scout': {
         if (order.world !== at) return order.world
         if (order.lookedOn === null) {
           order.lookedOn = state.week
           commanderReport(state, ship, at)
         }
-        if (state.week <= order.lookedOn) return null
+        const stay = Math.max(1, order.weeks)
+        if (state.week < order.lookedOn + stay) return null
+        // A watch ends with the one report nobody colours; a look was written on arrival.
+        if (stay > 1) watchReport(state, ship, at, order.lookedOn, friendlyPort(state, ship, at))
         ship.order = afterwards(ship, order.then)
         continue
+      }
       case 'transport':
         if (!order.loaded) loadCargo(state, ship, at, order)
         if (order.to !== at) return order.to
