@@ -5,7 +5,7 @@
  * Starting position; tune there, not here.
  */
 import { newCharacter } from './characters'
-import { word } from './names'
+import { SHIP_NAMES, type NamedHull } from './data/ships'
 import { nextInt, type Rng } from './rng'
 import type { Character, CharacterId, FactionId, Ship, ShipId, ShipRole, WorldId } from './types'
 
@@ -55,16 +55,21 @@ export const STARTING_FLEET: { role: keyof typeof HULLS; count: number }[] = [
   { role: 'scout', count: 6 },
 ]
 
-const PREFIXES = ['Vigilant', 'Steadfast', 'Resolute', 'Wayfarer', 'Sentinel', 'Harbinger', 'Lantern', 'Kestrel']
+const ORDINALS = ['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
 
-export function shipName(rng: Rng, taken: Set<string>): string {
-  for (;;) {
-    const name = nextInt(rng, 1, 3) === 1 ? PREFIXES[nextInt(rng, 0, PREFIXES.length - 1)] : word(rng)
-    if (!taken.has(name)) {
-      taken.add(name)
-      return name
-    }
-  }
+/**
+ * A name for a hull of this class not already in `taken`, from the class's
+ * own pool (src/sim/data/ships.ts). The draw is random while names remain;
+ * once the pool is spent the name is reused with a number, as navies do.
+ * Adds the result to `taken`.
+ */
+export function shipName(rng: Rng, hull: NamedHull, taken: Set<string>): string {
+  const pool = SHIP_NAMES[hull]
+  const free = pool.filter((n) => !taken.has(n))
+  let name = free.length > 0 ? free[nextInt(rng, 0, free.length - 1)] : pool[nextInt(rng, 0, pool.length - 1)]
+  for (let i = 0; taken.has(name); i++) name = `${name.replace(/ [IVX]+$/, '')} ${ORDINALS[Math.min(i, ORDINALS.length - 1)]}`
+  taken.add(name)
+  return name
 }
 
 /** One hull of a class, with a freshly rolled commander, in port at `at`. */
@@ -101,7 +106,7 @@ export function startingFleet(rng: Rng, faction: FactionId, capital: WorldId): {
       n += 1
       const commander = newCharacter(rng, cid, faction, { kind: 'commander', ship: id })
       characters[cid] = commander
-      ships[id] = newShip(id, shipName(rng, taken), HULLS[role], faction, capital, commander)
+      ships[id] = newShip(id, shipName(rng, role, taken), HULLS[role], faction, capital, commander)
     }
   }
   return { ships, characters }

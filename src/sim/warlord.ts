@@ -109,7 +109,7 @@ export function placeWarlord(state: GameState): void {
       n += 1
       const commander = newCharacter(state.rng, cid, WARLORD, { kind: 'commander', ship: id })
       state.characters[cid] = commander
-      const ship = newShip(id, shipName(state.rng, taken), HULLS[role], WARLORD, seat.id, commander)
+      const ship = newShip(id, shipName(state.rng, role, taken), HULLS[role], WARLORD, seat.id, commander)
       ship.standing = { rally: seat.id, onContact: 'favourable' }
       state.ships[id] = ship
     }

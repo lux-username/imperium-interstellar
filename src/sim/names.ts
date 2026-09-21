@@ -6,9 +6,7 @@
  * by that culture's own pattern: family-first where the tradition is, a
  * patronymic where there were no surnames, one name where one name was
  * enough. See design/culture-tables.md for the tables and the reasoning.
- *
- * Ship names still come from the syllable generator at the bottom of this
- * file; nothing else does.
+ * Ships are named by class from src/sim/data/ships.ts, in ./fleet.ts.
  */
 import { CORE, CULTURES, WORLD, type Culture } from './data/names'
 import type { Community } from './data/names/culture'
@@ -109,26 +107,4 @@ export function personName(rng: Rng, cultureName: string, sex: Sex): string {
   }
   const father = pattern.includes('{father}') ? pick(rng, p.given.m) : ''
   return pattern.replace('{given}', given).replace('{family}', family).replace('{father}', father)
-}
-
-// ---------------------------------------------------------------------------
-// Ship names: an original syllable generator, so hulls sound like nowhere in particular.
-
-const ONSETS = ['', '', 'b', 'br', 'c', 'ch', 'd', 'dr', 'f', 'g', 'gr', 'h', 'j', 'k', 'kr', 'l', 'm', 'n', 'p', 'pr', 'r', 's', 'sh', 'st', 't', 'th', 'tr', 'v', 'w', 'z']
-const NUCLEI = ['a', 'e', 'i', 'o', 'u', 'a', 'e', 'o', 'ae', 'ai', 'au', 'ea', 'ei', 'ou', 'y']
-const CODAS = ['', '', '', 'n', 'r', 's', 'l', 'th', 'x', 'm', 'nd', 'rn', 'sk', 'st', 'k', 'd', 't', 'll', 'ss']
-
-function syllable(rng: Rng, first: boolean): string {
-  const onset = first ? pick(rng, ONSETS) : pick(rng, ONSETS.filter((o) => o.length <= 1 || o === 'th' || o === 'sh'))
-  return onset + pick(rng, NUCLEI) + pick(rng, CODAS)
-}
-
-/** One capitalised word of two or three syllables. */
-export function word(rng: Rng): string {
-  const count = nextInt(rng, 2, 3)
-  let s = ''
-  for (let i = 0; i < count; i++) s += syllable(rng, i === 0)
-  // Collapse doubled letters across syllable joins so "Kell" doesn't become "Kelll".
-  s = s.replace(/(.)\1\1+/g, '$1$1')
-  return s.charAt(0).toUpperCase() + s.slice(1)
 }
