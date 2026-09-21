@@ -12,6 +12,7 @@
  */
 import { neighbours } from './chart'
 import { EVENT_MEMORY, valenceFor } from './events'
+import { capitalise, eventLabel, eventText } from './letters'
 import { learn } from './mail'
 import { personName, rollSex } from './names'
 import { raided } from './pirates'
@@ -99,6 +100,10 @@ function hearRumour(state: GameState, rumour: Rumour, at: WorldId): void {
     channel,
     observer: THE_DOCKS,
     observerName: channel === 'merchant' ? merchantName(state, at) : 'the docks',
+    observerTitle: null,
+    observerShip: null,
+    subject: capitalise(eventLabel(rumour.event)),
+    lede: eventText(rumour.event),
     observedAt: rumour.event.at,
     observed: rumour.event.week,
     snapshot: { kind: 'event', event: JSON.parse(JSON.stringify(rumour.event)) as Event },

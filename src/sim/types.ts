@@ -183,6 +183,10 @@ export interface Ship {
   standing: StandingOrders
   /** Mail in the hold, by MailId. */
   mailbag: MailId[]
+  /** When her commander last read orders from the desk. A general report covers everything since. */
+  lastOrders: Week
+  /** What she has seen since those orders, for the general report: copies of the events at the worlds she lay at. Cleared when orders are read. */
+  log: Event[]
 }
 
 export type Post =

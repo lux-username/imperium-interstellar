@@ -6,7 +6,7 @@
  */
 import { hexLabel } from '../sim/hex'
 import { expectedArrival, nextDeparture, route, type CharacterId, type PlayerView, type ReportId, type WorldId } from '../sim/view'
-import { ago, eventText, holderText, profileString, sailsText, stateOf, weekLabel, worldName } from './format'
+import { ago, eventText, holderText, profileString, sailsText, signature, stateOf, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
@@ -59,10 +59,10 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
         <>
           <p className="asof">
             {isCapital && 'Seen directly from the desk.'}
-            {!isCapital && isDeskObservation(report.id) && `As of ${weekLabel(report.observed)} — ${ago(view.week, report.observed)}, from ${report.observerName}.`}
+            {!isCapital && isDeskObservation(report.id) && `As of ${weekLabel(report.observed)} — ${ago(view.week, report.observed)}, from ${signature(report)}.`}
             {!isCapital && !isDeskObservation(report.id) && (
               <>
-                As of {weekLabel(report.observed)} — {ago(view.week, report.observed)}, reported by {report.observerName}
+                As of {weekLabel(report.observed)} — {ago(view.week, report.observed)}, reported by {signature(report)}
                 {report.channel === 'agent' ? ' (a scout’s watch: nothing shaded)' : ''}.{' '}
                 <button type="button" className="link" onClick={() => onShowReport(report.id)}>
                   show report
@@ -178,7 +178,7 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
           <ul className="history">
             {history.map((r) => r.snapshot.kind === 'world' && (
               <li key={r.id}>
-                <span className="muted">obs. {weekLabel(r.observed)}, arrived {weekLabel(r.delivered ?? 0)}, {r.observerName}:</span>{' '}
+                <span className="muted">obs. {weekLabel(r.observed)}, arrived {weekLabel(r.delivered ?? 0)}, {signature(r)}:</span>{' '}
                 {r.events.length > 0 ? r.events.map(eventText).join(' ') : `${holderText(view, r.snapshot.world)}, garrison ${r.snapshot.world.garrison + r.snapshot.world.marines}, Governor ${r.snapshot.world.governorName ?? '—'}`}{' '}
                 <button type="button" className="link" onClick={() => onShowReport(r.id)}>
                   show
@@ -194,7 +194,7 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
           <ul className="history">
             {named.map(({ report: r, event: e }) => (
               <li key={`${r.id}-${e.id}`}>
-                <span className="muted">{weekLabel(e.week)}, {r.observerName}:</span> {e.person ?? 'prisoners'} named this world as a haven under questioning.{' '}
+                <span className="muted">{weekLabel(e.week)}, {signature(r)}:</span> {e.person ?? 'prisoners'} named this world as a haven under questioning.{' '}
                 <button type="button" className="link" onClick={() => onShowReport(r.id)}>
                   show
                 </button>

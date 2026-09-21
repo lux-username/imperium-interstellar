@@ -29,6 +29,10 @@ function fixture(): GameState {
     channel: 'official',
     observer: governor,
     observerName: 'Governor of Outpost',
+    observerTitle: 'governor',
+    observerShip: null,
+    subject: 'All quiet',
+    lede: 'The world is quiet.',
     observedAt: outpost,
     observed: 2,
     snapshot: {
@@ -111,6 +115,8 @@ function fixture(): GameState {
         order: { kind: 'courier', route: [capital, outpost], then: null, repeat: true, leg: 0 },
         standing: { rally: null, onContact: 'favourable' },
         mailbag: ['m-1' as MailId],
+        lastOrders: 0,
+        log: [],
       },
     },
     characters: {

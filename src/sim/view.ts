@@ -35,6 +35,10 @@ import type {
 // when a letter should land using the same sums the sim uses.
 export { expectedArrival, hexRoute, nextDeparture, route } from './chart'
 
+// The wording of events and letters is the sim's, so the inbox never says
+// anything a letter did not.
+export { UNREST_WORDS, eventLabel, eventText, unrestWord } from './letters'
+
 // The public-knowledge primitives the UI needs, re-exported so it never has
 // a reason to reach into types.ts.
 export type {
@@ -224,11 +228,21 @@ export function isRumour(channel: Channel): boolean {
   return channel === 'merchant' || channel === 'docks'
 }
 
+/** The office a writer holds. A governor writes for a world, a captain for a hull; a survey, the desk, a merchant and the docks hold none. */
+export type Title = 'governor' | 'captain' | null
+
 export interface Report {
   id: ReportId
   channel: Channel
   observer: CharacterId
   observerName: string
+  observerTitle: Title
+  /** The hull a captain writes from, by name. */
+  observerShip: string | null
+  /** What the letter is about, in a few words, as the writer put it. */
+  subject: string
+  /** The first sentence: the most important news, in the writer's words. */
+  lede: string
   /** Where the observation was made. Can differ from `envelope.origin` when a ship saw something and posted it from its next port. */
   observedAt: WorldId
   observed: Week

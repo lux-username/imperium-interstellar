@@ -75,11 +75,11 @@ function colouredEvent(event: Event, governor: Character): Event {
  * the events since their last letter that they are willing to mention.
  * Writing resets the quiet clock.
  */
-export function governorLetter(state: GameState, world: World, mention: Event[]): Mail | null {
+export function governorLetter(state: GameState, world: World, mention: Event[], requested = false): Mail | null {
   const id = world.actingGovernor
   const governor = id ? state.characters[id] : null
   if (!id || !governor) return null
-  const mail = writeReport(state, id, world.id, colouredSnapshot(state, world, governor), { events: mention.map((e) => colouredEvent(e, governor)) })
+  const mail = writeReport(state, id, world.id, colouredSnapshot(state, world, governor), { events: mention.map((e) => colouredEvent(e, governor)), occasion: requested ? 'requested' : 'letter' })
   world.lastLetter = state.week
   return mail
 }
@@ -105,7 +105,7 @@ export function governorsWrite(state: GameState): void {
     if (!governor) continue
     const thisWeek = eventsAt(state, world.id, state.week, state.week)
     if (thisWeek.some((e) => e.kind === 'dispatch_received')) {
-      governorLetter(state, world, eventsWorthMentioning(state, world, governor))
+      governorLetter(state, world, eventsWorthMentioning(state, world, governor), true)
       continue
     }
     const mention = thisWeek.filter((e) => discloses(state.rng, governor, e))

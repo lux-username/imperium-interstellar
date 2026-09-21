@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { PlayerView, Report, ReportId, WorldId } from '../sim/view'
-import { ago, eventLabel, eventText, holderText, subjectWorld, weekLabel, worldName } from './format'
+import { ago, eventText, headline, holderText, signature, subjectWorld, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
@@ -87,13 +87,13 @@ export function Inbox({ view, pile, onSelect, focus }: Props) {
             >
               <div className="line1">
                 <span className="kind">{r.channel === 'agent' ? '◎' : r.snapshot.kind === 'world' ? '◉' : r.snapshot.kind === 'ship' ? '▲' : '~'}</span>
-                <span className="subject">{subject(view, r)}</span>
+                <span className="subject">{headline(view, r)}</span>
                 <span className="arrived">
                   {pile === 'rumours' ? <>about {weekLabel(r.observed)} · heard {weekLabel(r.delivered ?? 0)}</> : <>sent {weekLabel(r.envelope.sent)} · arr. {weekLabel(r.delivered ?? 0)}</>}
                 </span>
               </div>
               <div className="from">
-                {r.channel === 'docks' ? 'Word on the docks' : r.channel === 'merchant' ? `A merchant, ${r.observerName}` : r.channel === 'agent' ? `Watch report, ${r.observerName}` : r.observerName}
+                {r.channel === 'docks' ? 'Word on the docks' : r.channel === 'merchant' ? `A merchant, ${r.observerName}` : signature(r)}
                 {r.channel === 'docks' || r.channel === 'merchant' ? `, of ${worldName(view, r.observedAt)}` : `, ${worldName(view, r.observedAt)}`}
               </div>
               {isOpen && (
@@ -103,11 +103,15 @@ export function Inbox({ view, pile, onSelect, focus }: Props) {
                     {r.delivered !== null && r.delivered - r.observed > 0 && <> · {r.delivered - r.observed} wk in transit</>}
                     {r.envelope.route.length > 2 && <> · via {r.envelope.route.slice(1, -1).map((id) => worldName(view, id)).join(', ')}</>}
                   </div>
+                  {pile === 'inbox' && <div className="lede">{r.lede}</div>}
                   <div className="line3">{body(view, r)}</div>
                   {r.events.length > 0 && (
                     <ul className="events">
                       {r.events.map((e) => (
-                        <li key={e.id}>{eventText(e)}</li>
+                        <li key={e.id}>
+                          {(e.at !== r.observedAt || e.week !== r.observed) && <span className="muted">{e.at !== r.observedAt ? `${worldName(view, e.at)}, ` : ''}{weekLabel(e.week)}: </span>}
+                          {eventText(e)}
+                        </li>
                       ))}
                     </ul>
                   )}
@@ -121,21 +125,7 @@ export function Inbox({ view, pile, onSelect, focus }: Props) {
   )
 }
 
-/** One line that says what the report is about. A letter leads with what happened, if anything did. */
-function subject(view: PlayerView, r: Report): string {
-  if (r.snapshot.kind === 'world') {
-    const w = r.snapshot.world
-    if (r.channel === 'agent') return `${w.name}: watch report, ${r.events.length} thing${r.events.length === 1 ? '' : 's'} seen`
-    // A letter leads with the worst of its news.
-    const lead = [...r.events].sort((a, b) => b.severity - a.severity)[0]
-    if (lead) return `${w.name}: ${eventLabel(lead)}${r.events.length > 1 ? ` (+${r.events.length - 1})` : ''}`
-    const hulls = w.ships.length > 0 ? `, ${w.ships.length} hull${w.ships.length === 1 ? '' : 's'} in port` : ''
-    return `${w.name}: ${holderText(view, w)}, garrison ${w.garrison + w.marines}${hulls}`
-  }
-  if (r.snapshot.kind === 'ship') return r.events.length > 0 ? `${r.snapshot.ship.name}: ${eventLabel(r.events[0])}` : `${r.snapshot.ship.name} sighted`
-  return `${worldName(view, r.snapshot.event.at)}: ${eventLabel(r.snapshot.event)}`
-}
-
+/** The standard part of a letter: how the world stood and what lay in port. The lede above it carries the news. */
 function body(view: PlayerView, r: Report): string {
   if (r.snapshot.kind === 'world') {
     const w = r.snapshot.world
