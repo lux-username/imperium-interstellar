@@ -44,7 +44,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const [address, setAddress] = useState<WorldId>(lastSeenAt(draft.ship ?? ''))
   const [addressEdited, setAddressEdited] = useState(false)
   const [destination, setDestination] = useState<WorldId | ''>(draft.destination ?? '')
-  const [task, setTask] = useState<Task>('patrol')
+  const [task, setTask] = useState<Task>(draft.ship && view.roster.find((r) => r.id === draft.ship)?.role === 'scout' ? 'watch' : 'patrol')
   const [weeks, setWeeks] = useState(4)
   const [watchWeeks, setWatchWeeks] = useState(4)
   const [army, setArmy] = useState(0)
@@ -60,8 +60,10 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const setShip = (id: ShipId | '') => {
     setShipState(id)
     if (!addressEdited) setAddress(lastSeenAt(id))
-    // Only a scout lies off and watches; anything else picked with that task falls back to a patrol.
-    if (id && view.roster.find((r) => r.id === id)?.role !== 'scout' && task === 'watch') setTask('patrol')
+    // Only a scout lies off and watches, and a scout never patrols: a task the hull cannot do falls back to the one it can.
+    const role = id ? view.roster.find((r) => r.id === id)?.role : undefined
+    if (role && role !== 'scout' && task === 'watch') setTask('patrol')
+    if (role === 'scout' && task === 'patrol') setTask('watch')
   }
 
   const entry = ship ? view.roster.find((r) => r.id === ship) : null
@@ -223,9 +225,10 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
             <input type="radio" name="task" checked={task === 'hold'} onChange={() => setTask('hold')} /> go there
             {task === 'hold' && <small className="muted"> (no stay: with “proceed to” below she calls there and carries on; choose “hold at the destination” to keep her there)</small>}
           </label>
-          <label>
-            <input type="radio" name="task" checked={task === 'patrol'} onChange={() => setTask('patrol')} /> patrol for{' '}
-            <input type="number" min={1} max={52} value={weeks} onChange={(e) => setWeeks(Math.max(1, Number.parseInt(e.target.value, 10) || 1))} /> wk
+          <label className={entry?.role === 'scout' ? 'muted' : ''}>
+            <input type="radio" name="task" checked={task === 'patrol'} disabled={entry?.role === 'scout'} onChange={() => setTask('patrol')} /> patrol for{' '}
+            <input type="number" min={1} max={52} value={weeks} disabled={entry?.role === 'scout'} onChange={(e) => setWeeks(Math.max(1, Number.parseInt(e.target.value, 10) || 1))} /> wk
+            {entry?.role === 'scout' && <small className="muted"> (a scout has no guns to patrol with; she looks or watches)</small>}
           </label>
           <label>
             <input type="radio" name="task" checked={task === 'look'} onChange={() => setTask('look')} /> look for a week and report
