@@ -3,8 +3,8 @@
  * something happened that they are willing to mention, and otherwise only
  * now and then to say all is quiet — so silence is itself a signal. Good
  * news always goes; bad news gets a disclosure roll shaded by who the
- * governor is; and the letter itself is coloured by the same traits, so a
- * self-serving governor's world always looks a little calmer than it is.
+ * governor is; and the letter itself is coloured by the same traits: a
+ * governor who harbours pirates leaves them out of it.
  *
  * The same shape holds one level up: the player's own monthly report to the
  * Council is selective in exactly this way (Phase 1c).
@@ -70,26 +70,16 @@ export function discloses(rng: Rng, governor: Character, event: Event): boolean 
   return check(rng, 8, dm)
 }
 
-/** How much a governor shades their world's unrest downward in what they write. */
-function shading(governor: Character): number {
-  return governor.traits.loyalty === 'self' ? 2 : 0
-}
-
-/** A copy of the world as the governor describes it, not quite as it is: calmer, and with no pirates in port if theirs is a haven. */
+/** A copy of the world as the governor describes it: as it is, but with no pirates in port if theirs is a haven. */
 export function colouredSnapshot(state: GameState, world: World, governor: Character): Snapshot {
   const snapshot = snapshotWorld(state, world)
-  if (snapshot.kind === 'world') {
-    snapshot.world.unrest = Math.max(0, snapshot.world.unrest - shading(governor))
-    if (harbours(governor) && isHaven(state, world)) snapshot.world.ships = snapshot.world.ships.filter((s) => s.faction !== PIRATES)
-  }
+  if (snapshot.kind === 'world' && harbours(governor) && isHaven(state, world)) snapshot.world.ships = snapshot.world.ships.filter((s) => s.faction !== PIRATES)
   return snapshot
 }
 
-/** A copy of an event as the governor tells it. */
-function colouredEvent(event: Event, governor: Character): Event {
-  const copy = JSON.parse(JSON.stringify(event)) as Event
-  if (copy.level !== null && (copy.kind === 'unrest_rose' || copy.kind === 'unrest_fell')) copy.level = Math.max(0, copy.level - shading(governor))
-  return copy
+/** A copy of an event as the governor tells it. What they choose to mention is the colouring; the event itself is told straight. */
+function colouredEvent(event: Event): Event {
+  return JSON.parse(JSON.stringify(event)) as Event
 }
 
 /**
@@ -101,7 +91,7 @@ export function governorLetter(state: GameState, world: World, mention: Event[],
   const id = world.actingGovernor
   const governor = id ? state.characters[id] : null
   if (!id || !governor) return null
-  const mail = writeReport(state, id, world.id, colouredSnapshot(state, world, governor), { events: mention.map((e) => colouredEvent(e, governor)), occasion: requested ? 'requested' : 'letter' })
+  const mail = writeReport(state, id, world.id, colouredSnapshot(state, world, governor), { events: mention.map(colouredEvent), occasion: requested ? 'requested' : 'letter' })
   world.lastLetter = state.week
   return mail
 }

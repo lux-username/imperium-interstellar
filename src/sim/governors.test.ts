@@ -53,15 +53,15 @@ describe('what a governor chooses to say', () => {
     expect(rate({}, grave)).toBeGreaterThan(0.8)
   })
 
-  it('a self-serving governor\'s letter shows the world calmer than it is', () => {
+  it('a self-serving governor\'s letter tells unrest straight: what they colour is what they choose to mention', () => {
     const s = line()
     s.worlds[X].unrest = 7
     s.characters['c-x' as CharacterId].traits.loyalty = 'self'
     const mail = governorLetter(s, s.worlds[X], [event('unrest_rose', 'bad', 2, 7)])!
     const report = mail.contents.kind === 'report' ? mail.contents.report : null
-    expect(report?.snapshot.kind === 'world' && report.snapshot.world.unrest).toBe(5)
-    expect(report?.events[0].level).toBe(5)
-    // The truth is untouched.
+    expect(report?.snapshot.kind === 'world' && report.snapshot.world.unrest).toBe(7)
+    expect(report?.events[0].level).toBe(7)
+    // The truth is untouched either way.
     expect(s.worlds[X].unrest).toBe(7)
     s.characters['c-x' as CharacterId].traits.loyalty = 'player'
     const honest = governorLetter(s, s.worlds[X], [])!
@@ -107,7 +107,7 @@ describe('what a governor chooses to say', () => {
     expect(observed.sort((a, b) => a - b)).toEqual([3, 3 + gap])
   })
 
-  it('a letter from the desk forces a report, still in the governor\'s own colours', () => {
+  it('a letter from the desk forces a report, and even a self-serving governor tells unrest straight', () => {
     const s = line()
     for (const w of Object.values(s.worlds)) w.profile.population = 0
     s.worlds[X].unrest = 6
@@ -116,7 +116,7 @@ describe('what a governor chooses to say', () => {
     runUntil(s, () => ask.status.kind === 'delivered', 10)
     const reply = Object.values(s.mail).find((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-x' && m.contents.report.observed === s.week)
     expect(reply).toBeDefined()
-    expect(reply?.contents.kind === 'report' && reply.contents.report.snapshot.kind === 'world' && reply.contents.report.snapshot.world.unrest).toBe(4)
+    expect(reply?.contents.kind === 'report' && reply.contents.report.snapshot.kind === 'world' && reply.contents.report.snapshot.world.unrest).toBe(6)
     expect(s.worlds[X].lastLetter).toBe(s.week)
   })
 
