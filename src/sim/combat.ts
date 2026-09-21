@@ -154,8 +154,9 @@ export function docked(state: GameState, ship: Ship, at: WorldId, arriving: Read
  * arrives next week with whatever she carries.
  */
 function breakOff(state: GameState, ship: Ship, at: WorldId): boolean {
+  // A scout's crew go unnamed and her getting clear is a matter of the hull, not the hand on the helm.
   const target = ship.role === 'scout' ? 4 : ship.role === 'packet' ? 7 : 9
-  const commander = ship.commander ? state.characters[ship.commander] : null
+  const commander = ship.role !== 'scout' && ship.commander ? state.characters[ship.commander] : null
   if (!check(state.rng, target, commander?.traits.competence.naval ?? 0)) return false
   const to = refuge(state, ship, at)
   if (!to) return false
@@ -190,6 +191,7 @@ function loseMail(state: GameState, ship: Ship): void {
 
 /** A hull with no guns caught in the open: pirates rob her and let her go; anyone else takes her. */
 function overtaken(state: GameState, ship: Ship, at: WorldId, by: Ship[]): void {
+  if (by.length === 0) return
   if (by[0].faction === PIRATES) {
     loseMail(state, ship)
     recordEvent(state, at, { kind: 'ship_robbed', valence: 'neutral', against: ship.faction, favours: PIRATES, severity: 2, ship })
@@ -253,6 +255,13 @@ function destroy(state: GameState, ship: Ship, at: WorldId, by: FactionId): void
  */
 function battle(state: GameState, scene: Scene, a: Ship[], b: Ship[]): void {
   const { at } = scene
+  // Scouts never join an action. One at the quay stays out of it; one in the open makes for a jump point as the shooting
+  // starts, and if she cannot get clear she is caught.
+  const scouts = [...a, ...b].filter((s) => s.role === 'scout' && s.location.kind === 'world' && !docked(state, s, at, scene.arriving))
+  for (const s of scouts) if (!breakOff(state, s, at)) overtaken(state, s, at, (a.includes(s) ? b : a).filter((x) => x.role !== 'scout'))
+  a = a.filter((s) => s.role !== 'scout' && state.ships[s.id] && s.location.kind === 'world')
+  b = b.filter((s) => s.role !== 'scout' && state.ships[s.id] && s.location.kind === 'world')
+  if (a.length === 0 || b.length === 0) return
   const lead = (side: Ship[]) => [...side].sort((x, y) => effectiveStrength(y) - effectiveStrength(x) || (x.id < y.id ? -1 : 1))[0]
   // The record names the intruder — the side that is not the port's own — and says whether the port's side had any
   // guns of its own to answer with, or only the batteries: a packet at the quay does not fight, the port does.
@@ -317,8 +326,10 @@ function encounter(state: GameState, scene: Scene, a: Ship[], b: Ship[]): void {
     return
   }
   const [hunters, quarry] = wantsA ? [a, b] : [b, a]
-  const open = quarry.filter((s) => !docked(state, s, at, arriving))
-  const underGuns = quarry.filter((s) => docked(state, s, at, arriving))
+  // Pirates want cargo and mail; a scout carries neither, so they let her be. Anyone else will take her if they can catch her.
+  const worth = hunters[0].faction === PIRATES ? quarry.filter((s) => s.role !== 'scout') : quarry
+  const open = worth.filter((s) => !docked(state, s, at, arriving))
+  const underGuns = worth.filter((s) => docked(state, s, at, arriving))
   const targets = open.filter((s) => !breakOff(state, s, at))
   // The port is a harder proposition: its guns and everything under them, taken together.
   if (underGuns.length > 0 && odds(postureOf(state, hunters), sideStrength(state, hunters, scene), sideStrength(state, underGuns, scene))) targets.push(...underGuns)

@@ -60,6 +60,8 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const setShip = (id: ShipId | '') => {
     setShipState(id)
     if (!addressEdited) setAddress(lastSeenAt(id))
+    // Only a scout lies off and watches; anything else picked with that task falls back to a patrol.
+    if (id && view.roster.find((r) => r.id === id)?.role !== 'scout' && task === 'watch') setTask('patrol')
   }
 
   const entry = ship ? view.roster.find((r) => r.id === ship) : null
@@ -86,7 +88,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   // A courier in port here could carry the orders itself: needed where no packet goes, worth it where it would land sooner.
   const couriers = view.roster.filter((r) => {
     const s = view.known.ships[r.id]
-    return r.id !== ship && r.commanderName !== null && s?.ship.at === view.capital && s.observed === view.week && !lastOrderSent(view, r.id)
+    return r.id !== ship && !r.prize && s?.ship.at === view.capital && s.observed === view.week && !lastOrderSent(view, r.id)
   })
   const chosenCourier = couriers.find((c) => c.id === courier) ?? couriers.find((c) => c.role === 'scout') ?? couriers[0] ?? null
   const courierPath = chosenCourier && address !== view.capital ? hexRoute(view.chart, view.capital, address, chosenCourier.jump) : null
@@ -141,7 +143,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
           <select value={ship} onChange={(e) => setShip(e.target.value as ShipId | '')}>
             <option value="">— choose a ship —</option>
             {view.roster
-              .filter((r) => r.commanderName !== null)
+              .filter((r) => !r.prize)
               .map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name} ({r.role}) — {seenText(r.id)}
@@ -228,10 +230,10 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
           <label>
             <input type="radio" name="task" checked={task === 'look'} onChange={() => setTask('look')} /> look for a week and report
           </label>
-          <label>
-            <input type="radio" name="task" checked={task === 'watch'} onChange={() => setTask('watch')} /> lie off and watch for{' '}
-            <input type="number" min={2} max={20} value={watchWeeks} onChange={(e) => setWatchWeeks(Math.min(20, Math.max(2, Number.parseInt(e.target.value, 10) || 2)))} /> wk, then send a report
-            {entry && entry.role !== 'scout' && <small className="muted"> (any hull can watch; only a scout is likely to get clear if warships come)</small>}
+          <label className={entry && entry.role !== 'scout' ? 'muted' : ''}>
+            <input type="radio" name="task" checked={task === 'watch'} disabled={!!entry && entry.role !== 'scout'} onChange={() => setTask('watch')} /> lie off and watch for{' '}
+            <input type="number" min={2} max={20} value={watchWeeks} disabled={!!entry && entry.role !== 'scout'} onChange={(e) => setWatchWeeks(Math.min(20, Math.max(2, Number.parseInt(e.target.value, 10) || 2)))} /> wk, then send a report
+            {entry && entry.role !== 'scout' && <small className="muted"> (scouts only)</small>}
           </label>
           <label>
             <input type="radio" name="task" checked={task === 'transport'} onChange={() => setTask('transport')} /> put down troops or a passenger

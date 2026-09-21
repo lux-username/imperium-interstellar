@@ -32,7 +32,7 @@ export function Fleet({ view, onSelect, onShowReport, onOrders }: Props) {
                 {entry.fuel === 0 ? ', scoops' : seen?.ship.fuel !== null && seen?.ship.fuel !== undefined ? `, fuel for ${seen.ship.fuel} of ${entry.fuel}` : ''}
               </span>
               <span className="arrived">{seen ? `${worldName(view, seen.ship.at)}, ${ago(view.week, seen.observed)}` : 'never seen'}</span>
-              {entry.commanderName !== null && (
+              {!entry.prize && (
                 <button
                   type="button"
                   className="small"
@@ -46,7 +46,7 @@ export function Fleet({ view, onSelect, onShowReport, onOrders }: Props) {
               )}
             </div>
             <div className="line2">
-              {entry.commanderName ? `Commander ${entry.commanderName}` : <span className="warn">Prize — no crew. Send an officer out to take command.</span>}
+              {entry.commanderName ? `Commander ${entry.commanderName}` : entry.prize ? <span className="warn">Prize — no crew. Send an officer out to take command.</span> : <span className="muted">Unnamed crew</span>}
               {seen && (seen.ship.hulk || seen.ship.damaged) && <span className="warn">{conditionText(seen.ship)}</span>}
               {seen && !isGovernmentHouseObservation(seen.report) && (
                 <>

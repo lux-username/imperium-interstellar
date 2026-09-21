@@ -12,8 +12,8 @@
  */
 import { hexRoute, laneBetween, nextDeparture, route } from './chart'
 import { isBold, isCautious } from './characters'
-import { burnsFuel, fuelCapacity } from './fleet'
-import { PIRATES } from './factions'
+import { burnsFuel, crewed, fuelCapacity } from './fleet'
+import { PIRATES, THE_SCOUTS } from './factions'
 import { hexDistance } from './hex'
 import { eventsAt, hullArrivedEvent, hullDepartedEvent, recordEvent } from './events'
 import { capitalOf, hostile } from './factions'
@@ -23,7 +23,7 @@ import { check } from './rng'
 import { watchReport } from './scouts'
 import { disembarkAtHome, loadCargo, takeOnWaiting, unloadCargo } from './troops'
 import { impound } from './world'
-import type { Address, GameState, Ship, ShipId, WorldId } from './types'
+import type { Address, CharacterId, GameState, Ship, ShipId, WorldId } from './types'
 import type { Order } from './orders'
 import type { Event } from './view'
 
@@ -195,11 +195,16 @@ export function friendlyPort(state: GameState, ship: Ship, at: WorldId): boolean
   return world !== undefined && world.faction === ship.faction && home !== null && route(state.lanes, at, home) !== null
 }
 
-/** Whether this officer has already posted a letter this week, so an action and an arrival do not make two. Notes from questioning prisoners are not the week's letter. */
-function wroteThisWeek(state: GameState, commander: Ship['commander']): boolean {
+/** Whether this hull has already posted a letter this week, so an action and an arrival do not make two. Notes from questioning prisoners are not the week's letter. */
+function wroteThisWeek(state: GameState, ship: Ship): boolean {
   return Object.values(state.mail).some(
-    (m) => m.contents.kind === 'report' && m.contents.report.observer === commander && m.contents.report.observed === state.week && !m.contents.report.events.every((e) => e.kind === 'haven_named'),
+    (m) => m.contents.kind === 'report' && m.contents.report.observerShipId === ship.id && m.contents.report.observed === state.week && !m.contents.report.events.every((e) => e.kind === 'haven_named'),
   )
+}
+
+/** Who signs a hull's letters: her officer, or — for a scout — nobody in particular, the hull herself. */
+export function writer(ship: Ship): CharacterId {
+  return ship.commander ?? THE_SCOUTS
 }
 
 /** Events a captain at `at` this week would put in a letter: anything serious, hostile hulls making port, and what befell her own hull. Own-side traffic is not news. */
@@ -224,8 +229,8 @@ function seenThisWeek(state: GameState, ship: Ship, at: WorldId): Event[] {
  * home.
  */
 export function commanderReport(state: GameState, ship: Ship, at: WorldId, occasion: Occasion = 'arrival'): void {
-  if (!ship.commander || at === capitalOf(state, ship.faction) || capitalOf(state, ship.faction) === null) return
-  if (wroteThisWeek(state, ship.commander)) return
+  if (!crewed(ship) || at === capitalOf(state, ship.faction) || capitalOf(state, ship.faction) === null) return
+  if (wroteThisWeek(state, ship)) return
   const world = state.worlds[at]
   const seen = seenThisWeek(state, ship, at)
   let events = seen
@@ -234,7 +239,7 @@ export function commanderReport(state: GameState, ship: Ship, at: WorldId, occas
     events = [...ship.log.filter((e) => !ids.has(e.id)), ...seen]
     ship.log = []
   }
-  const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world), { events, occasion, since: occasion === 'general' ? ship.lastOrders : undefined })
+  const mail = writeReport(state, writer(ship), at, snapshotWorld(state, world), { events, occasion, since: occasion === 'general' ? ship.lastOrders : undefined, ship: ship.id, faction: ship.faction })
   if (!friendlyPort(state, ship, at)) {
     mail.status = { kind: 'aboard', ship: ship.id }
     ship.mailbag.push(mail.id)
@@ -288,7 +293,7 @@ export function logWitnessed(state: GameState): void {
   const ids = Object.keys(state.ships).sort() as ShipId[]
   for (const id of ids) {
     const ship = state.ships[id]
-    if (!ship.commander) continue
+    if (!crewed(ship)) continue
     const at = ship.location.kind === 'world' ? ship.location.world : ship.location.from
     if (at === capitalOf(state, ship.faction)) continue
     for (const e of eventsAt(state, at, state.week, state.week)) {
@@ -347,9 +352,9 @@ export function afterActionReports(state: GameState): void {
   const ids = Object.keys(state.ships).sort() as ShipId[]
   for (const id of ids) {
     const ship = state.ships[id]
-    if (!ship.commander || ship.location.kind !== 'world') continue
+    if (!crewed(ship) || ship.location.kind !== 'world') continue
     const at = ship.location.world
-    if (at === capitalOf(state, ship.faction) || wroteThisWeek(state, ship.commander)) continue
+    if (at === capitalOf(state, ship.faction) || wroteThisWeek(state, ship)) continue
     const seen = seenThisWeek(state, ship, at)
     if (!foughtThisWeek(ship, seen) && !friendlyPort(state, ship, at)) continue
     if (sendsUpdate(state, ship, seen)) commanderReport(state, ship, at, 'action')
@@ -370,7 +375,7 @@ function onArrival(state: GameState, ship: Ship, at: WorldId): void {
     ship.order = afterwards(ship, order.then)
   }
   disembarkAtHome(state, ship, at)
-  if (!ship.commander || at === capitalOf(state, ship.faction)) return
+  if (!crewed(ship) || at === capitalOf(state, ship.faction)) return
   // The rendezvous made: a general report of everything since the last orders. Elsewhere, a letter of arrival.
   if (runEndsAt(ship, at)) commanderReport(state, ship, at, 'general')
   else if (friendlyPort(state, ship, at) || orderDestination(order) === at) commanderReport(state, ship, at, 'arrival')
@@ -382,8 +387,8 @@ export function departShips(state: GameState): void {
   for (const id of ids) {
     const ship = state.ships[id]
     if (ship.location.kind !== 'world') continue
-    // No officer aboard: a packet runs her lane regardless, a prize sails for the rendezvous under her prize crew, anything else waits.
-    if (ship.commander === null && !(ship.role === 'packet' && ship.order?.kind === 'courier') && ship.order?.kind !== 'move') continue
+    // Nobody to act on orders: a packet runs her lane regardless, a prize sails for the rendezvous under her prize crew, anything else waits.
+    if (!crewed(ship) && !(ship.role === 'packet' && ship.order?.kind === 'courier') && ship.order?.kind !== 'move') continue
     const from = ship.location.world
     const wasPatrolling = ship.order?.kind === 'patrol' && ship.order.world === from && ship.order.began !== null
     const target = orderTarget(state, ship, from)

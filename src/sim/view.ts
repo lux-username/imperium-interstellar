@@ -238,8 +238,8 @@ export function isRumour(channel: Channel): boolean {
   return channel === 'merchant' || channel === 'docks'
 }
 
-/** The office a writer holds. A governor writes for a world, a captain for a hull; a survey, Government House, a merchant and the docks hold none. */
-export type Title = 'governor' | 'captain' | null
+/** The office a writer holds. A governor writes for a world, a captain for a hull, a scout's unnamed crew for their scout; a survey, Government House, a merchant and the docks hold none. */
+export type Title = 'governor' | 'captain' | 'scout' | null
 
 /** Reports Government House made itself — the capital seen from the window, the survey it inherited — have no letter behind them. */
 export function isGovernmentHouseObservation(id: ReportId): boolean {
@@ -327,9 +327,11 @@ export interface RosterEntry {
   name: string
   role: ShipRole
   jump: number
-  /** Null for a prize: taken in action and waiting for an officer to be sent out to her. */
+  /** Null for a prize waiting for an officer, and for a scout, whose crew go unnamed. */
   commander: CharacterId | null
   commanderName: string | null
+  /** Taken in action and lying idle until an officer is sent out to her. Never a scout. */
+  prize: boolean
   /** Detachments she can carry; a fact of her class. */
   troops: number
   /** Jumps a full tank gives her; a fact of her class. */

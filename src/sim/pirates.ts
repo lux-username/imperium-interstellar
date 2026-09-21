@@ -13,7 +13,7 @@ import { neighbours } from './chart'
 import { isBold, newCharacter } from './characters'
 import { recordEvent } from './events'
 import { PIRATES, REBELS, hostile } from './factions'
-import { HULLS, newShip, shipName } from './fleet'
+import { HULLS, crewed, newShip, shipName } from './fleet'
 import { hexDistance } from './hex'
 import { snapshotShip, writeReport } from './mail'
 import { check, nextFloat, nextInt } from './rng'
@@ -319,7 +319,7 @@ export function harbourPirates(state: GameState, landed: readonly ShipId[]): voi
     const sheltered = here.filter((s) => s.faction === PIRATES && s.havens?.includes(at))
     if (sheltered.length === 0) continue
     const newlyDocked = sheltered.some((s) => arrived.has(s.id))
-    const witnessArrived = here.some((s) => s.faction !== PIRATES && s.commander !== null && arrived.has(s.id))
+    const witnessArrived = here.some((s) => s.faction !== PIRATES && crewed(s) && arrived.has(s.id))
     if (!newlyDocked && !witnessArrived) continue
     const governor = world.actingGovernor ? state.characters[world.actingGovernor] : null
     recordEvent(state, at, { kind: 'pirates_harboured', valence: 'bad', favours: PIRATES, severity: 3, ship: sheltered[0], level: sheltered.length, person: governor?.name ?? null })

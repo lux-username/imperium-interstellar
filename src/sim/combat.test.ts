@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { fightAtWorlds } from './combat'
 import { advanceWeek, newGame, requestReport } from './game'
 import { governorLetter } from './governors'
-import { PIRATES } from './factions'
+import { PIRATES, WARLORD } from './factions'
 import { HULLS, newShip } from './fleet'
 import { playerTraits } from './characters'
 import { STARTING_PIRATES, isHaven, raided, seizePirates, spawnPirate } from './pirates'
@@ -165,21 +165,58 @@ describe('warship against raider', () => {
 })
 
 describe('scouts', () => {
-  it('almost always get clear of a raider', () => {
-    let escaped = 0
-    for (let seed = 1; seed <= 30; seed++) {
+  /** An unnamed scout of ours landing at `at` this week. */
+  function scout(s: GameState, at: WorldId): void {
+    s.ships['s-sc' as ShipId] = newShip('s-sc' as ShipId, 'Kestrel', HULLS.scout, 'f-admin' as never, C, null)
+    s.ships['s-sc' as ShipId].location = { kind: 'transit', from: C, to: at, arrives: 1 }
+    s.ships['s-sc' as ShipId].standing = { rally: null, onContact: 'always' } // the posture is ignored: a scout never fights
+    s.ships['s-sc' as ShipId].order = { kind: 'hold' }
+  }
+
+  it('are left alone by pirates, who have nothing to take from them', () => {
+    for (let seed = 1; seed <= 20; seed++) {
       const s = line()
       s.rng = createRng(seed)
       raider(s, X)
-      const cid = 'c-sc' as CharacterId
-      s.characters[cid] = { id: cid, name: 'Scout', faction: 'f-admin' as never, post: { kind: 'commander', ship: 's-sc' as ShipId }, traits: playerTraits() }
-      s.ships['s-sc' as ShipId] = newShip('s-sc' as ShipId, 'Kestrel', HULLS.scout, 'f-admin' as never, C, s.characters[cid])
-      s.ships['s-sc' as ShipId].location = { kind: 'transit', from: C, to: X, arrives: 1 }
-      s.ships['s-sc' as ShipId].standing.onContact = 'never'
+      scout(s, X)
       advanceWeek(s)
-      if (Object.values(s.events).some((e) => e.kind === 'ship_fled' && e.ship?.id === 's-sc')) escaped += 1
+      expect(Object.values(s.events).some((e) => e.ship?.id === 's-sc' && e.kind !== 'hull_arrived')).toBe(false)
+      expect(s.ships['s-sc' as ShipId].location).toEqual({ kind: 'world', world: X })
+    }
+  })
+
+  it('never join an action and almost always get clear of anyone else who comes for them', () => {
+    let escaped = 0
+    let caught = 0
+    for (let seed = 1; seed <= 30; seed++) {
+      const s = line()
+      s.rng = createRng(seed)
+      s.worlds[X].faction = WARLORD
+      warship(s, X, 'always')
+      s.ships['s-war' as ShipId].faction = WARLORD
+      s.characters['c-s-war' as CharacterId].faction = WARLORD
+      scout(s, X)
+      advanceWeek(s)
+      const events = Object.values(s.events)
+      expect(events.some((e) => e.kind === 'battle')).toBe(false)
+      if (events.some((e) => e.kind === 'ship_fled' && e.ship?.id === 's-sc')) escaped += 1
+      if (events.some((e) => e.kind === 'ship_captured' && e.ship?.id === 's-sc')) caught += 1
     }
     expect(escaped).toBeGreaterThanOrEqual(25)
+    expect(escaped + caught).toBe(30)
+  })
+
+  it('at the quay of her own port she sits out an action in orbit rather than running', () => {
+    const s = line()
+    s.worlds[X].profile.starport = 'A'
+    warship(s, X, 'always')
+    raider(s, X)
+    s.ships['s-sc' as ShipId] = newShip('s-sc' as ShipId, 'Kestrel', HULLS.scout, 'f-admin' as never, X, null)
+    s.ships['s-sc' as ShipId].order = { kind: 'hold' }
+    fightAtWorlds(s)
+    expect(Object.values(s.events).some((e) => e.kind === 'battle')).toBe(true)
+    expect(Object.values(s.events).some((e) => e.ship?.id === 's-sc')).toBe(false)
+    expect(s.ships['s-sc' as ShipId].location).toEqual({ kind: 'world', world: X })
   })
 })
 

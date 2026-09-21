@@ -130,7 +130,9 @@ describe('ordered hulls', () => {
     expect(view.roster).toHaveLength(14)
     expect(view.roster.map((r) => r.role).sort()).toEqual(['escort', 'escort', 'patrol', 'patrol', 'patrol', 'patrol', 'scout', 'scout', 'scout', 'scout', 'scout', 'scout', 'transport', 'transport'])
     for (const entry of view.roster) {
-      expect(entry.commanderName).not.toBeNull()
+      // Warships and transports have an officer; a scout's crew go unnamed. None is a prize.
+      expect(entry.commanderName === null).toBe(entry.role === 'scout')
+      expect(entry.prize).toBe(false)
       expect(view.known.ships[entry.id]?.ship.at).toBe(s.capital)
     }
     // Order a patrol craft to the nearest world on the chart; the dispatch is read at once and the hull sails this week.

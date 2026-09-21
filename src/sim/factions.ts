@@ -15,6 +15,8 @@ export const REBELS = 'f-rebels' as FactionId
 
 export const PLAYER = 'c-player' as CharacterId
 export const THE_WARLORD = 'c-warlord' as CharacterId
+/** Nobody in particular: the writer of a scout's letters, whose crew go unnamed. */
+export const THE_SCOUTS = 'c-scouts' as CharacterId
 
 export function stance(a: FactionId, b: FactionId): Stance {
   if (a === b) return 'friendly'

@@ -13,6 +13,7 @@ import { hexLabel } from './hex'
 import { newCharacter } from './characters'
 import { recordEvent } from './events'
 import { ADMINISTRATION, REBELS, WARLORD, capitalOf } from './factions'
+import { crewed } from './fleet'
 import { groundRound, troopStrength } from './ground'
 import { shipsAt } from './mail'
 import { check, nextInt } from './rng'
@@ -103,7 +104,7 @@ export function changeHands(state: GameState, world: World, winner: FactionId, t
   // The governor's fate. The player is not killed: Government House is taken, and the game ends with it.
   const governor = world.actingGovernor
   if (governor && governor !== state.player && state.characters[governor]) {
-    const refuge = shipsAt(state, world.id).find((s) => s.faction === loser && s.commander !== null)
+    const refuge = shipsAt(state, world.id).find((s) => s.faction === loser && crewed(s))
     const name = state.characters[governor]?.name ?? null
     if (refuge) {
       state.characters[governor].post = { kind: 'passenger', ship: refuge.id }

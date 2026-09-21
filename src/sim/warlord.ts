@@ -16,7 +16,7 @@ import { hexRoute, neighbours, route } from './chart'
 import { newCharacter } from './characters'
 import { portGuns } from './combat'
 import { PIRATES, THE_WARLORD, WARLORD, hostile } from './factions'
-import { HULLS, fuelCapacity, newShip, shipName, troopCapacity } from './fleet'
+import { HULLS, crewed, fuelCapacity, newShip, shipName, troopCapacity, wantsOfficer } from './fleet'
 import { hexDistance } from './hex'
 import { roll } from './rng'
 import type { CharacterId, GameState, Ship, ShipId, World, WorldId } from './types'
@@ -107,8 +107,8 @@ export function placeWarlord(state: GameState): void {
       const id = `s-wl-${role}-${n}` as ShipId
       const cid = `c-wl-${n}` as CharacterId
       n += 1
-      const commander = newCharacter(state.rng, cid, WARLORD, { kind: 'commander', ship: id })
-      state.characters[cid] = commander
+      const commander = role === 'scout' ? null : newCharacter(state.rng, cid, WARLORD, { kind: 'commander', ship: id })
+      if (commander) state.characters[cid] = commander
       const ship = newShip(id, shipName(state.rng, role, taken), HULLS[role], WARLORD, seat.id, commander)
       ship.standing = { rally: seat.id, onContact: 'favourable' }
       state.ships[id] = ship
@@ -268,7 +268,7 @@ function rendezvousFor(state: GameState, seat: WorldId, to: WorldId): WorldId {
 
 function idleAt(state: GameState, at: WorldId, role: Ship['role']): Ship[] {
   return Object.values(state.ships)
-    .filter((s) => s.faction === WARLORD && s.role === role && s.commander && s.location.kind === 'world' && s.location.world === at && (!s.order || s.order.kind === 'hold') && s.damage === 0)
+    .filter((s) => s.faction === WARLORD && s.role === role && crewed(s) && s.location.kind === 'world' && s.location.world === at && (!s.order || s.order.kind === 'hold') && s.damage === 0)
     .sort((a, b) => (a.id < b.id ? -1 : 1))
 }
 
@@ -335,7 +335,7 @@ export function warlordActs(state: GameState): void {
 /** Prizes that have reached his seat get an officer from his pool, while he has one. */
 function crewPrizes(state: GameState, seat: WorldId): void {
   for (const prize of Object.values(state.ships).sort((a, b) => (a.id < b.id ? -1 : 1))) {
-    if (prize.faction !== WARLORD || prize.commander !== null || prize.role === 'packet' || prize.location.kind !== 'world' || prize.location.world !== seat) continue
+    if (prize.faction !== WARLORD || !wantsOfficer(prize) || prize.location.kind !== 'world' || prize.location.world !== seat) continue
     const cid = pool(state, seat)[0]
     if (!cid) return
     state.characters[cid].post = { kind: 'commander', ship: prize.id }

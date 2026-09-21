@@ -11,7 +11,9 @@
  * for EVENT_MEMORY weeks (see ./events.ts), which is longer than any watch.
  */
 import { eventsAt } from './events'
+import { crewed } from './fleet'
 import { snapshotWorld, writeReport } from './mail'
+import { writer } from './ships'
 import type { GameState, Ship, Week, WorldId } from './types'
 
 /** The longest watch a scout can be ordered to keep, so the record still holds all of it when she writes. */
@@ -24,10 +26,10 @@ export const MAX_WATCH = 20
  * carries her own news home.
  */
 export function watchReport(state: GameState, ship: Ship, at: WorldId, since: Week, friendlyPort: boolean): void {
-  if (!ship.commander) return
+  if (!crewed(ship)) return
   const world = state.worlds[at]
   const seen = eventsAt(state, at, since, state.week)
-  const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world), { channel: 'agent', events: seen, occasion: 'watch', since })
+  const mail = writeReport(state, writer(ship), at, snapshotWorld(state, world), { channel: 'agent', events: seen, occasion: 'watch', since, ship: ship.id, faction: ship.faction })
   if (!friendlyPort) {
     mail.status = { kind: 'aboard', ship: ship.id }
     ship.mailbag.push(mail.id)

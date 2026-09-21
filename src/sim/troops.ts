@@ -13,7 +13,7 @@
  */
 import { recordEvent } from './events'
 import { capitalOf, hostile } from './factions'
-import { troopCapacity } from './fleet'
+import { crewed, troopCapacity, wantsOfficer } from './fleet'
 import { CRYO_LOSS, landUnderFire, troopStrength } from './ground'
 import { nextFloat } from './rng'
 import type { GameState, Ship, Troops, WorldId } from './types'
@@ -76,7 +76,7 @@ export function unloadCargo(state: GameState, ship: Ship, at: WorldId, order: Tr
   }
   if (order.purpose === 'command') {
     const prize = Object.values(state.ships)
-      .filter((s) => s.faction === ship.faction && s.commander === null && s.role !== 'packet' && s.location.kind === 'world' && s.location.world === at)
+      .filter((s) => s.faction === ship.faction && wantsOfficer(s) && s.location.kind === 'world' && s.location.world === at)
       .sort((a, b) => (a.id < b.id ? -1 : 1))[0]
     if (!prize) return
     disembark()
@@ -143,7 +143,7 @@ export function disembarkAtHome(state: GameState, ship: Ship, at: WorldId): void
 
 /** Anyone of the ship's own side stranded on a quay that is not theirs — an unseated governor, say — comes aboard for a ride home. */
 export function takeOnWaiting(state: GameState, ship: Ship, at: WorldId): void {
-  if (ship.role === 'packet' || !ship.commander || state.worlds[at]?.faction === ship.faction) return
+  if (ship.role === 'packet' || !crewed(ship) || state.worlds[at]?.faction === ship.faction) return
   for (const c of Object.values(state.characters)) {
     if (c.faction !== ship.faction || c.post.kind !== 'unassigned' || c.post.at !== at) continue
     c.post = { kind: 'passenger', ship: ship.id }

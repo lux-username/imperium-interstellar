@@ -4,8 +4,9 @@ import { unrestWord, worldStateOf, type Dispatch, type FactionId, type Order, ty
 // The wording of events is the sim's (see src/sim/letters.ts): the panes say only what a letter said.
 export { UNREST_WORDS, eventLabel, eventText, unrestWord } from '../sim/view'
 
-/** How a writer signs: "Governor Sarah Bradley", "Captain Amelia Middleton — Blackwing". A merchant or the docks sign as they are named. */
+/** How a writer signs: "Governor Sarah Bradley", "Captain Amelia Middleton — Blackwing", "Scout Wren" (her crew go unnamed). A merchant or the docks sign as they are named. */
 export function signature(r: Report): string {
+  if (r.observerTitle === 'scout') return `Scout ${r.observerShip ?? r.observerName}`
   const title = r.observerTitle === 'governor' ? 'Governor ' : r.observerTitle === 'captain' ? 'Captain ' : ''
   return `${title}${r.observerName}${r.observerShip ? ` — ${r.observerShip}` : ''}`
 }
@@ -14,6 +15,7 @@ export function signature(r: Report): string {
 export function headline(view: PlayerView, r: Report): string {
   if (r.channel === 'agent') return `${r.observerShip ?? r.observerName} watch report: ${r.subject}`
   if (r.observerTitle === 'captain') return `${r.observerShip ?? r.observerName} captain's report: ${r.subject}`
+  if (r.observerTitle === 'scout') return `${r.observerShip ?? r.observerName} scout's report: ${r.subject}`
   if (r.observerTitle === 'governor') return `${worldName(view, r.observedAt)} governor's report: ${r.subject}`
   return `${worldName(view, subjectWorld(r))}: ${r.subject}`
 }

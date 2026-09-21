@@ -178,7 +178,7 @@ export function App() {
               Rumours{view.rumours.some((r) => r.delivered === view.week) ? ' •' : ''}
             </button>
             <button type="button" className={tab === 'fleet' ? 'on' : ''} onClick={() => setTab('fleet')}>
-              Fleet ({view.roster.length}){view.roster.some((r) => r.commanderName === null) ? ' · prize' : ''}
+              Fleet ({view.roster.length}){view.roster.some((r) => r.prize) ? ' · prize' : ''}
             </button>
             <button type="button" className={tab === 'officers' ? 'on' : ''} onClick={() => setTab('officers')}>
               Officers

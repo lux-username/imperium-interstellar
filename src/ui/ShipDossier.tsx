@@ -43,7 +43,7 @@ export function ShipDossier({ view, now, ship, onSelectWorld, onOrders, onShowRe
       <h3>
         {name} <span className="muted">{snap ? hullKind(now, snap) : entry ? entry.role : ''}</span>
         <span className={`tag ${colours}`}>{COLOUR_WORDS[colours]}</span>
-        {entry && !entry.commanderName && <span className="tag warn">prize</span>}
+        {entry?.prize && <span className="tag warn">prize</span>}
         {snap?.hulk ? <span className="tag warn">hulk</span> : snap?.damaged ? <span className="tag warn">damaged</span> : null}
       </h3>
 
@@ -51,7 +51,7 @@ export function ShipDossier({ view, now, ship, onSelectWorld, onOrders, onShowRe
         {ours && (
           <>
             <dt>Captain</dt>
-            <dd>{entry.commanderName ?? <span className="warn">none — a prize waiting for an officer</span>}</dd>
+            <dd>{entry.commanderName ?? (entry.prize ? <span className="warn">none — a prize waiting for an officer</span> : <span className="muted">a scout’s crew go unnamed</span>)}</dd>
             <dt>Class</dt>
             <dd>
               {entry.role}, J-{entry.jump}
@@ -108,7 +108,7 @@ export function ShipDossier({ view, now, ship, onSelectWorld, onOrders, onShowRe
         )}
       </dl>
 
-      {ours && entry.commanderName && (
+      {ours && !entry.prize && (
         <div className="actions">
           <button type="button" onClick={() => onOrders(ship)}>
             Give orders…

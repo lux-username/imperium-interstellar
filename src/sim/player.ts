@@ -4,7 +4,7 @@
  * delivered reports, the player's own outgoing mail, and public knowledge.
  */
 import { COMMANDABLE_ROLES, type GameState } from './types'
-import { fuelCapacity, troopCapacity } from './fleet'
+import { fuelCapacity, troopCapacity, wantsOfficer } from './fleet'
 import { knownHavens } from './belief'
 import { isGovernmentHouseObservation, isRumour, type ChartEntry, type Dispatch, type FactionEntry, type PlayerView, type PoolEntry, type Report, type RosterEntry } from './view'
 
@@ -33,7 +33,7 @@ export function buildPlayerView(state: GameState): PlayerView {
   const playerFaction = state.characters[state.player].faction
   const roster: RosterEntry[] = Object.values(state.ships)
     .filter((s) => s.faction === playerFaction && COMMANDABLE_ROLES.includes(s.role))
-    .map((s) => ({ id: s.id, name: s.name, role: s.role, jump: s.jump, commander: s.commander, commanderName: s.commander ? (state.characters[s.commander]?.name ?? null) : null, troops: troopCapacity(s.role), fuel: fuelCapacity(s.role) }))
+    .map((s) => ({ id: s.id, name: s.name, role: s.role, jump: s.jump, commander: s.commander, commanderName: s.commander ? (state.characters[s.commander]?.name ?? null) : null, prize: wantsOfficer(s), troops: troopCapacity(s.role), fuel: fuelCapacity(s.role) }))
     .sort((a, b) => (a.id < b.id ? -1 : 1))
   // People and troops at the capital are seen from Government House's window, not learned by letter.
   const pool: PoolEntry[] = Object.values(state.characters)

@@ -34,6 +34,20 @@ export const HULLS: Record<Exclude<ShipRole, 'packet' | 'merchant'>, HullClass> 
   raider: { role: 'raider', jump: 2, strength: 2, fuel: 4, troops: 1 },
 }
 
+/**
+ * Whether a hull can act on orders. A warship or transport needs an officer
+ * aboard; a scout's crew go unnamed and need none, so a scout is always
+ * crewed; packets run themselves and are nobody's to order.
+ */
+export function crewed(ship: Pick<Ship, 'commander' | 'role'>): boolean {
+  return ship.commander !== null || ship.role === 'scout'
+}
+
+/** A hull lying idle for want of an officer: a prize that is not a scout. */
+export function wantsOfficer(ship: Pick<Ship, 'commander' | 'role'>): boolean {
+  return ship.commander === null && ship.role !== 'scout' && ship.role !== 'packet' && ship.role !== 'merchant'
+}
+
 /** How many detachments a hull can carry. */
 export function troopCapacity(role: ShipRole): number {
   return role === 'packet' || role === 'merchant' ? 0 : HULLS[role].troops
@@ -108,8 +122,9 @@ export function startingFleet(rng: Rng, faction: FactionId, capital: WorldId): {
       const id = `s-${role}-${n}` as ShipId
       const cid = `c-cmdr-${n}` as CharacterId
       n += 1
-      const commander = newCharacter(rng, cid, faction, { kind: 'commander', ship: id })
-      characters[cid] = commander
+      // A scout's crew go unnamed: no officer is rolled for her.
+      const commander = role === 'scout' ? null : newCharacter(rng, cid, faction, { kind: 'commander', ship: id })
+      if (commander) characters[cid] = commander
       ships[id] = newShip(id, shipName(rng, role, taken), HULLS[role], faction, capital, commander)
     }
   }
