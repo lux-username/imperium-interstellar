@@ -88,6 +88,17 @@ describe('fuel', () => {
     expect(r.fuel).toBeGreaterThanOrEqual(HULLS.raider.fuel - 1) // filled on landing, and perhaps off again the same week
   })
 
+  it('a C port fills the tanks too: unrefined, but fuel is fuel', () => {
+    const s = thirsty()
+    s.worlds[X].profile.starport = 'C'
+    expect(refuelsAt(s, s.ships[P], X)).toBe(true)
+    expect(refuelsAt(s, s.ships[P], Y)).toBe(false)
+    orderShip(s, P, { kind: 'move', to: Y, then: null })
+    advanceWeek(s) // sails C→X
+    advanceWeek(s) // lands X: filled; sails X→Y
+    expect(s.ships[P].fuel).toBe(HULLS.patrol.fuel - 1)
+  })
+
   it('a packet burns nothing and carries nothing on the books', () => {
     const s = line()
     for (let i = 0; i < 8; i++) advanceWeek(s)

@@ -6,7 +6,7 @@
  * A charted route is preferred. A hull someone sent on purpose may also
  * jump off-lane to any world within its jump rating — that is what makes
  * scouts and warships worth having. Every jump costs a tank of fuel, and
- * only a port of class B or better that is open to her fills them: a hull
+ * only a port of class C or better that is open to her fills them: a hull
  * down to her last jump makes for fuel — her rendezvous if it will serve —
  * before anything else, and one with none sits where she is.
  */
@@ -157,12 +157,13 @@ export function impoundAtPorts(state: GameState, landed: readonly ShipId[]): voi
 }
 
 /**
- * Whether a hull can fill her tanks here: a port of class B or better that
- * is open to her side — for a pirate, a haven she knows of that class.
+ * Whether a hull can fill her tanks here: a port of class C or better that
+ * is open to her side — for a pirate, a haven she knows of that class. A C
+ * port has only unrefined fuel, but fuel is fuel.
  */
 export function refuelsAt(state: GameState, ship: Ship, at: WorldId): boolean {
   const world = state.worlds[at]
-  if (!world || (world.profile.starport !== 'A' && world.profile.starport !== 'B')) return false
+  if (!world || !['A', 'B', 'C'].includes(world.profile.starport)) return false
   if (ship.faction === PIRATES) return ship.havens?.includes(at) ?? false
   return !hostile(world.faction, ship.faction)
 }

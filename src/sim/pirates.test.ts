@@ -5,7 +5,7 @@ import { PIRATES } from './factions'
 import { HULLS, newShip } from './fleet'
 import { advanceWeek } from './game'
 import { discloses, governorLetter } from './governors'
-import { harbourPirates, seizePirates, spawnPirate } from './pirates'
+import { harbourPirates, pirateOrders, seizePirates, spawnPirate } from './pirates'
 import { buildPlayerView } from './player'
 import type { CharacterId, GameState, ShipId, WorldId } from './types'
 import { line } from './fixtures.test-helper'
@@ -53,6 +53,17 @@ describe('pirates at a haven they know', () => {
     fightAtWorlds(s, ['s-war' as ShipId])
     expect(Object.values(s.events).some((e) => e.kind === 'battle')).toBe(true)
     expect(pirate).toBeDefined()
+  })
+})
+
+describe('where a raider goes hunting', () => {
+  it('any world on the lanes will do, whatever its port, but never a haven she knows or a faction’s seat', () => {
+    const s = line()
+    s.worlds[X].profile.starport = 'D' // no port to speak of, but the packets call
+    const pirate = havenAtY(s)
+    pirate.order = null
+    pirateOrders(s)
+    expect(pirate.order).toMatchObject({ kind: 'patrol', world: X })
   })
 })
 

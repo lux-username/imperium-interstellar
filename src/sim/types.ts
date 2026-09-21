@@ -167,7 +167,7 @@ export interface Ship {
   strength: number
   /** Points of strength knocked off in action; repaired a point a week at a friendly port of class C or better. A hull with damage ≥ strength cannot fight. */
   damage: number
-  /** Jumps left in the tanks. Every jump costs one; a port of class B or better that is open to her fills them. Packets carry none and burn none: the lanes keep them fuelled. */
+  /** Jumps left in the tanks. Every jump costs one; a port of class C or better that is open to her fills them. Packets carry none and burn none: the lanes keep them fuelled. */
   fuel: number
   location: Location
   /** Null for a prize waiting for an officer, and for packets, which run themselves. */

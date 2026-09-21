@@ -105,14 +105,13 @@ export function spawnPirates(state: GameState): void {
 // ---------------------------------------------------------------------------
 // What a raider does
 
-/** Ports worth lying off: charted A/B ports with traffic, hostile to pirates, not a haven she means to keep, and never a faction's seat — that is where the fleet lies. */
+/** Ports worth lying off: any world on the lanes — that is where the trade is — hostile to pirates, not a haven she means to keep, and never a faction's seat, which is where the fleet lies. */
 function huntingGrounds(state: GameState, ship: Ship, from: WorldId): WorldId[] {
   const here = state.worlds[from]
   const seats = new Set(Object.values(state.factions).map((f) => f.capital))
   return (Object.keys(state.worlds).sort() as WorldId[]).filter((id) => {
     const w = state.worlds[id]
     if (id === from || ship.havens?.includes(id) || seats.has(id)) return false
-    if (w.profile.starport !== 'A' && w.profile.starport !== 'B') return false
     if (!hostile(w.faction, PIRATES) || neighbours(state.lanes, id).length === 0) return false
     return hexDistance(w.hex, here.hex) <= ship.jump * 2
   })
@@ -120,14 +119,14 @@ function huntingGrounds(state: GameState, ship: Ship, from: WorldId): WorldId[] 
 
 /**
  * The nearest haven she *knows of*. She sails on her knowledge, not the
- * truth: a haven cleaned up since she heard of it will seize her. With the
- * tanks low she prefers one with a port that can fill them (B or better).
+ * truth: a haven cleaned up since she heard of it will seize her. Every
+ * haven has a working port (C or better), so any of them can fill her tanks.
  */
 function nearestHaven(state: GameState, ship: Ship, from: WorldId): WorldId | null {
   const known = (ship.havens ?? []).filter((h) => state.worlds[h])
   if (known.length === 0) return null
   const here = state.worlds[from]
-  const fuelled = known.filter((h) => ['A', 'B'].includes(state.worlds[h].profile.starport))
+  const fuelled = known.filter((h) => ['A', 'B', 'C'].includes(state.worlds[h].profile.starport))
   const pool = ship.fuel <= 2 && fuelled.length > 0 ? fuelled : known
   return [...pool].sort((a, b) => hexDistance(state.worlds[a].hex, here.hex) - hexDistance(state.worlds[b].hex, here.hex) || (a < b ? -1 : 1))[0]
 }
