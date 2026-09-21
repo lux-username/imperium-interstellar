@@ -19,7 +19,7 @@ describe('rumour', () => {
       recordEvent(s, s.capital, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 3, level: 8 })
     }
     spawnRumours(s)
-    // Bad news becomes talk on 2d6 ≥ 9: a bit over a quarter of the time.
+    // News becomes talk on 2d6 ≥ 9, good or bad alike: a bit over a quarter of the time.
     expect(s.rumours.length).toBeGreaterThan(15)
     expect(s.rumours.length).toBeLessThan(45)
     for (const r of s.rumours) {

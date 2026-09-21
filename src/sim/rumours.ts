@@ -8,7 +8,7 @@
  *
  * A rumour is delivered to whoever reads reports at a world it reaches:
  * the desk at the capital now, the Warlord's and the Council's seats later.
- * Bad news travels best.
+ * The docks have no preference: good news and bad become talk alike.
  */
 import { neighbours } from './chart'
 import { EVENT_MEMORY, valenceFor } from './events'
@@ -54,17 +54,17 @@ function degrade(state: GameState, event: Event): Event {
   return copy
 }
 
-/** The 2d6 target for an event to become talk: bad news does so more readily than good; routine traffic never. */
-export const TALK_TARGET = { bad: 9, good: 10 }
+/** The 2d6 target for an event to become talk. The docks have no preference between good news and bad; routine traffic never becomes talk. */
+export const TALK_TARGET = 9
 
-/** This week's events at ports may become rumours. */
+/** This week's events at ports may become rumours, good and bad alike. */
 export function spawnRumours(state: GameState): void {
   // The docks tell it as the port's own side would hear it.
   const events = Object.values(state.events)
     .filter((e) => e.week === state.week && valenceFor(e, state.worlds[e.at].faction) !== 'neutral' && e.severity >= 1 && e.at !== state.capital && hasPort(state, e.at))
     .sort((a, b) => (a.id < b.id ? -1 : 1))
   for (const e of events) {
-    if (!check(state.rng, valenceFor(e, state.worlds[e.at].faction) === 'bad' ? TALK_TARGET.bad : TALK_TARGET.good)) continue
+    if (!check(state.rng, TALK_TARGET)) continue
     state.rumours.push({ event: degrade(state, e), origin: e.at, born: state.week, heard: { [e.at]: 0 } })
   }
 }
