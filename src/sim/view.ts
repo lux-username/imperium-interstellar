@@ -278,11 +278,13 @@ export interface Belief {
   ships: Record<ShipId, Sighting>
 }
 
-/** A world's entry on the star chart: where it is and what it is called. Public, like the lanes. */
+/** A world's entry on the star chart: where it is, what it is called and who settled it. Public, like the lanes. */
 export interface ChartEntry {
   id: WorldId
   name: string
   hex: Hex
+  /** The cultures that settled the world, by name. The survey knew this; it does not change. */
+  cultures: string[]
 }
 
 /**

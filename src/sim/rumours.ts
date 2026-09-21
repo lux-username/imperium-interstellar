@@ -13,7 +13,7 @@
 import { neighbours } from './chart'
 import { EVENT_MEMORY, valenceFor } from './events'
 import { learn } from './mail'
-import { personName } from './names'
+import { personName, rollSex } from './names'
 import { raided } from './pirates'
 import { check, nextInt } from './rng'
 import type { CharacterId, GameState, Mail, MailId, ReportId, Week, WorldId } from './types'
@@ -81,6 +81,13 @@ export function spreadRumours(state: GameState): void {
   }
 }
 
+/** The trader who brought the word: one of the port's own people, so a Han world's merchants are Han. */
+function merchantName(state: GameState, at: WorldId): string {
+  const cultures = state.worlds[at].cultures
+  const culture = cultures[nextInt(state.rng, 0, cultures.length - 1)]
+  return personName(state.rng, culture, rollSex(state.rng))
+}
+
 /** A rumour reaches a world. If someone there keeps a picture of the subsector, it goes into it as a report. */
 function hearRumour(state: GameState, rumour: Rumour, at: WorldId): void {
   const reader = state.worlds[at]?.actingGovernor
@@ -91,7 +98,7 @@ function hearRumour(state: GameState, rumour: Rumour, at: WorldId): void {
     id: `r-${state.nextId}` as ReportId,
     channel,
     observer: THE_DOCKS,
-    observerName: channel === 'merchant' ? personName(state.rng) : 'the docks',
+    observerName: channel === 'merchant' ? merchantName(state, at) : 'the docks',
     observedAt: rumour.event.at,
     observed: rumour.event.week,
     snapshot: { kind: 'event', event: JSON.parse(JSON.stringify(rumour.event)) as Event },

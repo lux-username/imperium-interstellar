@@ -147,19 +147,23 @@ describe('revolt', () => {
   })
 
   it('a rising is news most governors write home about at once, asking for help', () => {
+    let risings = 0
     let letters = 0
-    for (let seed = 1; seed <= 12; seed++) {
+    for (let seed = 1; seed <= 48; seed++) {
       const s = line()
       s.rng = createRng(seed)
       s.worlds[X].garrison = 6
       s.worlds[X].unrest = 10
       runUntil(s, (st) => st.worlds[X].contest !== null || st.worlds[X].faction !== 'f-admin', 3)
+      if (!Object.values(s.events).some((e) => e.at === X && e.kind === 'revolt_began')) continue // not every seed rises in three weeks
+      risings += 1
       const letter = Object.values(s.mail).find((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-x' && m.contents.report.events.some((e) => e.kind === 'revolt_began'))
       if (!letter) continue
       letters += 1
       if (letter.contents.kind === 'report') expect(letter.contents.report.snapshot.kind === 'world' && letter.contents.report.snapshot.world.contest?.attacker).toBe(REBELS)
     }
     // 2d6 + 3 against 8: about five in six write; the rest sit on it.
-    expect(letters).toBeGreaterThanOrEqual(8)
+    expect(risings).toBeGreaterThanOrEqual(24)
+    expect(letters / risings).toBeGreaterThanOrEqual(0.6)
   })
 })

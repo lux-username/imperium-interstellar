@@ -24,7 +24,7 @@ export function line(): GameState {
   const govY = 'c-y' as CharacterId
   const profile = { starport: 'B' as const, size: 5, atmosphere: 6, hydrographics: 5, population: 5, government: 5, law: 5, tech: 9 }
   const world = (id: WorldId, name: string, col: number, gov: CharacterId) => ({
-    id, name, hex: { col, row: 5 }, profile: { ...profile }, faction: admin, governor: gov, actingGovernor: gov, unrest: 0, garrison: 5, marines: 0, contest: null, lastLetter: 0,
+    id, name, hex: { col, row: 5 }, cultures: ['English'], profile: { ...profile }, faction: admin, governor: gov, actingGovernor: gov, unrest: 0, garrison: 5, marines: 0, contest: null, lastLetter: 0,
   })
   const cx = 'l-c-x' as LaneId
   const xy = 'l-x-y' as LaneId

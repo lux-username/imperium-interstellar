@@ -9,7 +9,7 @@
  */
 import { allHexes, hexDistance, hexLabel, SUBSECTOR_COLS, SUBSECTOR_ROWS, type Hex } from './hex'
 import { newCharacter, playerTraits } from './characters'
-import { worldName } from './names'
+import { worldCultures, worldName } from './names'
 import { createRng, nextInt, roll, type Rng } from './rng'
 import { ADMINISTRATION, PLAYER, startingFactions } from './factions'
 import type { Character, CharacterId, Faction, FactionId, StarportClass, World, WorldId, WorldProfile } from './types'
@@ -112,6 +112,26 @@ export interface Generated {
   capital: WorldId
 }
 
+/** A world at a hex: who settled it, what it is called, and what it is like. Quiet and ungoverned until the rest of generation says otherwise. */
+function newWorld(rng: Rng, hex: Hex, taken: Set<string>): World {
+  const cultures = worldCultures(rng)
+  return {
+    id: worldId(hex),
+    name: worldName(rng, cultures, taken),
+    hex,
+    cultures,
+    profile: generateProfile(rng),
+    faction: ADMINISTRATION,
+    governor: null,
+    actingGovernor: null,
+    unrest: 0,
+    garrison: 0,
+    marines: 0,
+    contest: null,
+    lastLetter: nextInt(rng, -7, 0),
+  }
+}
+
 /**
  * Worlds, their governors, and the two factions every game starts with.
  * Lanes and ships are laid over this by ./lanes.ts; the whole thing is
@@ -125,22 +145,8 @@ export function generateWorlds(rng: Rng): Generated {
 
   for (const hex of allHexes()) {
     if (roll(rng) < WORLD_TARGET) continue
-    const id = worldId(hex)
-    const world: World = {
-      id,
-      name: worldName(rng, taken),
-      hex,
-      profile: generateProfile(rng),
-      faction: ADMINISTRATION,
-      governor: null,
-      actingGovernor: null,
-      unrest: 0,
-      garrison: 0,
-      marines: 0,
-      contest: null,
-      lastLetter: nextInt(rng, -7, 0),
-    }
-    worlds[id] = world
+    const world = newWorld(rng, hex, taken)
+    worlds[world.id] = world
     list.push(world)
   }
 
@@ -151,20 +157,7 @@ export function generateWorlds(rng: Rng): Generated {
     const hex = hexes[nextInt(rng, 0, hexes.length - 1)]
     const id = worldId(hex)
     if (worlds[id]) continue
-    const world: World = {
-      id,
-      name: worldName(rng, taken),
-      hex,
-      profile: generateProfile(rng),
-      faction: ADMINISTRATION,
-      governor: null,
-      actingGovernor: null,
-      unrest: 0,
-      garrison: 0,
-      marines: 0,
-      contest: null,
-      lastLetter: nextInt(rng, -7, 0),
-    }
+    const world = newWorld(rng, hex, taken)
     worlds[id] = world
     list.push(world)
   }

@@ -44,6 +44,21 @@ describe('culture name pools', () => {
       it('feminine family forms, when present, align with the family list', () => {
         if (c.familyF) expect(c.familyF.length).toBe(c.family.length)
       })
+
+      it('communities, when present, partition the flat pools', () => {
+        if (!c.communities) return
+        expect(c.communities.length).toBeGreaterThan(1)
+        for (const k of c.communities) {
+          expect(k.weight, `${k.name} weight`).toBeGreaterThan(0)
+          expect(k.given.m.length, `${k.name} men`).toBeGreaterThan(0)
+          expect(k.given.f.length, `${k.name} women`).toBeGreaterThan(0)
+          expect(k.family.length, `${k.name} family`).toBeGreaterThan(0)
+          if (k.familyF) expect(k.familyF.length).toBe(k.family.length)
+        }
+        expect(c.communities.flatMap((k) => k.given.m)).toEqual(c.given.m)
+        expect(c.communities.flatMap((k) => k.given.f)).toEqual(c.given.f)
+        expect(c.communities.flatMap((k) => k.family)).toEqual(c.family)
+      })
     })
   }
 })

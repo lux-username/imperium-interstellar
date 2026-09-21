@@ -9,7 +9,7 @@ import { isRumour, type ChartEntry, type Dispatch, type FactionEntry, type Playe
 
 export function buildPlayerView(state: GameState): PlayerView {
   const chart: Record<string, ChartEntry> = {}
-  for (const w of Object.values(state.worlds)) chart[w.id] = { id: w.id, name: w.name, hex: { ...w.hex } }
+  for (const w of Object.values(state.worlds)) chart[w.id] = { id: w.id, name: w.name, hex: { ...w.hex }, cultures: [...w.cultures] }
 
   const inbox: Report[] = []
   const rumours: Report[] = []

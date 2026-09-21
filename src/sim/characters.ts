@@ -5,7 +5,7 @@
  * it only says what kind of person they are.
  */
 import type { Character, CharacterId, FactionId, Post, Traits } from './types'
-import { personName } from './names'
+import { officerCulture, personName, rollSex } from './names'
 import { roll, type Rng } from './rng'
 
 /** −2 … +2 from 2d6: the middle of the curve is ordinary. */
@@ -41,9 +41,16 @@ export function playerTraits(): Traits {
   return { loyalty: 'player', initiative: 0, competence: { administrative: 0, naval: 0, diplomatic: 0 }, ambition: 0 }
 }
 
-/** A new person with rolled traits, named and posted. */
+/**
+ * A new person with rolled traits, named and posted. The name comes from
+ * one culture — the imperial core six times in ten, the wider world the
+ * other four — and the same pool serves every side: the desk's officers,
+ * the Warlord's, a pirate captain.
+ */
 export function newCharacter(rng: Rng, id: CharacterId, faction: FactionId, post: Post): Character {
-  return { id, name: personName(rng), faction, post, traits: rollTraits(rng) }
+  const culture = officerCulture(rng)
+  const sex = rollSex(rng)
+  return { id, name: personName(rng, culture, sex), culture, sex, faction, post, traits: rollTraits(rng) }
 }
 
 /** Bold people act before they are sure; cautious ones write first. */

@@ -77,6 +77,8 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
             <dd>
               {profileString(snap.profile)} <span className="muted">(port · size · atmo · hydro · pop · gov · law – tech)</span>
             </dd>
+            <dt>Settled by</dt>
+            <dd>{entry.cultures.join(', ')}</dd>
             <dt>Governor</dt>
             <dd>{snap.governorName ?? <span className="muted">none — unpopulated</span>}</dd>
             <dt>Garrison</dt>

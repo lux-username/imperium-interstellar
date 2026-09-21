@@ -1,43 +1,63 @@
-import type { Culture } from './culture'
+import type { Community, Culture } from './culture'
+
+const hinduM = [
+  'Ram Prasad', 'Shiv Narayan', 'Ganga Prasad', 'Jagannath', 'Raghunath', 'Bhagwan Das', 'Mathura Das', 'Kishori Lal', 'Babu Ram', 'Sita Ram',
+  'Jai Kishan', 'Hari Shankar', 'Radhey Shyam', 'Girdhari Lal', 'Banwari Lal', 'Bhola Nath', 'Kedar Nath', 'Kashi Nath', 'Baij Nath', 'Durga Prasad',
+  'Devi Prasad', 'Kali Charan', 'Ram Charan', 'Ram Sewak', 'Ram Dayal', 'Ram Autar', 'Ram Nath', 'Ram Lakhan', 'Ram Bharose', 'Nand Kishore',
+  'Nand Lal', 'Chhote Lal', 'Chhedi Lal', 'Bhagirath', 'Ramanand', 'Sukhdev', 'Tulsi Ram', 'Balmukund', 'Vishwanath', 'Har Prasad',
+  'Gopal Das', 'Gobind Ram', 'Keshav Deo', 'Madan Mohan', 'Mohan Lal', 'Moti Lal', 'Pyare Lal', 'Sundar Lal', 'Shyam Sundar', 'Jagdish Prasad',
+  'Ayodhya Prasad', 'Awadh Bihari', 'Bihari Lal', 'Lakhan', 'Bhairon', 'Bhawani', 'Jhinku', 'Mahabir', 'Ramdhari', 'Ramashray',
+  'Sheo Ratan', 'Suraj Bali',
+]
+const hinduF = [
+  'Sita', 'Radha', 'Ganga', 'Jamuna', 'Parvati', 'Lakshmi', 'Durga', 'Saraswati', 'Savitri', 'Gauri',
+  'Kamla', 'Vimla', 'Shanti', 'Sumitra', 'Kaushalya', 'Janki', 'Rukmini', 'Damyanti', 'Shakuntala', 'Phoolmati',
+  'Ramkali', 'Ramrati', 'Ramdei', 'Ramdulari', 'Sukhdei', 'Bhagwanti', 'Jagrani', 'Rajrani', 'Munni', 'Chhoti',
+  'Bitto', 'Gomti', 'Sarju', 'Tulsi', 'Champa', 'Chameli', 'Chandni', 'Kesar', 'Kasturi', 'Mohini',
+  'Nirmala', 'Prabhavati', 'Ratna', 'Roopwati', 'Sundari', 'Surajmukhi', 'Urmila', 'Chandrawati', 'Indrawati', 'Raj Kumari',
+  'Ram Piari', 'Shyam Piari', 'Devki', 'Jasoda', 'Anandi', 'Basanti', 'Dhanpati', 'Hira', 'Moti', 'Panna',
+  'Pushpa', 'Sona', 'Ganga Dei', 'Kishori',
+]
+const hinduFamily = [
+  'Tiwari', 'Tripathi', 'Dubey', 'Pandey', 'Mishra', 'Shukla', 'Upadhyay', 'Chaturvedi', 'Dwivedi', 'Pathak',
+  'Sharma', 'Vajpayee', 'Awasthi', 'Bajpai', 'Dixit', 'Srivastava', 'Saxena', 'Mathur', 'Nigam', 'Bhatnagar',
+  'Kulshreshtha', 'Agarwal', 'Gupta', 'Bansal', 'Goel', 'Singhal', 'Jaiswal', 'Sahu', 'Sonkar', 'Kushwaha',
+  'Maurya', 'Yadav', 'Verma', 'Patel', 'Lodhi', 'Chauhan', 'Rathore', 'Thakur', 'Singh', 'Chandel',
+  'Bais', 'Gaharwar', 'Bisen', 'Kachhwaha', 'Sinha', 'Prasad', 'Lal', 'Ojha', 'Jha', 'Choubey',
+  'Rai', 'Das', 'Kanaujia', 'Gaur', 'Saraswat', 'Pandit', 'Bhargava', 'Tandon', 'Kapoor', 'Khanna',
+]
+
+const muslimM = [
+  'Wajid Ali', 'Amjad Ali', 'Asadullah', 'Muhammad Husain', 'Abdul Karim', 'Abdul Rahman', 'Ghulam Husain', 'Ghulam Muhammad', 'Amir Ali', 'Sayyid Ahmad',
+  'Altaf Husain', 'Nazir Ahmad', 'Ilahi Bakhsh', 'Khuda Bakhsh', 'Karim Bakhsh', 'Pir Bakhsh', 'Nabi Bakhsh', 'Nur Muhammad',
+]
+const muslimF = [
+  'Fatima', 'Zainab', 'Amina', 'Khadija', 'Ruqayya', 'Kulsum', 'Sakina', 'Zohra', 'Mehrunnisa', 'Hamida',
+  'Rashida', 'Wahida', 'Sughra', 'Kubra', 'Bilqis', 'Umrao',
+]
+const muslimFamily = [
+  'Khan', 'Siddiqui', 'Ansari', 'Qureshi', 'Sheikh', 'Sayyid', 'Farooqi', 'Usmani', 'Rizvi', 'Zaidi',
+  'Naqvi', 'Kidwai', 'Hashmi', 'Abbasi', 'Chishti', 'Kazmi', 'Jafri', 'Nomani', 'Alvi', 'Mirza',
+]
+
+/** Each community's names pair only with its own; the flat pools below are the union. */
+const communities: Community[] = [
+  { name: 'Hindu', weight: 4, given: { m: hinduM, f: hinduF }, family: hinduFamily },
+  { name: 'Muslim', weight: 1, given: { m: muslimM, f: muslimF }, family: muslimFamily },
+]
 
 export const gangetic: Culture = {
   name: 'Gangetic',
   group: 'South Asian',
   order: 'given-family',
   pattern: { m: '{given} {family}', f: '{given} {family}' },
-  notes: 'The Ganges plain — Awadh, Banaras, Bihar — under the Company and then the Crown. Hindustani given names are often two words (Ram Prasad, Kedar Nath); about a fifth of each pool is Muslim, as Awadh was.',
+  notes: 'The Ganges plain — Awadh, Banaras, Bihar — under the Company and then the Crown. Hindustani given names are often two words (Ram Prasad, Kedar Nath). About a fifth of the population is Muslim, as Awadh was, and the pools are split by community so that a given name and a family name always come from the same one.',
+  communities,
   given: {
-    m: [
-      'Ram Prasad', 'Shiv Narayan', 'Ganga Prasad', 'Jagannath', 'Raghunath', 'Bhagwan Das', 'Mathura Das', 'Kishori Lal', 'Babu Ram', 'Sita Ram',
-      'Jai Kishan', 'Hari Shankar', 'Radhey Shyam', 'Girdhari Lal', 'Banwari Lal', 'Bhola Nath', 'Kedar Nath', 'Kashi Nath', 'Baij Nath', 'Durga Prasad',
-      'Devi Prasad', 'Kali Charan', 'Ram Charan', 'Ram Sewak', 'Ram Dayal', 'Ram Autar', 'Ram Nath', 'Ram Lakhan', 'Ram Bharose', 'Nand Kishore',
-      'Nand Lal', 'Chhote Lal', 'Chhedi Lal', 'Bhagirath', 'Ramanand', 'Sukhdev', 'Tulsi Ram', 'Balmukund', 'Vishwanath', 'Har Prasad',
-      'Gopal Das', 'Gobind Ram', 'Keshav Deo', 'Madan Mohan', 'Mohan Lal', 'Moti Lal', 'Pyare Lal', 'Sundar Lal', 'Shyam Sundar', 'Jagdish Prasad',
-      'Ayodhya Prasad', 'Awadh Bihari', 'Bihari Lal', 'Lakhan', 'Bhairon', 'Bhawani', 'Jhinku', 'Mahabir', 'Ramdhari', 'Ramashray',
-      'Sheo Ratan', 'Suraj Bali', 'Wajid Ali', 'Amjad Ali', 'Asadullah', 'Muhammad Husain', 'Abdul Karim', 'Abdul Rahman', 'Ghulam Husain', 'Ghulam Muhammad',
-      'Amir Ali', 'Sayyid Ahmad', 'Altaf Husain', 'Nazir Ahmad', 'Ilahi Bakhsh', 'Khuda Bakhsh', 'Karim Bakhsh', 'Pir Bakhsh', 'Nabi Bakhsh', 'Nur Muhammad',
-    ],
-    f: [
-      'Sita', 'Radha', 'Ganga', 'Jamuna', 'Parvati', 'Lakshmi', 'Durga', 'Saraswati', 'Savitri', 'Gauri',
-      'Kamla', 'Vimla', 'Shanti', 'Sumitra', 'Kaushalya', 'Janki', 'Rukmini', 'Damyanti', 'Shakuntala', 'Phoolmati',
-      'Ramkali', 'Ramrati', 'Ramdei', 'Ramdulari', 'Sukhdei', 'Bhagwanti', 'Jagrani', 'Rajrani', 'Munni', 'Chhoti',
-      'Bitto', 'Gomti', 'Sarju', 'Tulsi', 'Champa', 'Chameli', 'Chandni', 'Kesar', 'Kasturi', 'Mohini',
-      'Nirmala', 'Prabhavati', 'Ratna', 'Roopwati', 'Sundari', 'Surajmukhi', 'Urmila', 'Chandrawati', 'Indrawati', 'Raj Kumari',
-      'Ram Piari', 'Shyam Piari', 'Devki', 'Jasoda', 'Anandi', 'Basanti', 'Dhanpati', 'Hira', 'Moti', 'Panna',
-      'Pushpa', 'Sona', 'Ganga Dei', 'Kishori', 'Fatima', 'Zainab', 'Amina', 'Khadija', 'Ruqayya', 'Kulsum',
-      'Sakina', 'Zohra', 'Mehrunnisa', 'Hamida', 'Rashida', 'Wahida', 'Sughra', 'Kubra', 'Bilqis', 'Umrao',
-    ],
+    m: communities.flatMap((c) => c.given.m),
+    f: communities.flatMap((c) => c.given.f),
   },
-  family: [
-    'Tiwari', 'Tripathi', 'Dubey', 'Pandey', 'Mishra', 'Shukla', 'Upadhyay', 'Chaturvedi', 'Dwivedi', 'Pathak',
-    'Sharma', 'Vajpayee', 'Awasthi', 'Bajpai', 'Dixit', 'Srivastava', 'Saxena', 'Mathur', 'Nigam', 'Bhatnagar',
-    'Kulshreshtha', 'Agarwal', 'Gupta', 'Bansal', 'Goel', 'Singhal', 'Jaiswal', 'Sahu', 'Sonkar', 'Kushwaha',
-    'Maurya', 'Yadav', 'Verma', 'Patel', 'Lodhi', 'Chauhan', 'Rathore', 'Thakur', 'Singh', 'Chandel',
-    'Bais', 'Gaharwar', 'Bisen', 'Kachhwaha', 'Sinha', 'Prasad', 'Lal', 'Ojha', 'Jha', 'Choubey',
-    'Rai', 'Das', 'Kanaujia', 'Gaur', 'Saraswat', 'Pandit', 'Bhargava', 'Tandon', 'Kapoor', 'Khanna',
-    'Khan', 'Siddiqui', 'Ansari', 'Qureshi', 'Sheikh', 'Sayyid', 'Farooqi', 'Usmani', 'Rizvi', 'Zaidi',
-    'Naqvi', 'Kidwai', 'Hashmi', 'Abbasi', 'Chishti', 'Kazmi', 'Jafri', 'Nomani', 'Alvi', 'Mirza',
-  ],
+  family: communities.flatMap((c) => c.family),
   places: [
     'Banaras', 'Allahabad', 'Lucknow', 'Kanpur', 'Agra', 'Mathura', 'Vrindavan', 'Ayodhya', 'Faizabad', 'Gorakhpur',
     'Azamgarh', 'Jaunpur', 'Ghazipur', 'Mirzapur', 'Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Darbhanga', 'Chapra',
