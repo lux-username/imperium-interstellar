@@ -80,7 +80,7 @@ describe('dispatches', () => {
     const mail = requestReport(s, X, 'c-x' as CharacterId)
     // The governor the player wrote to is gone before the letter lands.
     s.characters['c-x' as CharacterId].post = { kind: 'unassigned', at: X }
-    s.characters['c-x2' as CharacterId] = { id: 'c-x2' as CharacterId, name: 'New', faction: 'f-admin' as FactionId, post: { kind: 'governor', world: X }, traits: playerTraits(), agent: false }
+    s.characters['c-x2' as CharacterId] = { id: 'c-x2' as CharacterId, name: 'New', faction: 'f-admin' as FactionId, post: { kind: 'governor', world: X }, traits: playerTraits() }
     s.worlds[X].governor = 'c-x2' as CharacterId
     s.worlds[X].actingGovernor = 'c-x2' as CharacterId
     runUntil(s, () => mail.status.kind !== 'awaiting_carrier' && mail.status.kind !== 'aboard')

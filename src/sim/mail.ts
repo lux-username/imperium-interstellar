@@ -260,7 +260,7 @@ export function pruneMail(state: GameState): void {
 export function characterLocation(state: GameState, character: CharacterId): WorldId | null {
   const c = state.characters[character]
   if (!c) return null
-  if (c.post.kind === 'governor' || c.post.kind === 'watching') return c.post.world
+  if (c.post.kind === 'governor') return c.post.world
   if (c.post.kind === 'unassigned') return c.post.at
   const loc = state.ships[c.post.ship]?.location
   return loc?.kind === 'world' ? loc.world : null

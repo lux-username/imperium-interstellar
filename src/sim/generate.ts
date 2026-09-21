@@ -174,7 +174,7 @@ export function generateWorlds(rng: Rng): Generated {
   const capital = chooseCapital(list)
 
   // Every populated world has an appointed governor; the player holds the capital.
-  characters[PLAYER] = { id: PLAYER, name: 'The Subsector Governor', faction: ADMINISTRATION, post: { kind: 'governor', world: capital.id }, traits: playerTraits(), agent: false }
+  characters[PLAYER] = { id: PLAYER, name: 'The Subsector Governor', faction: ADMINISTRATION, post: { kind: 'governor', world: capital.id }, traits: playerTraits() }
   capital.governor = PLAYER
   capital.actingGovernor = PLAYER
   for (const world of list) {
@@ -197,14 +197,10 @@ export function generateWorlds(rng: Rng): Generated {
 
   const factions: Record<FactionId, Faction> = startingFactions(capital.id)
 
-  // A handful of officers without posts and a few agents, at the capital, for the desk to send out.
+  // A handful of officers without posts at the capital, for the desk to send out to seats and prizes.
   for (let i = 1; i <= 4; i++) {
     const id = `c-officer-${i}` as CharacterId
     characters[id] = newCharacter(rng, id, ADMINISTRATION, { kind: 'unassigned', at: capital.id })
-  }
-  for (let i = 1; i <= 3; i++) {
-    const id = `c-agent-${i}` as CharacterId
-    characters[id] = { ...newCharacter(rng, id, ADMINISTRATION, { kind: 'unassigned', at: capital.id }), agent: true }
   }
 
   return { worlds, characters, factions, capital: capital.id }

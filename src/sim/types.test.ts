@@ -112,8 +112,8 @@ function fixture(): GameState {
       },
     },
     characters: {
-      [player]: { id: player, name: 'The Governor-General', faction: admin, post: { kind: 'governor', world: capital }, traits: playerTraits(), agent: false },
-      [governor]: { id: governor, name: 'Governor of Outpost', faction: admin, post: { kind: 'governor', world: outpost }, traits: playerTraits(), agent: false },
+      [player]: { id: player, name: 'The Governor-General', faction: admin, post: { kind: 'governor', world: capital }, traits: playerTraits() },
+      [governor]: { id: governor, name: 'Governor of Outpost', faction: admin, post: { kind: 'governor', world: outpost }, traits: playerTraits() },
     },
     factions: { [admin]: { id: admin, name: 'The Administration', kind: 'administration', capital, leader: player } },
     mail: { ['m-1' as MailId]: { id: 'm-1' as MailId, contents: { kind: 'report', report }, status: { kind: 'aboard', ship: packet } } },

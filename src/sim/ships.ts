@@ -11,6 +11,7 @@ import { hexRoute, laneBetween, nextDeparture, route } from './chart'
 import { eventsAt, hullArrivedEvent, hullDepartedEvent } from './events'
 import { capitalOf, hostile } from './factions'
 import { loadMail, snapshotWorld, unloadMail, writeReport } from './mail'
+import { disembarkAtHome, loadCargo, takeOnWaiting, unloadCargo } from './troops'
 import type { Address, GameState, Ship, ShipId, WorldId } from './types'
 import type { Order } from './orders'
 
@@ -77,6 +78,13 @@ export function orderTarget(state: GameState, ship: Ship, at: WorldId): WorldId 
         if (state.week <= order.lookedOn) return null
         ship.order = afterwards(ship, order.then)
         continue
+      case 'transport':
+        if (!order.loaded) loadCargo(state, ship, at, order)
+        if (order.to !== at) return order.to
+        // Already where the cargo is going: put it down here and now.
+        unloadCargo(state, ship, at, order)
+        ship.order = afterwards(ship, order.then)
+        continue
     }
   }
   return null
@@ -85,7 +93,7 @@ export function orderTarget(state: GameState, ship: Ship, at: WorldId): WorldId 
 /** The world an order is ultimately about, for deciding when a commander writes. */
 function orderDestination(order: Order | null): WorldId | null {
   if (!order) return null
-  if (order.kind === 'move') return order.to
+  if (order.kind === 'move' || order.kind === 'transport') return order.to
   if (order.kind === 'patrol' || order.kind === 'scout') return order.world
   return null
 }
@@ -193,6 +201,11 @@ function onArrival(state: GameState, ship: Ship, at: WorldId): void {
   const order = ship.order
   if (order?.kind === 'patrol' && order.world === at && order.began === null) order.began = state.week
   if (order?.kind === 'scout' && order.world === at && order.lookedOn === null) order.lookedOn = state.week
+  if (order?.kind === 'transport' && order.to === at && order.loaded) {
+    unloadCargo(state, ship, at, order)
+    ship.order = afterwards(ship, order.then)
+  }
+  disembarkAtHome(state, ship, at)
   if (!ship.commander || at === capitalOf(state, ship.faction)) return
   if (friendlyPort(state, ship, at) || orderDestination(order) === at) commanderReport(state, ship, at)
 }
@@ -220,6 +233,7 @@ export function departShips(state: GameState): void {
     if (ship.role === 'packet' && lane && nextDeparture(lane, from, state.week) !== state.week) continue
     if (ship.role === 'packet' && !portOpenTo(state, to, ship.faction)) continue
     loadMail(state, ship, from, to, path)
+    takeOnWaiting(state, ship, from)
     hullDepartedEvent(state, from, ship)
     ship.location = { kind: 'transit', from, to, arrives: state.week + 1 }
   }

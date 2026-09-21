@@ -16,7 +16,7 @@ const Y = 'w-y' as WorldId
 /** A raider lying off `at`, on a raiding patrol, knowing Y as her haven. */
 function raider(s: GameState, at: WorldId, id = 's-raider' as ShipId): void {
   const cid = `c-${id}` as CharacterId
-  s.characters[cid] = { id: cid, name: 'Raider', faction: PIRATES, post: { kind: 'commander', ship: id }, traits: { ...playerTraits(), loyalty: 'self' }, agent: false }
+  s.characters[cid] = { id: cid, name: 'Raider', faction: PIRATES, post: { kind: 'commander', ship: id }, traits: { ...playerTraits(), loyalty: 'self' } }
   s.ships[id] = newShip(id, 'Black Gull', HULLS.raider, PIRATES, at, s.characters[cid])
   s.ships[id].havens = [Y]
   s.ships[id].order = { kind: 'patrol', world: at, weeks: 4, posture: 'favourable', then: { kind: 'world', world: Y }, began: 0 }
@@ -25,7 +25,7 @@ function raider(s: GameState, at: WorldId, id = 's-raider' as ShipId): void {
 /** A warship of the desk's at `at`. */
 function warship(s: GameState, at: WorldId, posture: 'never' | 'favourable' | 'always' = 'favourable', id = 's-war' as ShipId): void {
   const cid = `c-${id}` as CharacterId
-  s.characters[cid] = { id: cid, name: 'Captain', faction: s.characters[s.player].faction, post: { kind: 'commander', ship: id }, traits: playerTraits(), agent: false }
+  s.characters[cid] = { id: cid, name: 'Captain', faction: s.characters[s.player].faction, post: { kind: 'commander', ship: id }, traits: playerTraits() }
   s.ships[id] = newShip(id, 'Vigilant', HULLS.patrol, s.characters[s.player].faction, at, s.characters[cid])
   s.ships[id].standing.onContact = posture
 }
@@ -138,7 +138,7 @@ describe('scouts', () => {
       s.rng = createRng(seed)
       raider(s, X)
       const cid = 'c-sc' as CharacterId
-      s.characters[cid] = { id: cid, name: 'Scout', faction: 'f-admin' as never, post: { kind: 'commander', ship: 's-sc' as ShipId }, traits: playerTraits(), agent: false }
+      s.characters[cid] = { id: cid, name: 'Scout', faction: 'f-admin' as never, post: { kind: 'commander', ship: 's-sc' as ShipId }, traits: playerTraits() }
       s.ships['s-sc' as ShipId] = newShip('s-sc' as ShipId, 'Kestrel', HULLS.scout, 'f-admin' as never, C, s.characters[cid])
       s.ships['s-sc' as ShipId].location = { kind: 'transit', from: C, to: X, arrives: 1 }
       s.ships['s-sc' as ShipId].standing.onContact = 'never'

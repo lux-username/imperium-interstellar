@@ -93,7 +93,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
     : task === 'hold'
       ? { kind: 'move', to: destination, then }
       : task === 'scout'
-        ? { kind: 'scout', world: destination, then, lookedOn: null }
+        ? { kind: 'scout', world: destination, weeks: 1, then, lookedOn: null }
         : { kind: 'patrol', world: destination, weeks, posture, then, began: null }
 
   const deliverable = readAtOnce || landsAt !== null || useCourier

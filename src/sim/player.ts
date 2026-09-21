@@ -32,7 +32,7 @@ export function buildPlayerView(state: GameState): PlayerView {
   // People and troops at the capital are seen from the desk's window, not learned by letter.
   const pool: PoolEntry[] = Object.values(state.characters)
     .filter((c) => c.faction === playerFaction && c.post.kind === 'unassigned' && c.post.at === state.capital)
-    .map((c) => ({ id: c.id, name: c.name, agent: c.agent }))
+    .map((c) => ({ id: c.id, name: c.name }))
     .sort((a, b) => (a.id < b.id ? -1 : 1))
   const capital = state.worlds[state.capital]
   const factions: Record<string, FactionEntry> = {}

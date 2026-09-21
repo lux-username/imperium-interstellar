@@ -91,7 +91,7 @@ export interface GroundContest {
   attackers: Troops
 }
 
-/** One line of a world's traffic log: a hull that called, and when. Kept for agents to read (see ./agents.ts). */
+/** One line of a world's traffic log: a hull that called, and when. What a scout lying off the world for a while reads back to the desk (see ./scouts.ts). */
 export interface TrafficEntry {
   ship: ShipSnapshot
   arrived: Week
@@ -119,7 +119,7 @@ export interface World {
   contest: GroundContest | null
   /** When the governor's office last wrote to the desk. Drives the "all quiet" letter. */
   lastLetter: Week
-  /** Hulls that called recently, newest last. Bounded (see ./agents.ts). */
+  /** Hulls that called recently, newest last. Bounded (see ./scouts.ts). */
   traffic: TrafficEntry[]
 }
 
@@ -177,7 +177,7 @@ export interface Ship {
   commander: CharacterId | null
   /** Detachments aboard, cryofrozen. */
   troops: Troops
-  /** People riding as passengers: an officer going out to a post, an agent, a governor who fled. */
+  /** People riding as passengers: an officer going out to a post, a governor who fled. */
   passengers: CharacterId[]
   /** Pirates only: the havens this hull knows it can put in at. Null for everyone else. */
   havens: WorldId[] | null
@@ -191,11 +191,9 @@ export interface Ship {
 export type Post =
   | { kind: 'governor'; world: WorldId }
   | { kind: 'commander'; ship: ShipId }
-  /** An agent watching a world, due to write on `since + weeks`. */
-  | { kind: 'watching'; world: WorldId; since: Week; weeks: number }
   /** Riding in a hull. */
   | { kind: 'passenger'; ship: ShipId }
-  /** At `at` with nothing to do: the officers' pool at the capital, an agent waiting for a hull home, a governor who fled. */
+  /** At `at` with nothing to do: the officers' pool at the capital, a governor who fled or was unseated. */
   | { kind: 'unassigned'; at: WorldId }
 
 /** Whose interest a person serves when it comes to it. Corruption is loyalty to self. */
@@ -221,8 +219,6 @@ export interface Character {
   faction: FactionId
   post: Post
   traits: Traits
-  /** Agents watch and report the truth; everyone else governs or commands. */
-  agent: boolean
 }
 
 export type FactionKind = 'empire' | 'administration' | 'rival' | 'pirates' | 'rebels'

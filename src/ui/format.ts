@@ -167,7 +167,7 @@ export function orderText(view: PlayerView, order: Order): string {
     case 'patrol':
       return `patrol ${worldName(view, order.world)} for ${order.weeks} wk${then}`
     case 'scout':
-      return `scout ${worldName(view, order.world)} and report${then}`
+      return order.weeks <= 1 ? `look in at ${worldName(view, order.world)} and report${then}` : `watch ${worldName(view, order.world)} for ${order.weeks} wk and report${then}`
     case 'courier':
       return `run mail ${order.route.map((w) => worldName(view, w)).join(' → ')}${order.repeat ? ' and repeat' : ''}${then}`
     case 'transport':
@@ -179,8 +179,7 @@ export function orderText(view: PlayerView, order: Order): string {
 function transportCargo(order: Extract<Order, { kind: 'transport' }>): string {
   const troops = [order.army > 0 ? `${order.army} army` : '', order.marines > 0 ? `${order.marines} marine` : ''].filter(Boolean).join(' and ')
   const troopText = troops ? `${troops} detachment${order.army + order.marines === 1 ? '' : 's'}` : ''
-  const person =
-    order.purpose === 'appoint' ? 'an officer to take the seal' : order.purpose === 'watch' ? `an agent to watch ${order.weeks} wk` : order.purpose === 'command' ? 'an officer to take command of the prize' : ''
+  const person = order.purpose === 'appoint' ? 'an officer to take the seal' : order.purpose === 'command' ? 'an officer to take command of the prize' : ''
   return `carry ${[troopText, person].filter(Boolean).join(' and ') || 'nothing'}`
 }
 

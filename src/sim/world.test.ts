@@ -80,7 +80,7 @@ describe('revolt', () => {
     const s = line()
     const packet = s.ships['s-xy' as ShipId] // in port at X on week 0
     expect(packet.location).toEqual({ kind: 'world', world: X })
-    s.characters['c-w' as CharacterId] = { id: 'c-w' as CharacterId, name: 'W', faction: 'f-admin' as never, post: { kind: 'commander', ship: 's-w' as ShipId }, traits: s.characters[s.player].traits, agent: false }
+    s.characters['c-w' as CharacterId] = { id: 'c-w' as CharacterId, name: 'W', faction: 'f-admin' as never, post: { kind: 'commander', ship: 's-w' as ShipId }, traits: s.characters[s.player].traits }
     s.ships['s-w' as ShipId] = { ...packet, id: 's-w' as ShipId, name: 'Warship', role: 'patrol', strength: 3, commander: 'c-w' as CharacterId, order: null, mailbag: [], passengers: [] }
     changeHands(s, s.worlds[X], REBELS, { army: 2, marines: 0 })
     expect(s.characters['c-x' as CharacterId].post).toEqual({ kind: 'passenger', ship: 's-w' })

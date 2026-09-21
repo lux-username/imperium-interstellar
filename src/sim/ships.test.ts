@@ -18,7 +18,7 @@ function fleet(): GameState {
   const s = line()
   const cmdr = 'c-cmdr' as CharacterId
   const ship = 's-patrol' as ShipId
-  s.characters[cmdr] = { id: cmdr, name: 'Cmdr', faction: s.characters[s.player].faction, post: { kind: 'commander', ship }, traits: playerTraits(), agent: false }
+  s.characters[cmdr] = { id: cmdr, name: 'Cmdr', faction: s.characters[s.player].faction, post: { kind: 'commander', ship }, traits: playerTraits() }
   s.ships[ship] = {
     id: ship,
     name: 'Vigilant',
@@ -38,7 +38,7 @@ function fleet(): GameState {
   }
   const govZ = 'c-z' as CharacterId
   s.worlds[Z] = { ...s.worlds[Y], id: Z, name: 'Zed', hex: { col: 5, row: 5 }, governor: govZ, actingGovernor: govZ, profile: { ...s.worlds[Y].profile, starport: 'D' } }
-  s.characters[govZ] = { id: govZ, name: 'Zee', faction: s.characters[s.player].faction, post: { kind: 'governor', world: Z }, traits: playerTraits(), agent: false }
+  s.characters[govZ] = { id: govZ, name: 'Zee', faction: s.characters[s.player].faction, post: { kind: 'governor', world: Z }, traits: playerTraits() }
   return s
 }
 
@@ -88,10 +88,10 @@ describe('ordered hulls', () => {
     // Zed's governor wrote long ago; nothing ever called.
     const stranded = governorLetter(s, s.worlds[Z], [])!
     expect(stranded.status).toEqual({ kind: 'awaiting_carrier', at: Z })
-    patrol(s).order = { kind: 'scout', world: Z, then: null, lookedOn: null }
+    patrol(s).order = { kind: 'scout', world: Z, weeks: 1, then: null, lookedOn: null }
     runUntil(s, (g) => at(g) === Z, 10)
     const arrived = s.week
-    expect(patrol(s).order).toEqual({ kind: 'scout', world: Z, then: null, lookedOn: arrived }) // the week is spent looking
+    expect(patrol(s).order).toEqual({ kind: 'scout', world: Z, weeks: 1, then: null, lookedOn: arrived }) // the week is spent looking
     advanceWeek(s)
     expect(patrol(s).location.kind).toBe('transit')
     expect(stranded.status.kind).toBe('aboard')

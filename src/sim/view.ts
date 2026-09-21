@@ -189,7 +189,7 @@ export interface Envelope {
 export type Channel =
   /** A governor's or commander's own letter. */
   | 'official'
-  /** One of the player's agents on the spot. */
+  /** A scout that lay off the world and watched: the one channel that carries the plain truth. */
   | 'agent'
   /** A trader's word at a port. */
   | 'merchant'
@@ -274,11 +274,10 @@ export interface RosterEntry {
   commanderName: string | null
 }
 
-/** Someone at the capital the desk can send somewhere: an officer without a post, or an agent. */
+/** An officer at the capital without a post, whom the desk can send out to a seat or a prize. */
 export interface PoolEntry {
   id: CharacterId
   name: string
-  agent: boolean
 }
 
 /** A faction as the chart names it. Public: everyone knows who the Warlord is. */
@@ -305,7 +304,7 @@ export interface PlayerView {
   known: Belief
   /** The hulls the desk commands, as listed on its books. Their whereabouts are in `known.ships`. */
   roster: RosterEntry[]
-  /** Officers and agents at the capital with nothing to do, seen directly from the desk. */
+  /** Officers at the capital with nothing to do, seen directly from the desk. */
   pool: PoolEntry[]
   /** Troops at the capital, seen directly from the desk. */
   reserve: { army: number; marines: number }

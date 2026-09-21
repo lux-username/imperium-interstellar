@@ -47,9 +47,9 @@ export function line(): GameState {
       [pxy]: { id: pxy, name: 'P2', role: 'packet', faction: admin, jump: 1, strength: 0, damage: 0, location: { kind: 'world', world: X }, commander: null, troops: { army: 0, marines: 0 }, passengers: [], havens: null, order: { kind: 'courier', route: [X, Y], then: null, repeat: true, leg: 1 }, standing: { rally: null, onContact: 'never' }, mailbag: [] },
     },
     characters: {
-      [player]: { id: player, name: 'Gov', faction: admin, post: { kind: 'governor', world: C }, traits: playerTraits(), agent: false },
-      [govX]: { id: govX, name: 'Ex', faction: admin, post: { kind: 'governor', world: X }, traits: playerTraits(), agent: false },
-      [govY]: { id: govY, name: 'Wy', faction: admin, post: { kind: 'governor', world: Y }, traits: playerTraits(), agent: false },
+      [player]: { id: player, name: 'Gov', faction: admin, post: { kind: 'governor', world: C }, traits: playerTraits() },
+      [govX]: { id: govX, name: 'Ex', faction: admin, post: { kind: 'governor', world: X }, traits: playerTraits() },
+      [govY]: { id: govY, name: 'Wy', faction: admin, post: { kind: 'governor', world: Y }, traits: playerTraits() },
     },
     factions: startingFactions(C),
     mail: {},

@@ -43,7 +43,7 @@ export function playerTraits(): Traits {
 
 /** A new person with rolled traits, named and posted. */
 export function newCharacter(rng: Rng, id: CharacterId, faction: FactionId, post: Post): Character {
-  return { id, name: personName(rng), faction, post, traits: rollTraits(rng), agent: false }
+  return { id, name: personName(rng), faction, post, traits: rollTraits(rng) }
 }
 
 /** Bold people act before they are sure; cautious ones write first. */
