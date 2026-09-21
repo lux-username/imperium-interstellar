@@ -201,3 +201,11 @@ Because his targets were chosen within two jumps of his *border* but his ships a
 ## 2026-09-20 — Chose to exclude named individuals, real or fictional, from the name pools
 
 Because a pool entry must read as a generic period name, and a name that is chiefly known as one person's — a famous historical figure, or a named character in a well-known novel — reads instead as that person, which is either a borrowing (the project rule on third-party works) or, for the recently dead in a culture that avoids their names, a discourtesy. Ordinary period names that happen to coincide with someone famous stay; names distinctive to one individual go. Applied to the Aborigine and Han women's pools this session; `#51` applies it to the Aborigine men's pool.
+
+## 2026-09-21 — Chose communities inside a culture over splitting cultures into new rows
+
+Because the defect in `#54` was pairing, not proportion: the South Asian files already hold the right share of Muslim names, they just let a Hindu given name take a Muslim surname. An optional `communities` list on the `Culture` schema keeps one row per culture in `WORLD`, keeps each file's stated proportions as weights, and lets the flat pools stay as the union so the 80/80/80 rule still applies to the file. Splitting into new cultures would have meant growing each Muslim pool from about sixteen names to eighty and reweighting the table for a distinction the world table does not make. The same shape is available to Egyptian (Copt / Muslim) if it ever needs it; Yoruba, where Lagos names genuinely mixed, is left flat.
+
+## 2026-09-21 — Chose one name pool for every side, sex at even odds, and merchants named from the port
+
+Per the user's instruction that the Governor and the Warlord draw from the same pool. `newCharacter` is the one door every rolled person comes through — the desk's governors and officers, the Warlord's officers, pirate captains — so the 60/40 core/world rule is applied there and nowhere else, and a Warlord captain is as likely to be Irish as one of ours. Sex is an even split because `spec.md` says nothing and the women's pools were built to be used; it is a guess, flagged in STATUS. A merchant who brings a rumour to a port is named from that world's own cultures rather than the officer rule, because a trader at a Han port is a local, not a posting.
