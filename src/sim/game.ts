@@ -13,6 +13,9 @@ import { spawnRumours, spreadRumours } from './rumours'
 import { afterActionReports, departShips, landShips, shipRoute, unloadArrivals } from './ships'
 import { fightAtWorlds, repairShips } from './combat'
 import { pirateOrders, placePirates, seizePirates, spawnPirates } from './pirates'
+import { placeWarlord, warlordActs } from './warlord'
+import { THE_WARLORD, WARLORD, capitalOf } from './factions'
+import { hexDistance } from './hex'
 import { forgetOldEvents, governorChangedEvent, unrestEvent, unrestIsNews } from './events'
 import { beginRevolt, fightContests, regrowGarrisons } from './world'
 import { newCharacter } from './characters'
@@ -51,9 +54,11 @@ export function newGame(seed: number): GameState {
     rumours: [],
     beliefs: { [PLAYER]: { worlds: {}, ships: {} } },
   }
+  placeWarlord(state)
   placePirates(state)
   pirateOrders(state)
   openingSurvey(state)
+  warlordSurvey(state)
   observeCapital(state)
   // Week 0's sailings have already happened when the player sits down, so
   // every packet is where its timetable says it should be — and none of it is news.
@@ -75,25 +80,43 @@ function openingSurvey(state: GameState): void {
     if (id === state.capital) continue
     const path = route(state.lanes, id, state.capital)
     const age = path ? path.length * 2 + roll(state.rng) : 20 + roll(state.rng) * 4
-    // A survey describes the world, not the traffic: whatever hull is in port today wasn't there back then.
-    const snapshot = snapshotWorld(state, world)
-    if (snapshot.kind === 'world') snapshot.world.ships = []
-    const report: Report = {
-      id: `r-survey-${hexLabel(world.hex)}` as ReportId,
-      channel: 'official',
-      observer: world.governor ?? PLAYER,
-      observerName: world.governor ? state.characters[world.governor].name : 'Survey of the previous administration',
-      observedAt: id,
-      observed: -age,
-      snapshot,
-      events: [],
-      envelope: { origin: id, destination: { kind: 'world', world: state.capital }, sent: -age, route: path ?? [id], eta: 0 },
-      delivered: 0,
-    }
-    learn(state, PLAYER, report)
+    surveyEntry(state, PLAYER, state.capital, world, age, path)
     // The world has had `age` weeks to drift since the survey was taken. Nothing that happened then is news now.
     for (let i = 0; i < Math.floor(age / 6); i++) driftWorld(state, world, false)
   }
+}
+
+/** The Warlord took the Commodore's charts with him: a stale picture of the worlds within reach of his border. */
+function warlordSurvey(state: GameState): void {
+  const seat = capitalOf(state, WARLORD)
+  if (!seat || !state.characters[THE_WARLORD]) return
+  const his = Object.values(state.worlds).filter((w) => w.faction === WARLORD)
+  const ids = Object.keys(state.worlds).sort() as WorldId[]
+  for (const id of ids) {
+    const world = state.worlds[id]
+    if (world.faction === WARLORD || !his.some((h) => hexDistance(h.hex, world.hex) <= 4)) continue
+    surveyEntry(state, THE_WARLORD, seat, world, 10 + roll(state.rng), route(state.lanes, id, seat))
+  }
+}
+
+/** One old survey entry about `world`, `age` weeks stale, entered straight into `reader`'s belief. */
+function surveyEntry(state: GameState, reader: CharacterId, home: WorldId, world: World, age: number, path: WorldId[] | null): void {
+  // A survey describes the world, not the traffic: whatever hull is in port today wasn't there back then.
+  const snapshot = snapshotWorld(state, world)
+  if (snapshot.kind === 'world') snapshot.world.ships = []
+  const report: Report = {
+    id: `r-survey-${hexLabel(world.hex)}-${reader}` as ReportId,
+    channel: 'official',
+    observer: world.governor ?? reader,
+    observerName: world.governor ? state.characters[world.governor].name : 'Survey of the previous administration',
+    observedAt: world.id,
+    observed: -age,
+    snapshot,
+    events: [],
+    envelope: { origin: world.id, destination: { kind: 'world', world: home }, sent: -age, route: path ?? [world.id], eta: 0 },
+    delivered: 0,
+  }
+  learn(state, reader, report)
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +143,7 @@ export function advanceWeek(state: GameState): void {
   fightContests(state)
   regrowGarrisons(state)
   governorsWrite(state)
+  warlordActs(state)
   spawnPirates(state)
   pirateOrders(state)
   spawnRumours(state)

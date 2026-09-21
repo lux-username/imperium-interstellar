@@ -12,7 +12,7 @@ import type { Order } from './orders'
 import type { Channel, Dispatch, DispatchPayload, Envelope, Event, Recipient, Report, ShipSnapshot, Snapshot } from './view'
 import { expectedArrival, route } from './chart'
 import { dispatchReceivedEvent } from './events'
-import { capitalOf } from './factions'
+import { capitalOf, hostile } from './factions'
 
 // ---------------------------------------------------------------------------
 // Minting
@@ -176,6 +176,8 @@ export function loadMail(state: GameState, ship: Ship, from: WorldId, to: WorldI
     const mail = state.mail[id]
     if (mail.status.kind !== 'awaiting_carrier' || mail.status.at !== from) continue
     const dest = destinationWorld(mail)
+    // Nobody carries the enemy's dispatches: mail for a seat at war with this hull's side stays where it is.
+    if (dest !== null && hostile(state.worlds[dest]?.faction ?? ship.faction, ship.faction)) continue
     const hop = nextHop(mail, from)
     if (hop === to) {
       mail.status = { kind: 'aboard', ship: ship.id }
@@ -226,6 +228,11 @@ export function unloadMail(state: GameState, ship: Ship, at: WorldId): void {
       continue
     }
     const env = envelopeOf(mail)
+    // A letter for a seat this port is at war with is not handed to the port: it stays aboard until a friendlier one.
+    if (dest !== null && hostile(state.worlds[at]?.faction ?? ship.faction, state.worlds[dest]?.faction ?? ship.faction)) {
+      ship.mailbag.push(id)
+      continue
+    }
     if (!env.route.includes(at) && dest !== null) {
       const path = route(state.lanes, at, dest)
       if (!path) {

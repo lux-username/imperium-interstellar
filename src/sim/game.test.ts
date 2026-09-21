@@ -123,6 +123,10 @@ describe('a generated game', () => {
       if (m.contents.kind !== 'report' || m.status.kind !== 'delivered') continue
       const r = m.contents.report
       if (isRumour(r.channel) || r.envelope.eta === null) continue // talk keeps no timetable
+      // Governors' letters to the desk ride the packets; a commander's letter may come home faster aboard his own hull,
+      // and a packet chased off her lane by a raider may land a letter early by another route (the envelope shows the re-routing).
+      if (r.envelope.destination.kind !== 'world' || r.envelope.destination.world !== s.capital || s.characters[r.observer]?.post.kind !== 'governor') continue
+      if (r.envelope.route[0] !== r.envelope.origin) continue
       expect(r.delivered, r.id).toBeGreaterThanOrEqual(r.envelope.eta)
       if (r.delivered === r.envelope.eta) onTime++
       checked++
@@ -158,12 +162,16 @@ describe('a generated game', () => {
 
   it('never gets mail out of an off-lane world', () => {
     const s = newGame(12)
-    const offLane = Object.values(s.worlds).filter((w) => w.id !== s.capital && route(s.lanes, w.id, s.capital) === null)
+    // The desk's own worlds off the lanes; the Warlord's write to his seat, not ours.
+    const offLane = Object.values(s.worlds).filter((w) => w.id !== s.capital && w.faction === s.characters[s.player].faction && route(s.lanes, w.id, s.capital) === null)
     expect(offLane.length).toBeGreaterThan(0)
     for (let i = 0; i < 30; i++) advanceWeek(s)
     for (const w of offLane) {
       for (const m of Object.values(s.mail)) {
-        if (m.contents.kind === 'report' && m.contents.report.observedAt === w.id) expect(m.status).toEqual({ kind: 'awaiting_carrier', at: w.id })
+        if (m.contents.kind !== 'report' || m.contents.report.observedAt !== w.id) continue
+        const dest = m.contents.report.envelope.destination
+        if (dest.kind !== 'world' || dest.world !== s.capital) continue // the Warlord's people write to his seat
+        expect(m.status).toEqual({ kind: 'awaiting_carrier', at: w.id })
       }
       // The desk still shows only the opening survey for it.
       expect(s.beliefs[s.player].worlds[w.id].observed).toBeLessThan(0)
