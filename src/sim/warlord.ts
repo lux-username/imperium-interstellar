@@ -15,7 +15,7 @@
 import { hexRoute, neighbours, route } from './chart'
 import { newCharacter } from './characters'
 import { portGuns } from './combat'
-import { THE_WARLORD, WARLORD, hostile } from './factions'
+import { PIRATES, THE_WARLORD, WARLORD, hostile } from './factions'
 import { HULLS, newShip, shipName, troopCapacity } from './fleet'
 import { hexDistance } from './hex'
 import { roll } from './rng'
@@ -127,8 +127,9 @@ interface Picture {
   own: { world: World; snap: WorldSnapshot | null; age: number }[]
   /** Worlds he believes are somebody else's, within reach. */
   targets: Known[]
-  /** Hostile hulls seen recently, by world. */
+  /** Hostile hulls seen recently, by world; pirates counted apart, since they raid but never land. */
   enemyAt: Record<WorldId, Sighted>
+  piratesAt: Record<WorldId, Sighted>
   /** How much losing a world would hurt the desk: chart facts, which he knows as well as anyone. */
   value: (w: World) => number
 }
@@ -169,11 +170,13 @@ function picture(state: GameState, seat: WorldId): Picture {
   }
 
   const enemyAt: Record<WorldId, Sighted> = {}
+  const piratesAt: Record<WorldId, Sighted> = {}
   for (const sighting of Object.values(belief.ships)) {
     const age = state.week - sighting.observed
     if (age > FRESH || !hostile(sighting.ship.faction, WARLORD)) continue
     const at = sighting.ship.at
-    enemyAt[at] = { strength: (enemyAt[at]?.strength ?? 0) + worth(sighting.ship.role), age: Math.min(enemyAt[at]?.age ?? age, age) }
+    const book = sighting.ship.faction === PIRATES ? piratesAt : enemyAt
+    book[at] = { strength: (book[at]?.strength ?? 0) + worth(sighting.ship.role), age: Math.min(book[at]?.age ?? age, age) }
   }
 
   // Chart facts: lanes, port, and how many worlds the desk reaches its capital through this one.
@@ -185,7 +188,7 @@ function picture(state: GameState, seat: WorldId): Picture {
   }
   const value = (w: World) => neighbours(state.lanes, w.id).length * 2 + portGuns(w.profile.starport) + (through[w.id] ?? 0) * 3
 
-  return { seat, own, targets, enemyAt, value }
+  return { seat, own, targets, enemyAt, piratesAt, value }
 }
 
 // ---------------------------------------------------------------------------
@@ -293,7 +296,7 @@ function defend(state: GameState, p: Picture): void {
   }
 }
 
-/** The strongest enemy force seen lately at or within two jumps of a world of his. */
+/** The strongest enemy force seen lately at or within two jumps of a world of his. Pirates do not count: they raid, they do not land. */
 function nearestEnemy(p: Picture, world: World): number {
   let worst = 0
   for (const [at, seen] of Object.entries(p.enemyAt)) {
@@ -342,24 +345,26 @@ function attack(state: GameState, p: Picture): void {
 }
 
 /**
- * Enemy hulls seen lately, in the open or under a weak port, that his idle
- * patrols could take at favourable odds: a courier at a C port, a lone
- * transport. He sends what he needs and they lie off the port a few weeks.
+ * Hulls seen lately that his idle patrols could take at favourable odds:
+ * the desk's courier at a C port, a lone transport — and pirates, wherever
+ * they lie, his own ports included. Pirates are his enemies too, and his
+ * corrupt governors breed them; when he has ships to spare he clears them
+ * out, and a nest at one of his own havens comes first. Enemy hulls docked
+ * at their own port have its guns; a pirate at a haven has none.
  */
 function hunt(state: GameState, p: Picture): void {
   const patrols = idleAt(state, p.seat, 'patrol')
   if (patrols.length === 0) return
   const mine = strengthOf(patrols)
-  const prey = Object.entries(p.enemyAt)
-    .map(([at, seen]) => {
-      const world = state.worlds[at as WorldId]
-      const known = p.targets.find((t) => t.world.id === at)
-      // Docked at their own port, they have its guns; anywhere else they are in the open.
-      const theirs = seen.strength + (known && known.snap.faction !== WARLORD ? portGuns(known.snap.profile.starport) : 0)
-      return { at: at as WorldId, world, theirs, age: seen.age }
-    })
-    .filter((x) => x.world && x.theirs < mine && hexRoute(state.worlds, p.seat, x.at, 2) !== null && x.world.faction !== WARLORD)
-    .sort((a, b) => a.theirs - b.theirs || a.age - b.age || (a.at < b.at ? -1 : 1))
+  const desks = Object.entries(p.enemyAt).map(([at, seen]) => {
+    const known = p.targets.find((t) => t.world.id === at)
+    const theirs = seen.strength + (known && known.snap.faction !== WARLORD ? portGuns(known.snap.profile.starport) : 0)
+    return { at: at as WorldId, theirs, age: seen.age, own: false }
+  })
+  const pirates = Object.entries(p.piratesAt).map(([at, seen]) => ({ at: at as WorldId, theirs: seen.strength, age: seen.age, own: state.worlds[at as WorldId]?.faction === WARLORD }))
+  const prey = [...desks, ...pirates]
+    .filter((x) => state.worlds[x.at] && x.theirs < mine && hexRoute(state.worlds, p.seat, x.at, 2) !== null && (x.own || state.worlds[x.at].faction !== WARLORD))
+    .sort((a, b) => Number(b.own) - Number(a.own) || a.theirs - b.theirs || a.age - b.age || (a.at < b.at ? -1 : 1))
   const target = prey[0]
   if (!target) return
   // Enough to be favourable, not the whole fleet.

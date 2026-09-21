@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { playerTraits } from './characters'
-import { REBELS, THE_WARLORD, WARLORD } from './factions'
+import { PIRATES, REBELS, THE_WARLORD, WARLORD } from './factions'
 import { HULLS, newShip } from './fleet'
 import { advanceWeek, newGame } from './game'
 import { hexDistance } from './hex'
@@ -194,5 +194,31 @@ describe('what the Warlord does with what he knows', () => {
       warlordActs(s)
     }
     expect(s.ships['s-cap' as ShipId].faction).toBe('f-admin')
+  })
+
+  it('clears a pirate nest at one of his own havens when he has ships to spare, ahead of the desk’s couriers', () => {
+    const s = court()
+    s.worlds[X].faction = WARLORD
+    heTinks(s, X, 1, (w) => {
+      w.faction = WARLORD
+    })
+    s.beliefs[THE_WARLORD].ships['s-gull' as ShipId] = { ship: { id: 's-gull' as ShipId, name: 'Gull', role: 'raider', faction: PIRATES, at: X, commander: null, damaged: false }, observed: 1, report: 'r' as never }
+    s.beliefs[THE_WARLORD].ships['s-swift' as ShipId] = { ship: { id: 's-swift' as ShipId, name: 'Swift', role: 'courier', faction: 'f-admin' as never, at: C, commander: null, damaged: false }, observed: 1, report: 'r' as never }
+    warlordActs(s)
+    const hunters = ordersOf(s).filter((o) => o.role === 'patrol' && o.order.kind === 'patrol')
+    expect(hunters.length).toBeGreaterThan(0)
+    expect(hunters.every((o) => o.order.kind === 'patrol' && o.order.world === X)).toBe(true)
+  })
+
+  it('does not reinforce a world against pirates, who raid but never land', () => {
+    const s = court()
+    s.worlds[X].faction = WARLORD
+    heTinks(s, X, 1, (w) => {
+      w.faction = WARLORD
+      w.garrison = 1
+    })
+    s.beliefs[THE_WARLORD].ships['s-gull' as ShipId] = { ship: { id: 's-gull' as ShipId, name: 'Gull', role: 'raider', faction: PIRATES, at: X, commander: null, damaged: false }, observed: 1, report: 'r' as never }
+    warlordActs(s)
+    expect(ordersOf(s).filter((o) => o.order.kind === 'transport' && o.order.to === X)).toEqual([])
   })
 })

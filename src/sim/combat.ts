@@ -51,11 +51,12 @@ interface Scene {
   arriving: ReadonlySet<ShipId>
 }
 
-/** A side's fighting power: its hulls, plus the port's guns if any of it lies docked there. */
+/** A side's fighting power: its hulls, plus the port's guns if any of it lies docked there — and the guns are the holder's, so a pirate at a haven gets none. */
 function sideStrength(state: GameState, ships: Ship[], scene: Scene): number {
   const hulls = hullStrength(ships)
-  const underGuns = ships.some((s) => docked(state, s, scene.at, scene.arriving))
-  return hulls + (underGuns ? portGuns(state.worlds[scene.at]?.profile.starport ?? 'X') : 0)
+  const world = state.worlds[scene.at]
+  const underGuns = ships.some((s) => s.faction === world?.faction && docked(state, s, scene.at, scene.arriving))
+  return hulls + (underGuns ? portGuns(world?.profile.starport ?? 'X') : 0)
 }
 
 const POSTURES: Posture[] = ['never', 'overwhelming', 'favourable', 'even', 'always']
