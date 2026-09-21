@@ -174,9 +174,15 @@ export function warlordActs(state: GameState): void {
   const spare = Math.max(0, home.garrison - 4)
   const lift = Math.min(spare, transports.length * troopCapacity('transport'))
   if (lift > 0) {
+    // He lands only where his own picture says an enemy holds the world; a world he has lost without hearing of it is not yet a target.
+    const believedEnemy = (w: World) => {
+      const snap = state.beliefs[THE_WARLORD]?.worlds[w.id]?.snapshot
+      return snap?.kind === 'world' && snap.world.faction !== WARLORD
+    }
     const known = frontier(state)
+      .filter((w) => believedEnemy(w) && hexRoute(state.worlds, seat, w.id, 2) !== null)
       .map((w) => ({ w, belief: believedGarrison(state, w.id) }))
-      .filter((t): t is { w: World; belief: { strength: number; age: number } } => t.belief !== null && hexRoute(state.worlds, seat, t.w.id, 2) !== null)
+      .filter((t): t is { w: World; belief: { strength: number; age: number } } => t.belief !== null)
       .sort((a, b) => a.belief.strength - b.belief.strength || (a.w.id < b.w.id ? -1 : 1))
     const target = known.find(({ belief }) => belief.strength + 1 < lift)
     if (target) {

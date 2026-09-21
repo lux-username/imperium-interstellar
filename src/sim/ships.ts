@@ -115,16 +115,19 @@ export function portOpenTo(state: GameState, at: WorldId, faction: Ship['faction
 }
 
 /**
- * Whether this faction's seat *believes* a port is closed to it. Hulls do
- * not know a world has fallen until word gets back: packets keep sailing
- * in and being lost until a report reaches the seat. A faction with no
- * seat believes nothing.
+ * Whether the port a packet is leaving *knows* the far port is closed to
+ * her side. Nothing travels faster than a hull: a port knows a world has
+ * fallen only when the talk of it has reached its own docks along the
+ * lanes — or, at a faction's seat, when the seat's own reports say so.
+ * Until then the packet sails as usual, and is impounded on arrival.
  */
-export function believedClosed(state: GameState, at: WorldId, faction: Ship['faction']): boolean {
+export function portKnowsClosed(state: GameState, from: WorldId, to: WorldId, faction: Ship['faction']): boolean {
+  const fell = (kind: string) => kind === 'world_fell' || kind === 'world_taken'
+  if (state.rumours.some((r) => r.event.at === to && fell(r.event.kind) && from in r.heard)) return true
+  if (state.factions[faction]?.capital !== from) return false
   const leader = state.factions[faction]?.leader
-  const known = leader ? state.beliefs[leader]?.worlds[at] : undefined
-  if (!known || known.snapshot.kind !== 'world') return false
-  return hostile(known.snapshot.world.faction, faction)
+  const known = leader ? state.beliefs[leader]?.worlds[to] : undefined
+  return known?.snapshot.kind === 'world' && hostile(known.snapshot.world.faction, faction)
 }
 
 /**
@@ -270,10 +273,10 @@ export function departShips(state: GameState): void {
     }
     const to = path[1]
     const lane = laneBetween(state.lanes, from, to)
-    // Packets keep the lane's timetable, and are held back only once their seat has heard the far port is closed to them;
-    // anything else sails as soon as it can.
+    // Packets keep the lane's timetable, and are held back only once the port they are leaving knows the far port is
+    // closed to them; anything else sails as soon as it can.
     if (ship.role === 'packet' && lane && nextDeparture(lane, from, state.week) !== state.week) continue
-    if (ship.role === 'packet' && believedClosed(state, to, ship.faction)) continue
+    if (ship.role === 'packet' && portKnowsClosed(state, from, to, ship.faction)) continue
     loadMail(state, ship, from, to, path)
     takeOnWaiting(state, ship, from)
     hullDepartedEvent(state, from, ship)

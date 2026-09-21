@@ -109,15 +109,21 @@ describe('revolt', () => {
     expect(fromY).toEqual([])
   })
 
-  it('once the desk has heard a port is closed, its packets are held back', () => {
+  it('once the docks at a port have heard a neighbour fell, its packet is held back — word travels by lane, never faster', () => {
     const s = line()
     changeHands(s, s.worlds[Y], REBELS, { army: 2, marines: 0 })
-    // Tell the desk directly, as a scout's letter would.
-    const known = s.beliefs[s.player].worlds
-    known[Y] = { id: 'r-t' as never, channel: 'official', observer: s.player, observerName: 'x', observedAt: Y, observed: 0, snapshot: { kind: 'world', world: { id: Y, name: 'Wye', hex: s.worlds[Y].hex, profile: s.worlds[Y].profile, faction: REBELS, governor: null, governorName: null, unrest: 2, garrison: 2, marines: 0, contest: null, ships: [] } }, events: [], envelope: { origin: Y, destination: { kind: 'world', world: s.capital }, sent: 0, route: [Y], eta: 0 }, delivered: 0 }
-    for (let i = 0; i < 12; i++) advanceWeek(s)
+    // The talk of it has reached Exe (as merchants would carry it) but not the capital.
+    const fell = Object.values(s.events).find((e) => e.kind === 'world_fell')!
+    s.rumours.push({ event: fell, origin: Y, born: 0, heard: { [Y]: 0, [X]: 1 } })
+    for (let i = 0; i < 6; i++) advanceWeek(s)
     expect(Object.values(s.events).some((e) => e.kind === 'hull_arrived' && e.at === Y && e.ship?.faction === 'f-admin')).toBe(false)
     expect(s.ships['s-xy' as ShipId].faction).toBe('f-admin')
+    // What the desk believes is no use to a packet lying at Exe: only the capital's own packets read the desk's mind.
+    const s2 = line()
+    changeHands(s2, s2.worlds[Y], REBELS, { army: 2, marines: 0 })
+    s2.beliefs[s2.player].worlds[Y] = { id: 'r-t' as never, channel: 'official', observer: s2.player, observerName: 'x', observedAt: Y, observed: 0, snapshot: { kind: 'world', world: { id: Y, name: 'Wye', hex: s2.worlds[Y].hex, profile: s2.worlds[Y].profile, faction: REBELS, governor: null, governorName: null, unrest: 2, garrison: 2, marines: 0, contest: null, ships: [] } }, events: [], envelope: { origin: Y, destination: { kind: 'world', world: s2.capital }, sent: 0, route: [Y], eta: 0 }, delivered: 0 }
+    for (let i = 0; i < 6; i++) advanceWeek(s2)
+    expect(s2.ships['s-xy' as ShipId].faction).toBe(REBELS) // she sailed in regardless, and was taken
   })
 
   it('an independent world regrows a garrison, slowly, up to a cap', () => {
