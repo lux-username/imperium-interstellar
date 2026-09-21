@@ -193,7 +193,7 @@ describe('a generated game', () => {
     const s = newGame(4)
     advanceWeek(s)
     const view = buildPlayerView(s)
-    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'ending', 'faction', 'factions', 'havens', 'inbox', 'known', 'lanes', 'observations', 'outgoing', 'pool', 'reserve', 'roster', 'rumours', 'week'])
+    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'ending', 'faction', 'factions', 'havens', 'inbox', 'known', 'lanes', 'names', 'observations', 'outgoing', 'pool', 'reserve', 'roster', 'rumours', 'week'])
     // The view is independent of the state it came from: mutating truth doesn't move it.
     const copy = clone(s)
     for (const w of Object.values(copy.worlds)) w.unrest = 10

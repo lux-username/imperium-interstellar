@@ -3,21 +3,17 @@
  * by whom, and the last order sent to it — and the prizes taken in action,
  * which want an officer sent out before they are any use. Nothing here is
  * the truth about where a ship is; it is the newest report and the desk's
- * own mail.
+ * own mail. A row opens the hull's dossier.
  */
-import type { PlayerView, ReportId, ShipId, WorldId } from '../sim/view'
+import { isDeskObservation, type PlayerView, type ReportId, type ShipId } from '../sim/view'
 import { ago, lastOrderSent, orderText, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
-  onSelect: (world: WorldId) => void
+  onSelect: (ship: ShipId) => void
   onShowReport: (id: ReportId) => void
   /** Open the orders dialog with this hull chosen. */
   onOrders: (ship: ShipId) => void
-}
-
-function isDeskObservation(id: ReportId): boolean {
-  return id.startsWith('r-desk-') || id.startsWith('r-survey-')
 }
 
 export function Fleet({ view, onSelect, onShowReport, onOrders }: Props) {
@@ -28,12 +24,12 @@ export function Fleet({ view, onSelect, onShowReport, onOrders }: Props) {
         const seen = view.known.ships[entry.id]
         const order = lastOrderSent(view, entry.id)
         return (
-          <li key={entry.id} onClick={() => seen && onSelect(seen.ship.at)}>
+          <li key={entry.id} onClick={() => onSelect(entry.id)}>
             <div className="line1">
               <span className="subject">{entry.name}</span>
               <span className="muted">
                 {entry.role}, J-{entry.jump}
-                {seen?.ship.fuel !== null && seen?.ship.fuel !== undefined ? `, fuel for ${seen.ship.fuel} of ${entry.fuel}` : ''}
+                {entry.fuel === 0 ? ', scoops' : seen?.ship.fuel !== null && seen?.ship.fuel !== undefined ? `, fuel for ${seen.ship.fuel} of ${entry.fuel}` : ''}
               </span>
               <span className="arrived">{seen ? `${worldName(view, seen.ship.at)}, ${ago(view.week, seen.observed)}` : 'never seen'}</span>
               {entry.commanderName !== null && (

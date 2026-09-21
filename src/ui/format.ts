@@ -1,5 +1,5 @@
 /** Small formatting helpers shared by the panes. Everything takes PlayerView data only. */
-import { unrestWord, worldStateOf, type Dispatch, type Order, type PlayerView, type Report, type ShipId, type Week, type WorldId, type WorldProfile, type WorldSnapshot, type WorldState } from '../sim/view'
+import { unrestWord, worldStateOf, type Dispatch, type FactionId, type Order, type PlayerView, type Report, type ShipId, type ShipSnapshot, type Week, type WorldId, type WorldProfile, type WorldSnapshot, type WorldState } from '../sim/view'
 
 // The wording of events is the sim's (see src/sim/letters.ts): the panes say only what a letter said.
 export { UNREST_WORDS, eventLabel, eventText, unrestWord } from '../sim/view'
@@ -77,6 +77,22 @@ export function subjectWorld(report: Report): WorldId {
   return s.kind === 'world' ? s.world.id : s.kind === 'ship' ? s.ship.at : s.event.at
 }
 
+/** Whose colours a hull flies, for the map and the tags: ours, the Warlord's, pirate, independent, or nobody's we know. */
+export type Colours = 'own' | 'warlord' | 'pirates' | 'rebels' | 'other'
+
+export function coloursOf(view: PlayerView, faction: FactionId): Colours {
+  if (faction === view.faction) return 'own'
+  const kind = view.factions[faction]?.kind
+  return kind === 'rival' ? 'warlord' : kind === 'pirates' ? 'pirates' : kind === 'rebels' ? 'rebels' : 'other'
+}
+
+/** "patrol craft", "Warlord escort", "pirate raider": a hull's kind with whose it is, unless ours. */
+export function hullKind(view: PlayerView, ship: ShipSnapshot): string {
+  const colours = coloursOf(view, ship.faction)
+  const whose = colours === 'own' ? '' : colours === 'warlord' ? 'Warlord ' : colours === 'pirates' ? 'pirate ' : colours === 'rebels' ? 'independent ' : `${view.factions[ship.faction]?.name ?? 'unknown'} `
+  return `${whose}${ship.role}`
+}
+
 /** Freshness bucket for colouring: how old is what we know. */
 export function freshness(week: Week, observed: Week): 'fresh' | 'aging' | 'stale' | 'ancient' {
   const n = week - observed
@@ -121,4 +137,26 @@ export function lastOrderSent(view: PlayerView, ship: ShipId): Dispatch | null {
     if (d.payload.kind === 'order' && d.payload.ship === ship) return d
   }
   return null
+}
+
+/** The worlds an order calls at, in turn, ending with the rendezvous if it names one. */
+export function orderStops(order: Order): WorldId[] {
+  const stops: WorldId[] = []
+  switch (order.kind) {
+    case 'hold':
+      break
+    case 'move':
+    case 'transport':
+      stops.push(order.to)
+      break
+    case 'patrol':
+    case 'scout':
+      stops.push(order.world)
+      break
+    case 'courier':
+      stops.push(...order.route)
+      break
+  }
+  if ('then' in order && order.then?.kind === 'world' && order.then.world !== stops[stops.length - 1]) stops.push(order.then.world)
+  return stops
 }

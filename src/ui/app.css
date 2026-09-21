@@ -19,6 +19,7 @@
   --contested: #f08a3c;
   --independent: #b39ddb;
   --warlord: #d1477a;
+  --pirates: #ff4f4f;
   --unknown: #5a6070;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: 13px;
@@ -388,6 +389,57 @@ button.small {
 .legend .contested { color: var(--contested); }
 .legend .independent { color: var(--independent); }
 .legend .warlord { color: var(--warlord); }
+.legend .pirates { color: var(--pirates); }
+.legend .own { color: var(--ink); }
+.legend .swatch.ring {
+  background: none;
+  border: 1px dashed var(--pirates);
+}
+
+/* The week the map is turned back to. */
+.scrubber {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+}
+.scrubber label {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex: 1;
+}
+.scrubber input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+/* Section headings in the officers list. */
+ul.fleet li.heading {
+  cursor: default;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  border: none;
+  padding: 0.5rem 0 0.1rem;
+}
+ul.fleet li.heading:hover {
+  background: none;
+}
+ul.enemies li .swatch {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 0.5em solid var(--muted);
+  border-top: 0.35em solid transparent;
+  border-bottom: 0.35em solid transparent;
+  margin-right: 0.4em;
+}
+ul.enemies li.warlord .swatch { border-left-color: var(--warlord); }
+ul.enemies li.pirates .swatch { border-left-color: var(--pirates); }
+ul.enemies li.rebels .swatch { border-left-color: var(--independent); }
 
 /* ---- map ---- */
 
@@ -503,8 +555,58 @@ svg.map {
   stroke-width: 1.5;
 }
 
+/* Hulls where last seen, in the colours they flew. */
 .map .world .ships polygon {
   fill: var(--ink);
+}
+.map .world .ships .warlord polygon {
+  fill: var(--warlord);
+}
+.map .world .ships .pirates polygon {
+  fill: var(--pirates);
+}
+.map .world .ships .rebels polygon {
+  fill: var(--independent);
+}
+.map .world .ships .other polygon {
+  fill: var(--muted);
+}
+.map .world .ships .chosen polygon {
+  stroke: var(--accent);
+  stroke-width: 1;
+}
+.map .world .ships .ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.2;
+}
+.map .world .ships .more {
+  fill: var(--muted);
+  font-size: 7px;
+}
+
+/* A port a letter has seen harbouring pirates. */
+.map .world .haven-ring {
+  fill: none;
+  stroke: var(--pirates);
+  stroke-width: 1.2;
+  stroke-dasharray: 2 2;
+}
+
+/* The run the chosen hull's orders describe. */
+.map .run polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+  opacity: 0.8;
+}
+.map .run circle {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.6;
 }
 
 .map .overlay .truth {
@@ -666,6 +768,13 @@ svg.map {
 .dossier .tag.contested { color: var(--contested); border-color: var(--contested); }
 .dossier .tag.independent { color: var(--independent); border-color: var(--independent); }
 .dossier .tag.warlord { color: var(--warlord); border-color: var(--warlord); }
+.dossier .tag.pirates { color: var(--pirates); border-color: var(--pirates); }
+.dossier .tag.rebels { color: var(--independent); border-color: var(--independent); }
+.dossier .tag.own { color: var(--loyal); border-color: var(--loyal); }
+.dossier .tag.warn { color: var(--warn); border-color: var(--warn); }
+.dossier h4 .sort button {
+  font-weight: normal;
+}
 
 .modal .cargo {
   margin: 0.3rem 0 0 1.4rem;

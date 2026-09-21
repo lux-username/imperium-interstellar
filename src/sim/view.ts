@@ -365,6 +365,8 @@ export interface PlayerView {
   roster: RosterEntry[]
   /** Officers at the capital with nothing to do, seen directly from the desk. */
   pool: PoolEntry[]
+  /** The names on the administration's rolls, by id: everyone the desk has ever appointed or could. Names only; where they are is belief. */
+  names: Record<CharacterId, string>
   /** Troops at the capital, seen directly from the desk. */
   reserve: { army: number; marines: number }
   /** Every official and agent report that has reached the desk, newest arrival first. This week's news is whatever has `delivered === week`. */

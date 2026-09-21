@@ -40,6 +40,8 @@ export function buildPlayerView(state: GameState): PlayerView {
     .filter((c) => c.faction === playerFaction && c.post.kind === 'unassigned' && c.post.at === state.capital)
     .map((c) => ({ id: c.id, name: c.name }))
     .sort((a, b) => (a.id < b.id ? -1 : 1))
+  const names: Record<string, string> = {}
+  for (const c of Object.values(state.characters)) if (c.faction === playerFaction) names[c.id] = c.name
   const capital = state.worlds[state.capital]
   const factions: Record<string, FactionEntry> = {}
   for (const f of Object.values(state.factions)) factions[f.id] = { id: f.id, name: f.name, kind: f.kind }
@@ -63,6 +65,7 @@ export function buildPlayerView(state: GameState): PlayerView {
     havens: knownHavens(inbox, known),
     roster,
     pool,
+    names,
     reserve: { army: capital.garrison, marines: capital.marines },
     inbox,
     observations,
