@@ -264,14 +264,23 @@ function tally(events: readonly Event[], side: FactionId) {
 /**
  * How an action reads to one side of it: from the hulls the letter says
  * were lost or broke off. `own` is the writer's hull if they were in it.
+ * The record names the intruders; a writer on the intruders' side reads
+ * the port's holder as the enemy. A governor whose side had nothing but
+ * the port's batteries in it says so: the port fought, not the hulls.
  */
 function battleHeading(state: GameState, e: Event, events: readonly Event[], side: FactionId, own: ShipId | null): Heading {
-  const enemy = e.ship?.faction
+  const holder = state.worlds[e.at]?.faction
+  const enemy = e.ship && e.ship.faction === side ? holder : e.ship?.faction
   const them = enemyName(state, enemy)
   const word = enemyWord(state, enemy)
   const involved = enemy !== undefined && hostile(enemy, side)
   if (!involved) return { subject: 'Battle in orbit', lede: `Action was fought in orbit against ${them}.` }
   const t = tally(events, side)
+  if (own === null && side === holder && e.level === 0) {
+    if (t.theirs > 0 && t.ours === 0) return { subject: `Port batteries beat off ${word}`, lede: `${capitalise(them)} came for the hulls at the quay; the port's batteries had the better of them, and ${plural(t.theirs, 'hull')} of theirs ${t.theirs === 1 ? 'was' : 'were'} lost.` }
+    if (t.ours > 0) return { subject: `${capitalise(word)} raided the quay`, lede: `${capitalise(them)} came for the hulls at the quay under the port's guns; ${plural(t.ours, 'hull')} of ours ${t.ours === 1 ? 'was' : 'were'} taken or robbed.` }
+    return { subject: `${capitalise(word)} beaten off by the port`, lede: `${capitalise(them)} came for the hulls at the quay and the port's batteries drove them off.` }
+  }
   if (own && events.some((x) => x.kind === 'ship_fled' && x.ship?.id === own)) return { subject: `Defeated by ${word}`, lede: `${capitalise(them)} outnumbered us and I broke off.` }
   if (t.ours > 0 && t.theirs === 0) return { subject: `Defeated by ${word}`, lede: own ? `We were beaten by ${them}; ${plural(t.ours, 'hull')} lost.` : `Our forces in orbit were beaten by ${them}.` }
   if (t.theirs > 0 && t.ours === 0) return { subject: `Victory over ${word}`, lede: own ? `We engaged ${them} and had the better of it; ${plural(t.theirs, 'hull')} of theirs lost.` : `Our forces in orbit had the better of ${them}.` }

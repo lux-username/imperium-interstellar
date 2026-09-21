@@ -144,7 +144,7 @@ export type EventKind =
   /** A landing was thrown back or a garrison overcome. `ship` null; `person` the new holder's name. */
   | 'world_taken'
   | 'landing_repulsed'
-  /** Hulls fought here. `ship` is the enemy's lead hull. */
+  /** Hulls fought here. `ship` is the intruders' lead hull — the side that is not the port's own; `level` is the armed strength the port's own side had, 0 when only the batteries answered, null when neither side was the port's. */
   | 'battle'
   | 'ship_fled'
   | 'ship_damaged'

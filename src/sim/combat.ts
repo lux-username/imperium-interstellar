@@ -254,7 +254,11 @@ function destroy(state: GameState, ship: Ship, at: WorldId, by: FactionId): void
 function battle(state: GameState, scene: Scene, a: Ship[], b: Ship[]): void {
   const { at } = scene
   const lead = (side: Ship[]) => [...side].sort((x, y) => effectiveStrength(y) - effectiveStrength(x) || (x.id < y.id ? -1 : 1))[0]
-  recordEvent(state, at, { kind: 'battle', valence: 'bad', severity: 2, ship: lead(b) })
+  // The record names the intruder — the side that is not the port's own — and says whether the port's side had any
+  // guns of its own to answer with, or only the batteries: a packet at the quay does not fight, the port does.
+  const holder = state.worlds[at]?.faction
+  const [intruders, defenders] = a[0].faction === holder ? [b, a] : [a, b]
+  recordEvent(state, at, { kind: 'battle', valence: 'bad', severity: 2, ship: lead(intruders), level: defenders[0].faction === holder ? hullStrength(defenders) : null })
   // Sides are who flew which flag when the action began: a hull taken mid-action leaves her side, and does not flee as a prize.
   const flagA = a[0].faction
   const flagB = b[0].faction

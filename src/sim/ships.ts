@@ -260,7 +260,7 @@ export function runEndsAt(ship: Ship, at: WorldId): boolean {
 
 /** Whether this week's events at `at` include a fight the ship was in, or anything that befell her — or pirates lying at the port unmolested, which a captain always reports. */
 function foughtThisWeek(ship: Ship, seen: readonly Event[]): boolean {
-  return seen.some((e) => (e.ship?.id === ship.id && e.kind !== 'hull_arrived') || (e.kind === 'battle' && e.ship !== null && hostile(e.ship.faction, ship.faction)) || e.kind === 'pirates_harboured')
+  return seen.some((e) => (e.ship?.id === ship.id && e.kind !== 'hull_arrived') || (e.kind === 'battle' && e.ship !== null && (hostile(e.ship.faction, ship.faction) || e.ship.faction === ship.faction)) || e.kind === 'pirates_harboured')
 }
 
 /**

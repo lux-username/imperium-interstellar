@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fightAtWorlds } from './combat'
 import { advanceWeek, newGame, requestReport } from './game'
+import { governorLetter } from './governors'
 import { PIRATES } from './factions'
 import { HULLS, newShip } from './fleet'
 import { playerTraits } from './characters'
@@ -255,6 +256,24 @@ describe("the port's guns", () => {
     }
     expect(attacked).toBe(20) // 4 against 2: favourable every time
     expect(raiderHurt).toBeGreaterThan(0) // and the port's guns count in the exchange
+  })
+
+  it('the record names the raiders, not the packet, and the governor says the port fought: a packet is unarmed', () => {
+    const s = line()
+    s.rng = createRng(3)
+    raider(s, X, 's-r1' as ShipId)
+    raider(s, X, 's-r2' as ShipId)
+    fightAtWorlds(s)
+    const battle = Object.values(s.events).find((e) => e.kind === 'battle')
+    expect(battle).toBeDefined()
+    expect(battle?.ship?.faction).toBe(PIRATES)
+    expect(battle?.level).toBe(0) // nothing of ours with guns: only the batteries
+    const events = Object.values(s.events).filter((e) => e.at === X && e.kind !== 'hull_arrived')
+    const mail = governorLetter(s, s.worlds[X], events)!
+    const report = mail.contents.kind === 'report' ? mail.contents.report : null
+    expect(report?.subject).toMatch(/port|quay/i)
+    expect(report?.subject).not.toMatch(/our forces|Victory|Defeated/)
+    expect(report?.lede).toMatch(/the port's batteries|under the port's guns/)
   })
 
   it('a docked warship fights from under the guns rather than running', () => {
