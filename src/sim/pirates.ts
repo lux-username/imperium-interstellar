@@ -203,7 +203,7 @@ export function interrogate(state: GameState, pirate: Ship, havensKnown: WorldId
     person: captain ?? pirate.name,
     level: null,
   }))
-  writeReport(state, questioner, at, { kind: 'ship', ship: snapshotShip(pirate, at) }, { events: notes })
+  writeReport(state, questioner, at, { kind: 'ship', ship: snapshotShip(pirate, at) }, { events: notes, occasion: 'notes' })
 }
 
 /**

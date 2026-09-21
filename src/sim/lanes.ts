@@ -143,6 +143,8 @@ export function packetShips(rng: Rng, lanes: Record<LaneId, Lane>): Record<ShipI
       order: { kind: 'courier', route: [lane.ends[0], lane.ends[1]], then: null, repeat: true, leg: 1 },
       standing: { rally: null, onContact: 'never' },
       mailbag: [],
+      lastOrders: 0,
+      log: [],
     }
   }
   return ships

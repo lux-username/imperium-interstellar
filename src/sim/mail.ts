@@ -7,12 +7,13 @@
  * for the next hull along the next leg. The arithmetic the whole game rests
  * on is: arrival = written + waiting + one week per jump.
  */
-import type { CharacterId, DispatchId, GameState, Mail, MailId, ReportId, Ship, Week, World, WorldId } from './types'
+import type { CharacterId, DispatchId, GameState, Mail, MailId, ReportId, Ship, ShipId, Week, World, WorldId } from './types'
 import type { Order } from './orders'
-import type { Channel, Dispatch, DispatchPayload, Envelope, Event, Recipient, Report, ShipSnapshot, Snapshot } from './view'
+import type { Channel, Dispatch, DispatchPayload, Envelope, Event, Recipient, Report, ShipSnapshot, Snapshot, Title } from './view'
 import { expectedArrival, route } from './chart'
 import { dispatchReceivedEvent } from './events'
 import { capitalOf, hostile } from './factions'
+import { heading, type Occasion } from './letters'
 
 // ---------------------------------------------------------------------------
 // Minting
@@ -72,6 +73,18 @@ export interface Writing {
   /** The events the writer chose to mention. */
   events?: Event[]
   observerName?: string
+  /** Why the letter is being written; shapes its heading (see ./letters.ts). A governor's letter unless said otherwise. */
+  occasion?: Occasion
+  /** For a general or watch report: the week its span begins. */
+  since?: Week
+}
+
+/** The office a writer holds and, for a captain, the hull they write from. */
+function signature(state: GameState, observer: CharacterId): { title: Title; ship: ShipId | null; shipName: string | null } {
+  const post = state.characters[observer]?.post
+  if (post?.kind === 'governor') return { title: 'governor', ship: null, shipName: null }
+  if (post?.kind === 'commander') return { title: 'captain', ship: post.ship, shipName: state.ships[post.ship]?.name ?? null }
+  return { title: null, ship: null, shipName: null }
 }
 
 /**
@@ -83,15 +96,22 @@ export interface Writing {
 export function writeReport(state: GameState, observer: CharacterId, at: WorldId, snapshot: Snapshot, writing: Writing = {}): Mail {
   const faction = state.characters[observer]?.faction
   const home = (faction && capitalOf(state, faction)) ?? state.capital
+  const events = writing.events ?? []
+  const who = signature(state, observer)
+  const head = heading(state, { side: faction ?? state.characters[state.player].faction, ship: who.ship, at, week: state.week, snapshot, events, occasion: writing.occasion ?? 'letter', since: writing.since })
   const report: Report = {
     id: mint<ReportId>(state, 'r'),
     channel: writing.channel ?? 'official',
     observer,
     observerName: writing.observerName ?? state.characters[observer]?.name ?? 'Unknown',
+    observerTitle: who.title,
+    observerShip: who.shipName,
+    subject: head.subject,
+    lede: head.lede,
     observedAt: at,
     observed: state.week,
     snapshot,
-    events: writing.events ?? [],
+    events,
     envelope: envelope(state, at, home, state.week),
     delivered: null,
   }
@@ -374,6 +394,9 @@ function receiveDispatch(state: GameState, dispatch: Dispatch, at: WorldId): voi
     if (ship) {
       ship.order = JSON.parse(JSON.stringify(payload.order)) as Order
       if (payload.standing) ship.standing = { ...ship.standing, ...payload.standing }
+      // Fresh orders open a fresh page: the general report at the next rendezvous covers what follows.
+      ship.lastOrders = state.week
+      ship.log = []
     }
   }
 }

@@ -91,6 +91,8 @@ export function newShip(id: ShipId, name: string, cls: HullClass, faction: Facti
     order: null,
     standing: { rally: at, onContact: 'favourable' },
     mailbag: [],
+    lastOrders: 0,
+    log: [],
   }
 }
 

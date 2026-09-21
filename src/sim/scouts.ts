@@ -27,7 +27,7 @@ export function watchReport(state: GameState, ship: Ship, at: WorldId, since: We
   if (!ship.commander) return
   const world = state.worlds[at]
   const seen = eventsAt(state, at, since, state.week)
-  const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world), { channel: 'agent', events: seen })
+  const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world), { channel: 'agent', events: seen, occasion: 'watch', since })
   if (!friendlyPort) {
     mail.status = { kind: 'aboard', ship: ship.id }
     ship.mailbag.push(mail.id)

@@ -10,7 +10,7 @@ import { chartLanes, packetShips } from './lanes'
 import { deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
 import { governorsWrite } from './governors'
 import { spawnRumours, spreadRumours } from './rumours'
-import { afterActionReports, departShips, impoundAtPorts, landShips, shipRoute, unloadArrivals } from './ships'
+import { afterActionReports, departShips, impoundAtPorts, landShips, logWitnessed, shipRoute, unloadArrivals } from './ships'
 import { fightAtWorlds, repairShips } from './combat'
 import { pirateOrders, placePirates, seizePirates, spawnPirates } from './pirates'
 import { placeWarlord, warlordActs } from './warlord'
@@ -110,6 +110,10 @@ function surveyEntry(state: GameState, reader: CharacterId, home: WorldId, world
     channel: 'official',
     observer: world.governor ?? reader,
     observerName: world.governor ? state.characters[world.governor].name : 'Survey of the previous administration',
+    observerTitle: world.governor ? 'governor' : null,
+    observerShip: null,
+    subject: 'Survey entry',
+    lede: 'An entry from the survey of the previous administration.',
     observedAt: world.id,
     observed: -age,
     snapshot,
@@ -152,6 +156,7 @@ export function advanceWeek(state: GameState): void {
   spawnRumours(state)
   spreadRumours(state)
   repairShips(state)
+  logWitnessed(state)
   departShips(state)
   pruneMail(state)
   observeCapital(state)
@@ -203,6 +208,10 @@ function observeCapital(state: GameState): void {
     channel: 'official',
     observer: PLAYER,
     observerName: state.characters[PLAYER].name,
+    observerTitle: null,
+    observerShip: null,
+    subject: 'The capital',
+    lede: 'Seen from the desk.',
     observedAt: capital.id,
     observed: state.week,
     snapshot: snapshotWorld(state, capital),

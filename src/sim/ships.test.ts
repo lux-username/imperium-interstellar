@@ -36,6 +36,8 @@ function fleet(): GameState {
     order: null,
     standing: { rally: C, onContact: 'favourable' },
     mailbag: [],
+    lastOrders: 0,
+    log: [],
   }
   const govZ = 'c-z' as CharacterId
   s.worlds[Z] = { ...s.worlds[Y], id: Z, name: 'Zed', hex: { col: 5, row: 5 }, governor: govZ, actingGovernor: govZ, profile: { ...s.worlds[Y].profile, starport: 'D' } }

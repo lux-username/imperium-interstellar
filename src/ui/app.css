@@ -253,6 +253,13 @@ button.link {
   margin-top: 0.15rem;
 }
 
+/* The first sentence of a letter: the news, before the standard particulars. */
+.lede {
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .line3 {
   margin-top: 0.25rem;
   font-size: 0.85rem;
