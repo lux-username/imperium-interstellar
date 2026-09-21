@@ -21,11 +21,11 @@ export const siamese: Culture = {
       'Bua', 'Kaeo', 'Thong', 'Phueng', 'Nuan', 'Sombun', 'Chan', 'Chuang', 'Daeng', 'Duang',
       'Fong', 'Hong', 'In', 'Iam', 'Kham', 'Khiao', 'Klin', 'Lamai', 'Lek', 'Mali',
       'Mi', 'Mon', 'Muang', 'Nak', 'Ngam', 'Ngoen', 'Nim', 'Nit', 'Nom', 'Nu',
-      'On', 'Pan', 'Phae', 'Phan', 'Phin', 'Phit', 'Phlu', 'Phrom', 'Pik', 'Plaeng',
+      'On', 'Pan', 'Phae', 'Phan', 'Phin', 'Phim', 'Phlu', 'Phrom', 'Pik', 'Plaeng',
       'Pluem', 'Puk', 'Rai', 'Rot', 'Sa', 'Sai', 'Sap', 'Sawat', 'Si', 'Som',
       'Son', 'Suk', 'Tan', 'Tap', 'Thap', 'Thian', 'Thim', 'Tiam', 'Tim', 'Tuan',
       'Ubon', 'Un', 'Waen', 'Wan', 'Yai', 'Yaem', 'Yim', 'Yot', 'Bunchuai', 'Bunma',
-      'Thongdi', 'Thongkham', 'Thongsuk', 'Kaeota', 'Malai', 'Samli', 'Sangwan', 'Somchit', 'Somsi', 'Wanni',
+      'Thongdi', 'Thongkham', 'Thongsuk', 'Kaeota', 'Malai', 'Samli', 'Sangwan', 'Somchit', 'Somsi', 'Jai',
     ],
   },
   family: [

@@ -23,7 +23,7 @@ export const javanese: Culture = {
       'Painten', 'Ponirah', 'Sakinem', 'Salijem', 'Sarmi', 'Soemi', 'Soeminah', 'Toemini', 'Wagini', 'Warsini',
       'Ngadinem', 'Paini', 'Ponijah', 'Rasmi', 'Roebinem', 'Sadinem', 'Sainem', 'Sardjinem', 'Soekinah', 'Soemirah',
       'Soepinah', 'Soeratmi', 'Soeratni', 'Soewarni', 'Toekinem', 'Toeminem', 'Waginem', 'Warsinem', 'Wartini', 'Jatmi',
-      'Jatinem', 'Ambar', 'Asih', 'Lestari', 'Moerni', 'Ningsih', 'Rahajoe', 'Sekar', 'Sinta', 'Srikandi',
+      'Jatinem', 'Ambar', 'Asih', 'Soemarah', 'Moerni', 'Kasminah', 'Rahajoe', 'Sekar', 'Sinta', 'Srikandi',
       'Woelan', 'Mardijah', 'Marfoeah', 'Mardjinem', 'Marni', 'Marsinah', 'Martini', 'Moedjinem', 'Moeljani', 'Ngatmini',
       'Parinem', 'Parti', 'Poedjiati', 'Sartinem', 'Soeparmi', 'Toemirah', 'Wagirah', 'Warti', 'Kasinem', 'Kasijah',
     ],

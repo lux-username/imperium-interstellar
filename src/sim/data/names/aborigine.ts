@@ -18,7 +18,7 @@ export const aborigine: Culture = {
       'Albert', 'Henry', 'Edward', 'Robert', 'Thomas', 'William', 'James', 'John', 'George', 'Simon',
     ],
     f: [
-      'Truganini', 'Mathinna', 'Pagerly', 'Wapperty', 'Tarenorerer', 'Cora', 'Maria', 'Dolly', 'Fanny', 'Kitty',
+      'Flora', 'Beatrice', 'Pagerly', 'Wapperty', 'Georgina', 'Cora', 'Maria', 'Dolly', 'Fanny', 'Kitty',
       'Nelly', 'Topsy', 'Judy', 'Sally', 'Polly', 'Rosie', 'Lucy', 'Annie', 'Jenny', 'Biddy',
       'Bella', 'Nancy', 'Louisa', 'Mary Ann', 'Eliza', 'Ellen', 'Emma', 'Emily', 'Jane', 'Jessie',
       'Lizzie', 'Maggie', 'Minnie', 'Nora', 'Rachel', 'Rebecca', 'Ruth', 'Sarah', 'Susan', 'Amy',
