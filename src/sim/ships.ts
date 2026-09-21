@@ -9,7 +9,7 @@
  */
 import { hexRoute, laneBetween, nextDeparture, route } from './chart'
 import { eventsAt, hullArrivedEvent, hullDepartedEvent } from './events'
-import { hostile } from './factions'
+import { capitalOf, hostile } from './factions'
 import { loadMail, snapshotWorld, unloadMail, writeReport } from './mail'
 import type { Address, GameState, Ship, ShipId, WorldId } from './types'
 import type { Order } from './orders'
@@ -99,10 +99,16 @@ export function portOpenTo(state: GameState, at: WorldId, faction: Ship['faction
   return world !== undefined && !hostile(world.faction, faction)
 }
 
-/** A port where a hull of this faction can lie safely and hand mail to the packets. */
+/** A port where a hull of this faction can lie safely and hand mail to the packets for home. */
 export function friendlyPort(state: GameState, ship: Ship, at: WorldId): boolean {
   const world = state.worlds[at]
-  return world !== undefined && world.faction === ship.faction && route(state.lanes, at, state.capital) !== null
+  const home = capitalOf(state, ship.faction)
+  return world !== undefined && world.faction === ship.faction && home !== null && route(state.lanes, at, home) !== null
+}
+
+/** Whether this officer has already posted a letter this week, so an action and an arrival do not make two. */
+function wroteThisWeek(state: GameState, commander: Ship['commander']): boolean {
+  return Object.values(state.mail).some((m) => m.contents.kind === 'report' && m.contents.report.observer === commander && m.contents.report.observed === state.week)
 }
 
 /**
@@ -113,9 +119,15 @@ export function friendlyPort(state: GameState, ship: Ship, at: WorldId): boolean
  * port with a lane home.
  */
 export function commanderReport(state: GameState, ship: Ship, at: WorldId): void {
-  if (!ship.commander || at === state.capital) return
+  if (!ship.commander || at === capitalOf(state, ship.faction) || capitalOf(state, ship.faction) === null) return
+  if (wroteThisWeek(state, ship.commander)) return
   const world = state.worlds[at]
-  const seen = eventsAt(state, at, state.week, state.week).filter((e) => e.severity >= 2 && e.kind !== 'hull_arrived')
+  const commander = state.characters[ship.commander]
+  // A self-serving commander leaves out the moments that reflect on them: their own hull breaking off or getting knocked about.
+  const seen = eventsAt(state, at, state.week, state.week)
+    .filter((e) => e.severity >= 2 || (e.ship?.id === ship.id && e.kind === 'ship_fled'))
+    .filter((e) => e.kind !== 'hull_arrived' && e.kind !== 'hull_departed')
+    .filter((e) => !(commander?.traits.loyalty === 'self' && e.ship?.id === ship.id && (e.kind === 'ship_fled' || e.kind === 'ship_damaged')))
   const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world), { events: seen })
   if (!friendlyPort(state, ship, at)) {
     mail.status = { kind: 'aboard', ship: ship.id }
@@ -127,10 +139,12 @@ export function commanderReport(state: GameState, ship: Ship, at: WorldId): void
 // The week's movements
 
 /**
- * Ships that have landed this week. Cargo comes off before anything departs,
- * so a packet that turns straight around can carry on what just arrived.
+ * Ships that have landed this week come out of jump. They do not unload
+ * yet: whatever is lying in the system gets its say first (see ./combat.ts).
+ * Returns the hulls that landed.
  */
-export function arriveShips(state: GameState): void {
+export function landShips(state: GameState): ShipId[] {
+  const landed: ShipId[] = []
   const ids = Object.keys(state.ships).sort() as ShipId[]
   for (const id of ids) {
     const ship = state.ships[id]
@@ -138,8 +152,35 @@ export function arriveShips(state: GameState): void {
     const at = ship.location.to
     ship.location = { kind: 'world', world: at }
     hullArrivedEvent(state, at, ship)
+    landed.push(id)
+  }
+  return landed
+}
+
+/**
+ * The week's arrivals unload, if they are still here to do it. Cargo comes
+ * off before anything departs, so a packet that turns straight around can
+ * carry on what just arrived.
+ */
+export function unloadArrivals(state: GameState, landed: ShipId[]): void {
+  for (const id of landed) {
+    const ship = state.ships[id]
+    if (!ship || ship.location.kind !== 'world') continue
+    const at = ship.location.world
     unloadMail(state, ship, at)
     onArrival(state, ship, at)
+  }
+}
+
+/** Every commander in a system where something happened this week writes home about it. */
+export function afterActionReports(state: GameState): void {
+  const ids = Object.keys(state.ships).sort() as ShipId[]
+  for (const id of ids) {
+    const ship = state.ships[id]
+    if (!ship.commander || ship.location.kind !== 'world') continue
+    const at = ship.location.world
+    const action = eventsAt(state, at, state.week, state.week).some((e) => ['battle', 'ship_robbed', 'ship_captured', 'ship_destroyed', 'pirate_seized', 'world_fell', 'world_taken'].includes(e.kind))
+    if (action) commanderReport(state, ship, at)
   }
 }
 
@@ -152,7 +193,7 @@ function onArrival(state: GameState, ship: Ship, at: WorldId): void {
   const order = ship.order
   if (order?.kind === 'patrol' && order.world === at && order.began === null) order.began = state.week
   if (order?.kind === 'scout' && order.world === at && order.lookedOn === null) order.lookedOn = state.week
-  if (!ship.commander || at === state.capital) return
+  if (!ship.commander || at === capitalOf(state, ship.faction)) return
   if (friendlyPort(state, ship, at) || orderDestination(order) === at) commanderReport(state, ship, at)
 }
 

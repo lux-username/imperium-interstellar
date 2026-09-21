@@ -1,0 +1,194 @@
+import { describe, expect, it } from 'vitest'
+import { fightAtWorlds } from './combat'
+import { advanceWeek, newGame, requestReport } from './game'
+import { PIRATES } from './factions'
+import { HULLS, newShip } from './fleet'
+import { playerTraits } from './characters'
+import { isHaven, raided, seizePirates, spawnPirate } from './pirates'
+import { createRng } from './rng'
+import type { CharacterId, GameState, ShipId, WorldId } from './types'
+import { line } from './fixtures.test-helper'
+
+const C = 'w-c' as WorldId
+const X = 'w-x' as WorldId
+const Y = 'w-y' as WorldId
+
+/** A raider lying off `at`, on a raiding patrol, knowing Y as her haven. */
+function raider(s: GameState, at: WorldId, id = 's-raider' as ShipId): void {
+  const cid = `c-${id}` as CharacterId
+  s.characters[cid] = { id: cid, name: 'Raider', faction: PIRATES, post: { kind: 'commander', ship: id }, traits: { ...playerTraits(), loyalty: 'self' }, agent: false }
+  s.ships[id] = newShip(id, 'Black Gull', HULLS.raider, PIRATES, at, s.characters[cid])
+  s.ships[id].havens = [Y]
+  s.ships[id].order = { kind: 'patrol', world: at, weeks: 4, posture: 'favourable', then: { kind: 'world', world: Y }, began: 0 }
+}
+
+/** A warship of the desk's at `at`. */
+function warship(s: GameState, at: WorldId, posture: 'never' | 'favourable' | 'always' = 'favourable', id = 's-war' as ShipId): void {
+  const cid = `c-${id}` as CharacterId
+  s.characters[cid] = { id: cid, name: 'Captain', faction: s.characters[s.player].faction, post: { kind: 'commander', ship: id }, traits: playerTraits(), agent: false }
+  s.ships[id] = newShip(id, 'Vigilant', HULLS.patrol, s.characters[s.player].faction, at, s.characters[cid])
+  s.ships[id].standing.onContact = posture
+}
+
+describe('a raider off a port', () => {
+  it('robs the packet that comes in, and the mail is lost; the packet herself carries on', () => {
+    const s = line()
+    // P1 is in jump from C to X, arriving week 1. Put a letter aboard her.
+    const packet = s.ships['s-cx' as ShipId]
+    expect(packet.location.kind).toBe('transit')
+    const mail = requestReport(s, X, 'c-x' as CharacterId)
+    mail.status = { kind: 'aboard', ship: packet.id }
+    packet.mailbag.push(mail.id)
+    raider(s, X)
+    advanceWeek(s)
+    const robbed = Object.values(s.events).find((e) => e.kind === 'ship_robbed')
+    expect(robbed?.ship?.id).toBe('s-cx')
+    expect(mail.status).toEqual({ kind: 'lost', week: 1 })
+    // She is let go, and turns straight around with the week's new mail as if nothing had happened.
+    expect(s.ships['s-cx' as ShipId]).toBeDefined()
+    expect(packet.faction).toBe('f-admin')
+    expect(packet.location.kind).toBe('transit')
+  })
+
+  it('leaves a packet docked at her own port alone: she cannot be forced out from under the guns', () => {
+    const s = line()
+    // P2 sits in port at X (her own faction's port) until week 1.
+    const packet = s.ships['s-xy' as ShipId]
+    expect(packet.location).toEqual({ kind: 'world', world: X })
+    raider(s, X)
+    fightAtWorlds(s)
+    expect(Object.values(s.events).some((e) => e.kind === 'ship_robbed' && e.ship?.id === 's-xy')).toBe(false)
+  })
+
+  it('slows the merchants, and their talk, on the lanes that touch the port', () => {
+    const s = line()
+    expect(raided(s, X)).toBe(false)
+    raider(s, X)
+    expect(raided(s, X)).toBe(true)
+    expect(raided(s, Y)).toBe(false)
+  })
+})
+
+describe('warship against raider', () => {
+  it('a patrol craft at favourable odds engages a lone raider; over many fights raiders are hit, taken, sunk or driven off', () => {
+    const outcomes = { captured: 0, destroyed: 0, fled: 0, damaged: 0, nothing: 0 }
+    for (let seed = 1; seed <= 40; seed++) {
+      const s = line()
+      s.rng = createRng(seed)
+      raider(s, X)
+      warship(s, X)
+      fightAtWorlds(s)
+      const kinds = new Set(Object.values(s.events).map((e) => e.kind))
+      if (kinds.has('ship_captured')) outcomes.captured += 1
+      else if (kinds.has('ship_destroyed')) outcomes.destroyed += 1
+      else if (kinds.has('ship_fled')) outcomes.fled += 1
+      else if (kinds.has('ship_damaged')) outcomes.damaged += 1
+      else outcomes.nothing += 1
+      // Either the raider was brought to action or she got clear before it.
+      expect(kinds.has('battle') || kinds.has('ship_fled')).toBe(true)
+    }
+    expect(outcomes.captured + outcomes.destroyed + outcomes.fled).toBeGreaterThan(10)
+  })
+
+  it('a prize lies where she was taken, ours, with nobody in command, and her captain is gone', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const s = line()
+      s.rng = createRng(seed)
+      raider(s, X)
+      warship(s, X, 'always')
+      s.ships['s-war' as ShipId].strength = 6 // make it quick
+      fightAtWorlds(s)
+      const prize = s.ships['s-raider' as ShipId]
+      if (!prize || prize.faction === PIRATES) continue
+      expect(prize.faction).toBe('f-admin')
+      expect(prize.commander).toBeNull()
+      expect(prize.havens).toBeNull()
+      expect(s.characters['c-s-raider' as CharacterId]).toBeUndefined()
+      return
+    }
+    throw new Error('no capture in 60 seeds')
+  })
+
+  it('a captain ordered never to engage sits tight at his own port and nothing happens', () => {
+    const s = line()
+    raider(s, X)
+    warship(s, X, 'never')
+    fightAtWorlds(s)
+    expect(Object.values(s.events).filter((e) => e.kind === 'battle')).toEqual([])
+  })
+
+  it('the survivors write home about it', () => {
+    const s = line()
+    s.rng = createRng(3)
+    raider(s, X)
+    warship(s, X, 'always')
+    advanceWeek(s)
+    const letters = Object.values(s.mail).filter((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-s-war')
+    const action = letters.some((m) => m.contents.kind === 'report' && m.contents.report.events.some((e) => e.kind === 'battle'))
+    // Either the captain wrote of the action, or he was lost with his ship.
+    expect(action || s.ships['s-war' as ShipId] === undefined || s.ships['s-war' as ShipId].faction !== 'f-admin').toBe(true)
+  })
+})
+
+describe('scouts', () => {
+  it('almost always get clear of a raider', () => {
+    let escaped = 0
+    for (let seed = 1; seed <= 30; seed++) {
+      const s = line()
+      s.rng = createRng(seed)
+      raider(s, X)
+      const cid = 'c-sc' as CharacterId
+      s.characters[cid] = { id: cid, name: 'Scout', faction: 'f-admin' as never, post: { kind: 'commander', ship: 's-sc' as ShipId }, traits: playerTraits(), agent: false }
+      s.ships['s-sc' as ShipId] = newShip('s-sc' as ShipId, 'Kestrel', HULLS.scout, 'f-admin' as never, C, s.characters[cid])
+      s.ships['s-sc' as ShipId].location = { kind: 'transit', from: C, to: X, arrives: 1 }
+      s.ships['s-sc' as ShipId].standing.onContact = 'never'
+      advanceWeek(s)
+      if (Object.values(s.events).some((e) => e.kind === 'ship_fled' && e.ship?.id === 's-sc')) escaped += 1
+    }
+    expect(escaped).toBeGreaterThanOrEqual(25)
+  })
+})
+
+describe('havens', () => {
+  it('a self-serving governor with a working port makes a haven; the capital never does', () => {
+    const s = line()
+    expect(isHaven(s, s.worlds[X])).toBe(false)
+    s.characters['c-x' as CharacterId].traits.loyalty = 'self'
+    expect(isHaven(s, s.worlds[X])).toBe(true)
+    s.characters[s.player].traits.loyalty = 'self'
+    expect(isHaven(s, s.worlds[C])).toBe(false)
+  })
+
+  it('a pirate who puts in where she is not welcome is seized and becomes a prize of the port', () => {
+    const s = line()
+    s.characters['c-y' as CharacterId].traits.loyalty = 'self'
+    const pirate = spawnPirate(s, s.worlds[Y])
+    expect(pirate.havens).toContain(Y)
+    seizePirates(s)
+    expect(pirate.faction).toBe(PIRATES)
+    // She flees to X, which she does not know as a haven.
+    pirate.location = { kind: 'world', world: X }
+    pirate.order = { kind: 'hold' }
+    seizePirates(s)
+    expect(pirate.faction).toBe('f-admin')
+    expect(pirate.commander).toBeNull()
+    expect(Object.values(s.events).some((e) => e.kind === 'pirate_seized')).toBe(true)
+  })
+
+  it('a generated game starts with havens and raiders, and within forty weeks something has happened on the lanes', () => {
+    let action = 0
+    for (const seed of [1, 2, 3, 4]) {
+      const s = newGame(seed)
+      const pirates = Object.values(s.ships).filter((x) => x.faction === PIRATES)
+      expect(pirates.length).toBeGreaterThanOrEqual(5)
+      for (const p of pirates) expect(p.havens?.length).toBeGreaterThan(0)
+      let seen = false
+      for (let i = 0; i < 40; i++) {
+        advanceWeek(s)
+        if (Object.values(s.events).some((e) => ['ship_robbed', 'battle', 'pirate_seized'].includes(e.kind))) seen = true
+      }
+      if (seen) action += 1
+    }
+    expect(action).toBeGreaterThanOrEqual(3)
+  })
+})

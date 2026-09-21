@@ -12,6 +12,7 @@ import type { Order } from './orders'
 import type { Channel, Dispatch, DispatchPayload, Envelope, Event, Recipient, Report, ShipSnapshot, Snapshot } from './view'
 import { expectedArrival, route } from './chart'
 import { dispatchReceivedEvent } from './events'
+import { capitalOf } from './factions'
 
 // ---------------------------------------------------------------------------
 // Minting
@@ -73,11 +74,14 @@ export interface Writing {
 }
 
 /**
- * An observer at `at` writes a report of `snapshot` addressed to the
- * capital and hands it to the port. Returns the mail. If `at` is the capital
- * itself the report is delivered on the spot.
+ * An observer at `at` writes a report of `snapshot` addressed to their
+ * faction's seat — the desk, for the player's people — and hands it to the
+ * port. Returns the mail. If `at` is the seat itself the report is
+ * delivered on the spot.
  */
 export function writeReport(state: GameState, observer: CharacterId, at: WorldId, snapshot: Snapshot, writing: Writing = {}): Mail {
+  const faction = state.characters[observer]?.faction
+  const home = (faction && capitalOf(state, faction)) ?? state.capital
   const report: Report = {
     id: mint<ReportId>(state, 'r'),
     channel: writing.channel ?? 'official',
@@ -87,12 +91,12 @@ export function writeReport(state: GameState, observer: CharacterId, at: WorldId
     observed: state.week,
     snapshot,
     events: writing.events ?? [],
-    envelope: envelope(state, at, state.capital, state.week),
+    envelope: envelope(state, at, home, state.week),
     delivered: null,
   }
   const mail: Mail = { id: mint<MailId>(state, 'm'), contents: { kind: 'report', report }, status: { kind: 'awaiting_carrier', at } }
   state.mail[mail.id] = mail
-  if (at === state.capital) deliver(state, mail, at)
+  if (at === home) deliver(state, mail, at)
   return mail
 }
 
@@ -164,6 +168,8 @@ function pathReaches(state: GameState, path: WorldId[], dest: WorldId): boolean 
  * way leaves the letters where they are.
  */
 export function loadMail(state: GameState, ship: Ship, from: WorldId, to: WorldId, path: WorldId[] = [from, to]): void {
+  // The port hands its bags only to hulls of its own side.
+  if (state.worlds[from]?.faction !== ship.faction) return
   const ids = Object.keys(state.mail).sort() as MailId[]
   const carrying = ship.role === 'packet' ? null : reportsAboard(state, ship)
   for (const id of ids) {

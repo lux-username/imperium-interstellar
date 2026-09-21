@@ -130,7 +130,9 @@ describe('what a governor chooses to say', () => {
     for (const r of letters) {
       for (const e of r.events) {
         expect(e.at).toBe(r.observedAt)
-        expect(e.kind === 'hull_arrived' || e.kind === 'hull_departed').toBe(false)
+        // Routine traffic is never news; a hull of another faction making port is.
+        if (e.kind === 'hull_arrived') expect(e.ship?.faction).not.toBe(view.faction)
+        expect(e.kind === 'hull_departed').toBe(false)
         expect(e.week).toBeLessThanOrEqual(r.observed)
       }
     }

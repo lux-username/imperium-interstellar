@@ -14,6 +14,7 @@ import { neighbours } from './chart'
 import { EVENT_MEMORY } from './events'
 import { learn } from './mail'
 import { personName } from './names'
+import { raided } from './pirates'
 import { check, nextInt } from './rng'
 import type { CharacterId, GameState, Mail, MailId, ReportId, Week, WorldId } from './types'
 import type { Event, Report } from './view'
@@ -70,7 +71,8 @@ export function spreadRumours(state: GameState): void {
     for (const from of froms) {
       for (const to of neighbours(state.lanes, from)) {
         if (to in rumour.heard) continue
-        if (!check(state.rng, 9)) continue
+        // Merchants think twice about a lane with a raider lying at either end, and their talk goes with them.
+        if (!check(state.rng, raided(state, from) || raided(state, to) ? 11 : 9)) continue
         rumour.heard[to] = rumour.heard[from] + 1
         hearRumour(state, rumour, to)
       }

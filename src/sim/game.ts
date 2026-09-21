@@ -10,7 +10,9 @@ import { chartLanes, packetShips } from './lanes'
 import { deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
 import { governorsWrite } from './governors'
 import { spawnRumours, spreadRumours } from './rumours'
-import { arriveShips, departShips, shipRoute } from './ships'
+import { afterActionReports, departShips, landShips, shipRoute, unloadArrivals } from './ships'
+import { fightAtWorlds, repairShips } from './combat'
+import { pirateOrders, placePirates, seizePirates, spawnPirates } from './pirates'
 import { forgetOldEvents, governorChangedEvent, unrestEvent, unrestIsNews } from './events'
 import { beginRevolt, fightContests, regrowGarrisons } from './world'
 import { newCharacter } from './characters'
@@ -49,6 +51,8 @@ export function newGame(seed: number): GameState {
     rumours: [],
     beliefs: { [PLAYER]: { worlds: {}, ships: {} } },
   }
+  placePirates(state)
+  pirateOrders(state)
   openingSurvey(state)
   observeCapital(state)
   // Week 0's sailings have already happened when the player sits down, so
@@ -96,22 +100,31 @@ function openingSurvey(state: GameState): void {
 // The week
 
 /**
- * One week passes. Order matters: hulls land and unload before anything
- * sails, so a packet turning straight around carries what just arrived; the
- * world changes before governors write, so a report describes this week.
+ * One week passes. Order matters: hulls land, whatever lies in the system
+ * has its say, and only then do they unload — so a robbed packet has
+ * nothing to hand over; everything unloads before anything sails, so a
+ * packet turning straight around carries what just arrived; the world
+ * changes before governors write, so a report describes this week.
  */
 export function advanceWeek(state: GameState): void {
   state.week += 1
   forgetOldEvents(state)
-  arriveShips(state)
+  const landed = landShips(state)
+  fightAtWorlds(state, landed)
+  seizePirates(state)
+  unloadArrivals(state, landed)
+  afterActionReports(state)
   deliverHeld(state)
   const ids = Object.keys(state.worlds).sort() as WorldId[]
   for (const id of ids) driftWorld(state, state.worlds[id])
   fightContests(state)
   regrowGarrisons(state)
   governorsWrite(state)
+  spawnPirates(state)
+  pirateOrders(state)
   spawnRumours(state)
   spreadRumours(state)
+  repairShips(state)
   departShips(state)
   pruneMail(state)
   observeCapital(state)
