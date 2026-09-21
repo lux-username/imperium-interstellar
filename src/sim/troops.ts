@@ -2,7 +2,7 @@
  * Troops and passengers: what a transport takes aboard where its order is
  * read, and what happens when it puts them down. Detachments travel
  * cryofrozen and one in ten does not survive revival, so a force arrives
- * weaker than it left by an amount the desk learns only from the
+ * weaker than it left by an amount the Home Office learns only from the
  * commander's letter. On a friendly world troops reinforce the garrison;
  * on a hostile one they land under fire — cleanly only behind a beachhead
  * of marines — and the ground contest begins (see ./ground.ts, ./world.ts).

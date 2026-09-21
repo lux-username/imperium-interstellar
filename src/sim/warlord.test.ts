@@ -27,7 +27,7 @@ describe('the Warlord at the start', () => {
       const fleet = Object.values(s.ships).filter((x) => x.faction === WARLORD && x.role !== 'packet')
       expect(fleet.length).toBe(8)
       expect(s.beliefs[THE_WARLORD]).toBeDefined()
-      // The desk's opening survey shows his worlds as his: the player starts knowing roughly where he is.
+      // The Home Office's opening survey shows his worlds as his: the player starts knowing roughly where he is.
       for (const w of his) {
         const known = s.beliefs[s.player].worlds[w.id]
         expect(known.snapshot.kind === 'world' && known.snapshot.world.faction).toBe(WARLORD)
@@ -175,7 +175,7 @@ describe('what the Warlord does with what he knows', () => {
     expect(scout?.order.kind === 'scout' && scout.order.world).toBe(X)
   })
 
-  it('takes an independent world when nothing of the desk’s is within his means', () => {
+  it('takes an independent world when nothing of the Home Office’s is within his means', () => {
     const s = court()
     s.worlds[X].faction = REBELS
     heTinks(s, X, 1, (w) => {
@@ -199,7 +199,7 @@ describe('what the Warlord does with what he knows', () => {
     expect(s.ships['s-cap' as ShipId].faction).toBe('f-admin')
   })
 
-  it('clears a pirate nest at one of his own havens when he has ships to spare, ahead of the desk’s couriers', () => {
+  it('clears a pirate nest at one of his own havens when he has ships to spare, ahead of the Home Office’s couriers', () => {
     const s = court()
     s.worlds[X].faction = WARLORD
     heTinks(s, X, 1, (w) => {

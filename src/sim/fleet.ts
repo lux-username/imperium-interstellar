@@ -1,5 +1,5 @@
 /**
- * The hulls the desk starts with, and the officers who command them. All
+ * The hulls the Home Office starts with, and the officers who command them. All
  * of it sits in port at the capital on week 0 with no orders: the player's
  * first job is to send it somewhere. Numbers per spec.md → First campaign →
  * Starting position; tune there, not here.

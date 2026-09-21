@@ -82,7 +82,7 @@ export function fightContests(state: GameState): void {
  * The garrison is gone. The governor gets off to a friendly hull in orbit
  * if there is one and is killed if there is not; unarmed hulls in port are
  * seized; whoever won holds the port and the palace with what they have
- * left. The player's own seat falling is the end of the game — the desk is
+ * left. The player's own seat falling is the end of the game — the Home Office is
  * taken, for ransom or a show trial; the Warlord's seat falling finishes
  * him as a power, and his governors have nobody left to write to.
  */
@@ -100,7 +100,7 @@ export function changeHands(state: GameState, world: World, winner: FactionId, t
     }
   }
 
-  // The governor's fate. The player is not killed: the desk is taken, and the game ends with it.
+  // The governor's fate. The player is not killed: the Home Office is taken, and the game ends with it.
   const governor = world.actingGovernor
   if (governor && governor !== state.player && state.characters[governor]) {
     const refuge = shipsAt(state, world.id).find((s) => s.faction === loser && s.commander !== null)

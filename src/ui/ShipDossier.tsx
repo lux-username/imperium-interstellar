@@ -1,18 +1,18 @@
 /**
- * One hull, as the desk knows it: what she is and whose, who commands her
+ * One hull, as the Home Office knows it: what she is and whose, who commands her
  * if she is ours, where she was last seen and by which letter, the orders
- * the desk sent her, and every report that mentions her — or, for one of
+ * the Home Office sent her, and every report that mentions her — or, for one of
  * ours, only the letters her captain wrote. Nothing here is the truth
- * about where she is; it is the newest word and the desk's own mail.
+ * about where she is; it is the newest word and the Home Office's own mail.
  */
 import { useState } from 'react'
-import { isDeskObservation, mentionsShip, type PlayerView, type ReportId, type ShipId, type WorldId } from '../sim/view'
+import { isHomeObservation, mentionsShip, type PlayerView, type ReportId, type ShipId, type WorldId } from '../sim/view'
 import { ago, coloursOf, conditionText, eventText, hullKind, lastOrderSent, orderText, signature, weekLabel, worldName } from './format'
 
 interface Props {
-  /** The picture being shown: the present, or what the desk now knows of an earlier week. */
+  /** The picture being shown: the present, or what the Home Office now knows of an earlier week. */
   view: PlayerView
-  /** The present, for the desk's books and mail, which are not a matter of belief. */
+  /** The present, for the Home Office's books and mail, which are not a matter of belief. */
   now: PlayerView
   ship: ShipId
   onSelectWorld: (world: WorldId) => void
@@ -71,8 +71,8 @@ export function ShipDossier({ view, now, ship, onSelectWorld, onOrders, onShowRe
               , {weekLabel(seen.observed)} ({ago(view.week, seen.observed)})
               {seen.ship.fuel !== null && entry ? `, fuel for ${seen.ship.fuel} of ${entry.fuel}` : ''}
               {conditionText(seen.ship)}
-              {isDeskObservation(seen.report) ? (
-                <span className="muted"> — seen from the desk</span>
+              {isHomeObservation(seen.report) ? (
+                <span className="muted"> — seen from the Home Office</span>
               ) : (
                 <>
                   {' '}

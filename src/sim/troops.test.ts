@@ -55,7 +55,7 @@ describe('the transport order', () => {
     expect(arrived).toBe(landed?.level)
     expect(arrived).toBeGreaterThanOrEqual(0)
     expect(arrived).toBeLessThanOrEqual(3)
-    // The master writes home from X; the letter is how the desk learns what arrived.
+    // The master writes home from X; the letter is how the Home Office learns what arrived.
     const letter = Object.values(s.mail).find((m) => m.contents.kind === 'report' && m.contents.report.observer === 'c-tr' && m.contents.report.observedAt === X)
     expect(letter).toBeDefined()
     // And she heads for the rendezvous.
@@ -150,7 +150,7 @@ describe('landings', () => {
     expect(taken).toBeGreaterThan(5)
   })
 
-  it('a relief force fights it out and the world is retaken or the landing thrown back — and the desk can hear which', () => {
+  it('a relief force fights it out and the world is retaken or the landing thrown back — and the Home Office can hear which', () => {
     const s = withTransport()
     changeHands(s, s.worlds[X], REBELS, { army: 1, marines: 0 })
     orderShip(s, T, transport(X, { army: 1, marines: 2 })) // a transport lifts three
@@ -186,7 +186,7 @@ describe('appointments', () => {
     expect(Object.values(s.events).some((e) => e.kind === 'appointment_made' && e.at === X)).toBe(true)
   })
 
-  it('a governor loyal to the desk hands over without a fuss', () => {
+  it('a governor loyal to the Home Office hands over without a fuss', () => {
     const s = withTransport()
     s.characters['c-x' as CharacterId].traits.loyalty = 'player'
     orderShip(s, T, transport(X, { passenger: 'c-off' as CharacterId, purpose: 'appoint' }))

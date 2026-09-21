@@ -5,7 +5,7 @@
  * to do there — hold, patrol, look, watch, or carry troops and people —
  * its disposition if it meets trouble, and where to go afterwards. The
  * order leaves as a dispatch to the address chosen — by default wherever
- * the desk last saw the ship.
+ * the Home Office last saw the ship.
  */
 import { useMemo, useState } from 'react'
 import { expectedArrival, hexRoute, route, type CharacterId, type Order, type PlayerView, type Posture, type Purpose, type ShipId, type StandingOrders, type WorldId } from '../sim/view'
@@ -73,7 +73,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const landsAt = address === view.capital ? view.week : path ? expectedArrival(lanes, path, view.week + 1) : null
   const readAtOnce = address === view.capital && seen?.ship.at === view.capital && seen.observed === view.week
 
-  // Where the hull is due, from the orders the desk sent it: write to where she will be, not where she was.
+  // Where the hull is due, from the orders the Home Office sent it: write to where she will be, not where she was.
   const prior = ship ? lastOrderSent(view, ship) : null
   const priorOrder = prior?.payload.kind === 'order' ? prior.payload.order : null
   const dueAt = priorOrder && 'to' in priorOrder ? priorOrder.to : priorOrder && 'world' in priorOrder ? priorOrder.world : null
@@ -94,7 +94,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const courierOffered = couriers.length > 0 && address !== view.capital && (landsAt === null || (courierLands !== null && courierLands < landsAt - 1))
   const useCourier = courierOffered && (byCourier || landsAt === null) && chosenCourier !== null && courierPath !== null
 
-  // Cargo is taken aboard wherever the order is read: from the desk's reserve here, from that world's garrison elsewhere.
+  // Cargo is taken aboard wherever the order is read: from the Home Office's reserve here, from that world's garrison elsewhere.
   const loadsHere = address === view.capital
   const capacity = entry?.troops ?? 0
   const carriesTroops = capacity > 0

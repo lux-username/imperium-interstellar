@@ -1,7 +1,7 @@
 /**
  * Fighting in space, resolved by the sim when hostile hulls share a
  * system. Strength, posture, commander traits and dice produce damage,
- * destruction, capture or retreat; there is no tactical layer. The desk
+ * destruction, capture or retreat; there is no tactical layer. The Home Office
  * learns of it from the commanders' own after-action letters (see
  * ./ships.ts), which a self-serving commander shades.
  *

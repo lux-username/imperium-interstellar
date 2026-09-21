@@ -1,11 +1,11 @@
 /**
- * The desk's books: every hull it commands, where each was last seen and
+ * The Home Office's books: every hull it commands, where each was last seen and
  * by whom, and the last order sent to it — and the prizes taken in action,
  * which want an officer sent out before they are any use. Nothing here is
- * the truth about where a ship is; it is the newest report and the desk's
+ * the truth about where a ship is; it is the newest report and the Home Office's
  * own mail. A row opens the hull's dossier.
  */
-import { isDeskObservation, type PlayerView, type ReportId, type ShipId } from '../sim/view'
+import { isHomeObservation, type PlayerView, type ReportId, type ShipId } from '../sim/view'
 import { ago, conditionText, lastOrderSent, orderText, weekLabel, worldName } from './format'
 
 interface Props {
@@ -48,7 +48,7 @@ export function Fleet({ view, onSelect, onShowReport, onOrders }: Props) {
             <div className="line2">
               {entry.commanderName ? `Commander ${entry.commanderName}` : <span className="warn">Prize — no crew. Send an officer out to take command.</span>}
               {seen && (seen.ship.hulk || seen.ship.damaged) && <span className="warn">{conditionText(seen.ship)}</span>}
-              {seen && !isDeskObservation(seen.report) && (
+              {seen && !isHomeObservation(seen.report) && (
                 <>
                   {' '}
                   ·{' '}

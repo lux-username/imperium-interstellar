@@ -9,7 +9,7 @@
  * *believes* to be weakly held, which can be wrong. His scouts are hulls
  * the player's people may see; a scout seen at a world is a warning that
  * it is being looked at. He grows by capturing worlds and by taking
- * prizes; tempting the desk's captains waits for money (bribes and fear
+ * prizes; tempting the Home Office's captains waits for money (bribes and fear
  * are a later system). There is no negotiating with him in this campaign.
  */
 import { hexRoute, neighbours, route } from './chart'
@@ -30,7 +30,7 @@ const WARLORD_FLEET: { role: keyof typeof HULLS; count: number }[] = [
   { role: 'scout', count: 2 },
 ]
 
-/** He decides once a month, on a week of his own so his moves do not stack with the desk's. */
+/** He decides once a month, on a week of his own so his moves do not stack with the Home Office's. */
 const DECISION_WEEK = 2
 
 /** Officers without a post at his seat when the game begins, and the most he keeps. He recruits one more every eight weeks. */
@@ -152,7 +152,7 @@ interface Picture {
   /** Hostile hulls seen recently, by world; pirates counted apart, since they raid but never land. */
   enemyAt: Record<WorldId, Sighted>
   piratesAt: Record<WorldId, Sighted>
-  /** How much losing a world would hurt the desk: chart facts, which he knows as well as anyone. */
+  /** How much losing a world would hurt the Home Office: chart facts, which he knows as well as anyone. */
   value: (w: World) => number
 }
 
@@ -201,7 +201,7 @@ function picture(state: GameState, seat: WorldId): Picture {
     book[at] = { strength: (book[at]?.strength ?? 0) + worth(sighting.ship.role), age: Math.min(book[at]?.age ?? age, age) }
   }
 
-  // Chart facts: lanes, port, and how many worlds the desk reaches its capital through this one.
+  // Chart facts: lanes, port, and how many worlds the Home Office reaches its capital through this one.
   const through: Record<WorldId, number> = {}
   for (const w of Object.values(state.worlds)) {
     const path = route(state.lanes, w.id, state.capital)
@@ -315,7 +315,7 @@ function dispatch(state: GameState, seat: WorldId, base: WorldId, to: WorldId, a
  * out fires on his own worlds; land on the enemy world that is worth most
  * and looks weakest; pick off enemy hulls he can take cheaply; and send
  * scouts where his picture is thinnest. Everything he sends is a hull the
- * desk's people may see, and everything he decides is decided on what has
+ * Home Office's people may see, and everything he decides is decided on what has
  * reached him — which can be stale, or wrong.
  */
 export function warlordActs(state: GameState): void {
@@ -415,11 +415,11 @@ function nearestEnemy(p: Picture, world: World): number {
 }
 
 /**
- * A landing, on the world he believes he can take that would hurt the desk
+ * A landing, on the world he believes he can take that would hurt the Home Office
  * most to lose: a chokepoint, a busy port. He must believe his troops beat
  * the garrison and his escorts beat whatever warships were seen there,
  * under the port's guns if they are docked. Independent worlds are softer
- * and count for less, but he takes them when nothing of the desk's is
+ * and count for less, but he takes them when nothing of the Home Office's is
  * within his means — or now and then anyway, for the port.
  */
 function attack(state: GameState, p: Picture): void {
@@ -441,10 +441,10 @@ function attack(state: GameState, p: Picture): void {
     .filter((c) => c.feasible)
     .sort((a, b) => b.value - a.value || a.garrison - b.garrison || (a.t.world.id < b.t.world.id ? -1 : 1) || (a.base < b.base ? -1 : 1))
   if (candidates.length === 0) return
-  const desks = candidates.filter((c) => !c.independent)
+  const ours = candidates.filter((c) => !c.independent)
   const independents = candidates.filter((c) => c.independent)
-  // The desk's worlds first; an independent one when that is all there is, or one month in four for its port.
-  const pick = desks.length === 0 || (independents.length > 0 && roll(state.rng) >= 10) ? (independents[0] ?? desks[0]) : desks[0]
+  // The Home Office's worlds first; an independent one when that is all there is, or one month in four for its port.
+  const pick = ours.length === 0 || (independents.length > 0 && roll(state.rng) >= 10) ? (independents[0] ?? ours[0]) : ours[0]
   const troops = Math.min(pick.lift, pick.garrison + 3)
   const escorts = pick.warships > 0 ? pick.patrols : pick.patrols.slice(0, 2)
   dispatch(state, p.seat, pick.base, pick.t.world.id, troops, escorts)
@@ -452,20 +452,20 @@ function attack(state: GameState, p: Picture): void {
 
 /**
  * Hulls seen lately that his idle patrols could take at favourable odds:
- * the desk's courier at a C port, a lone transport — and pirates, wherever
+ * the Home Office's courier at a C port, a lone transport — and pirates, wherever
  * they lie, his own ports included. Pirates are his enemies too, and his
  * corrupt governors breed them; when he has ships to spare he clears them
  * out, and a nest at one of his own havens comes first. Enemy hulls docked
  * at their own port have its guns; a pirate at a haven has none.
  */
 function hunt(state: GameState, p: Picture): void {
-  const desks = Object.entries(p.enemyAt).map(([at, seen]) => {
+  const ours = Object.entries(p.enemyAt).map(([at, seen]) => {
     const known = p.targets.find((t) => t.world.id === at)
     const theirs = seen.strength + (known && known.snap.faction !== WARLORD ? portGuns(known.snap.profile.starport) : 0)
     return { at: at as WorldId, theirs, age: seen.age, own: false }
   })
   const pirates = Object.entries(p.piratesAt).map(([at, seen]) => ({ at: at as WorldId, theirs: seen.strength, age: seen.age, own: state.worlds[at as WorldId]?.faction === WARLORD }))
-  const prey = [...desks, ...pirates]
+  const prey = [...ours, ...pirates]
     .filter((x) => state.worlds[x.at] && (x.own || state.worlds[x.at].faction !== WARLORD))
     .sort((a, b) => Number(b.own) - Number(a.own) || a.theirs - b.theirs || a.age - b.age || (a.at < b.at ? -1 : 1))
   for (const target of prey) {

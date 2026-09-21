@@ -53,7 +53,7 @@ describe('rumour', () => {
     expect(s.rumours).toHaveLength(0)
   })
 
-  it('hops lane to lane and is delivered to the desk as a merchant\'s word or docks talk, kept apart from the mail', () => {
+  it('hops lane to lane and is delivered to the Home Office as a merchant\'s word or docks talk, kept apart from the mail', () => {
     const s = line()
     for (const w of Object.values(s.worlds)) w.profile.population = 0 // nothing else happens
     s.week = 1
@@ -127,7 +127,7 @@ describe('rumour', () => {
     const before = JSON.stringify(s.beliefs[s.player].ships)
     s.rumours.push({ event: { ...e }, origin: Y, born: 1, heard: { [Y]: 0, ['w-x' as WorldId]: 1 } })
     for (let i = 0; i < 20; i++) advanceWeek(s)
-    // The rumour reached the desk (X is a lane away), but the ship sightings are exactly what the desk saw for itself.
+    // The rumour reached the Home Office (X is a lane away), but the ship sightings are exactly what the Home Office saw for itself.
     const view = buildPlayerView(s)
     expect(view.rumours.some((r) => r.snapshot.kind === 'event' && r.snapshot.event.ship?.id === ship.id)).toBe(true)
     const rumourIds = new Set(view.rumours.map((r) => r.id))
@@ -135,7 +135,7 @@ describe('rumour', () => {
     expect(before).toBeDefined()
   })
 
-  it('in a generated game the docks tell the desk of worlds no official letter has come from', () => {
+  it('in a generated game the docks tell the Home Office of worlds no official letter has come from', () => {
     const s = newGame(21)
     for (let i = 0; i < 40; i++) advanceWeek(s)
     const view = buildPlayerView(s)

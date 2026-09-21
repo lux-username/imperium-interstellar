@@ -1,7 +1,7 @@
 /**
  * The last-known map. Every marker is drawn from the newest delivered
  * report about that world, and carries the age of that report. Colour is
- * who the desk believes holds the world; age is the badge above it and a
+ * who the Home Office believes holds the world; age is the badge above it and a
  * dashed outline once the word is old. Hulls are drawn where they were
  * last seen, in the colours they flew; a hull picked out is ringed and,
  * if it is ours, the run its orders describe is drawn. The lane chart and
@@ -135,7 +135,7 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
                 )}
                 {isCapital && (
                   <text x={x} y={y - radius - 3} className="age">
-                    {view.week === report?.observed ? 'the desk' : ago(view.week, report?.observed ?? view.week)}
+                    {view.week === report?.observed ? 'Home Office' : ago(view.week, report?.observed ?? view.week)}
                   </text>
                 )}
               </g>

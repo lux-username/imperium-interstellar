@@ -1,5 +1,5 @@
 /**
- * What a governor chooses to tell the desk. A governor writes when
+ * What a governor chooses to tell the Home Office. A governor writes when
  * something happened that they are willing to mention, and otherwise only
  * now and then to say all is quiet — so silence is itself a signal. Good
  * news always goes; bad news gets a disclosure roll shaded by who the
@@ -102,11 +102,11 @@ export function eventsWorthMentioning(state: GameState, world: World, governor: 
 }
 
 /**
- * Each week, every governor decides whether to write: yes if the desk
+ * Each week, every governor decides whether to write: yes if the Home Office
  * wrote asking (a full report, everything since the last letter that they
  * will admit to), yes if something happened this week that they will
  * mention, yes if it has been long enough since the last letter, otherwise
- * no. News buried this week stays buried unless the desk asks.
+ * no. News buried this week stays buried unless the Home Office asks.
  */
 export function governorsWrite(state: GameState): void {
   const ids = Object.keys(state.worlds).sort() as WorldId[]

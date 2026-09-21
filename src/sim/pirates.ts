@@ -6,7 +6,7 @@
  * busy port for a few weeks, robbing what comes and goes, then puts back
  * in to a haven she knows. A pirate who puts in anywhere else is seized by
  * the port. So a pirate problem on a lane is usually also a governor
- * problem at one end of it, and the desk learns where from what its
+ * problem at one end of it, and the Home Office learns where from what its
  * hulls see in port and from the docks.
  */
 import { neighbours } from './chart'
@@ -175,7 +175,7 @@ export function pirateTalk(state: GameState): void {
 /**
  * A governor who is corrupt enough to harbour pirates and bold enough to
  * say so puts it about, now and then, that their port asks no questions
- * — talk meant for pirate ears, which the desk's docks may also pick up.
+ * — talk meant for pirate ears, which the Home Office's docks may also pick up.
  * It is talk from the start, never an event in the record.
  */
 export function toutHavens(state: GameState): void {

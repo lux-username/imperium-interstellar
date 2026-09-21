@@ -137,7 +137,7 @@ export function hullDepartedEvent(state: GameState, at: WorldId, ship: Ship): Ev
   return recordEvent(state, at, { kind: 'hull_departed', valence: 'neutral', severity: 0, ship })
 }
 
-/** Mail from the desk was opened here. */
+/** Mail from the Home Office was opened here. */
 export function dispatchReceivedEvent(state: GameState, at: WorldId): Event {
   return recordEvent(state, at, { kind: 'dispatch_received', valence: 'neutral', severity: 0 })
 }

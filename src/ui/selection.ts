@@ -1,4 +1,4 @@
-/** What the desk has picked out on the map or in a list: a world, or a hull. The right-hand pane shows its dossier. */
+/** What the Home Office has picked out on the map or in a list: a world, or a hull. The right-hand pane shows its dossier. */
 import type { ShipId, WorldId } from '../sim/view'
 
 export type Selection = { kind: 'world'; id: WorldId } | { kind: 'ship'; id: ShipId }

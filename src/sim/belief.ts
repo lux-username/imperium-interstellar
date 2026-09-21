@@ -8,7 +8,7 @@
  * weeks ago is a three-week-old sighting, not a fresh one.
  *
  * Pure: the sim folds each report in as it is delivered (see learn in
- * ./mail.ts), and the desk folds the whole inbox again with a cut-off week
+ * ./mail.ts), and the Home Office folds the whole inbox again with a cut-off week
  * to show what it now knows about a week gone by. The two agree because
  * they are the same fold.
  */

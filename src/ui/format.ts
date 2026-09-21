@@ -18,7 +18,7 @@ export function headline(view: PlayerView, r: Report): string {
   return `${worldName(view, subjectWorld(r))}: ${r.subject}`
 }
 
-/** A world's state as the desk believes it, from the newest snapshot. */
+/** A world's state as the Home Office believes it, from the newest snapshot. */
 export function stateOf(view: PlayerView, snap: WorldSnapshot): WorldState {
   return worldStateOf(view.factions[snap.faction]?.kind, snap.contest, snap.unrest, snap.contest ? view.factions[snap.contest.attacker]?.kind : undefined)
 }
@@ -108,7 +108,7 @@ export function freshness(week: Week, observed: Week): 'fresh' | 'aging' | 'stal
 }
 
 
-/** An order as the desk would write it. */
+/** An order as the Home Office would write it. */
 export function orderText(view: PlayerView, order: Order): string {
   const target = order.kind === 'move' || order.kind === 'transport' ? order.to : order.kind === 'patrol' || order.kind === 'scout' ? order.world : null
   const then = 'then' in order && order.then?.kind === 'world' && order.then.world !== target ? `, then ${worldName(view, order.then.world)}` : ''
@@ -136,7 +136,7 @@ function transportCargo(order: Extract<Order, { kind: 'transport' }>): string {
   return `carry ${[troopText, person].filter(Boolean).join(' and ') || 'nothing'}`
 }
 
-/** The newest order the desk has sent to a ship, if any. */
+/** The newest order the Home Office has sent to a ship, if any. */
 export function lastOrderSent(view: PlayerView, ship: ShipId): Dispatch | null {
   for (const d of view.outgoing) {
     if (d.payload.kind === 'order' && d.payload.ship === ship) return d

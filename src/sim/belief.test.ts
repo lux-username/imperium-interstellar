@@ -52,7 +52,7 @@ describe('the fold from reports to a picture', () => {
     expect(beliefFrom([general, later]).ships[raider.id].observed).toBe(16)
   })
 
-  it('can say what the desk now knows about an earlier week', () => {
+  it('can say what the Home Office now knows about an earlier week', () => {
     const general = letter('r-1', Y, 20, 24, [{ ...raider, at: Y }], [event('hull_arrived', X, 14), event('hull_departed', X, 17)])
     const now = beliefFrom([general])
     expect(now.ships[raider.id].ship.at).toBe(Y)
