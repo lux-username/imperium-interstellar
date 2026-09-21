@@ -12,6 +12,7 @@ import { governorsWrite } from './governors'
 import { spawnRumours, spreadRumours } from './rumours'
 import { arriveShips, departShips, shipRoute } from './ships'
 import { forgetOldEvents, governorChangedEvent, unrestEvent, unrestIsNews } from './events'
+import { beginRevolt, fightContests, regrowGarrisons } from './world'
 import { newCharacter } from './characters'
 import { createRng, roll } from './rng'
 import { generateWorlds, ADMINISTRATION, PLAYER } from './generate'
@@ -106,6 +107,8 @@ export function advanceWeek(state: GameState): void {
   deliverHeld(state)
   const ids = Object.keys(state.worlds).sort() as WorldId[]
   for (const id of ids) driftWorld(state, state.worlds[id])
+  fightContests(state)
+  regrowGarrisons(state)
   governorsWrite(state)
   spawnRumours(state)
   spreadRumours(state)
@@ -116,19 +119,23 @@ export function advanceWeek(state: GameState): void {
 
 /**
  * The slow life of a world between reports. Unrest creeps up on a high
- * roll and settles on a low one, more readily where the garrison is thin;
- * now and then a governor dies, resigns, or is quietly replaced by their
- * own council, and the desk hears of it only when the new one writes.
+ * roll and settles on a low one, more readily where the garrison is thin
+ * and less readily while a fight is on; at the top of the scale the world
+ * rises (see ./world.ts). Now and then a governor dies, resigns, or is
+ * quietly replaced by their own council, and the desk hears of it only
+ * when the new one writes.
  */
 export function driftWorld(state: GameState, world: World, record = true): void {
   if (world.profile.population === 0) return
   const r = roll(state.rng)
   const before = world.unrest
-  if (r >= 11 && world.unrest < 10) world.unrest += 1
-  else if (r <= (world.garrison >= 3 ? 4 : 3) && world.unrest > 0) world.unrest -= 1
+  const garrison = world.garrison + world.marines
+  if (r >= (garrison === 0 ? 10 : 11) && world.unrest < 10) world.unrest += 1
+  else if (r <= (garrison >= 3 ? 4 : 3) && world.unrest > 0 && !world.contest) world.unrest -= 1
   // A point either way within the same mood is not news; a change of mood, or either end of the scale, is.
   if (record && unrestIsNews(state, world.id, before, world.unrest)) unrestEvent(state, world.id, world.unrest, world.unrest > before)
-  if (world.id === state.capital) return
+  if (world.unrest >= 10 && !world.contest) beginRevolt(state, world)
+  if (world.id === state.capital || world.contest) return
   if (roll(state.rng) === 2 && roll(state.rng) >= 9) replaceGovernor(state, world, record)
 }
 

@@ -28,7 +28,7 @@ function implicates(event: Event): boolean {
 
 /** Bad news whose natural letter is a request for help. */
 function asksForHelp(event: Event): boolean {
-  return event.kind === 'unrest_rose'
+  return event.kind === 'unrest_rose' || event.kind === 'revolt_began' || event.kind === 'troops_landed'
 }
 
 /**
@@ -108,7 +108,9 @@ export function governorsWrite(state: GameState): void {
       continue
     }
     const mention = thisWeek.filter((e) => discloses(state.rng, governor, e))
+    // A governor with a fight on their hands writes every other week whether or not anything new has happened.
+    const interval = world.contest ? 2 : quietInterval(world)
     if (mention.length > 0) governorLetter(state, world, mention)
-    else if (state.week - world.lastLetter >= quietInterval(world)) governorLetter(state, world, [])
+    else if (state.week - world.lastLetter >= interval) governorLetter(state, world, [])
   }
 }

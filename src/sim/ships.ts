@@ -8,7 +8,8 @@
  * scouts and warships worth having. Fuel risk is Phase 1b.
  */
 import { hexRoute, laneBetween, nextDeparture, route } from './chart'
-import { hullArrivedEvent, hullDepartedEvent } from './events'
+import { eventsAt, hullArrivedEvent, hullDepartedEvent } from './events'
+import { hostile } from './factions'
 import { loadMail, snapshotWorld, unloadMail, writeReport } from './mail'
 import type { Address, GameState, Ship, ShipId, WorldId } from './types'
 import type { Order } from './orders'
@@ -92,22 +93,30 @@ function orderDestination(order: Order | null): WorldId | null {
 // ---------------------------------------------------------------------------
 // Commanders' reports
 
-/** A port where a hull of this faction can lie safely and hand mail to the packets. Phase 1b adds hostile worlds. */
+/** Whether a port will take a hull of this faction at all. A hostile world's port is closed to it: no fuel, no mail, no landing. */
+export function portOpenTo(state: GameState, at: WorldId, faction: Ship['faction']): boolean {
+  const world = state.worlds[at]
+  return world !== undefined && !hostile(world.faction, faction)
+}
+
+/** A port where a hull of this faction can lie safely and hand mail to the packets. */
 export function friendlyPort(state: GameState, ship: Ship, at: WorldId): boolean {
   const world = state.worlds[at]
   return world !== undefined && world.faction === ship.faction && route(state.lanes, at, state.capital) !== null
 }
 
 /**
- * A commander writes home: what the world looks like from orbit and what is
- * in port. At a friendly port on the lanes the letter goes by the next
- * packet; off the lanes it rides with the ship until it finds a port with
- * a lane home.
+ * A commander writes home: what the world looks like from orbit, what is
+ * in port, and anything serious that happened here this week. At a
+ * friendly port on the lanes the letter goes by the next packet; off the
+ * lanes or over a hostile world it rides with the ship until it finds a
+ * port with a lane home.
  */
 export function commanderReport(state: GameState, ship: Ship, at: WorldId): void {
   if (!ship.commander || at === state.capital) return
   const world = state.worlds[at]
-  const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world))
+  const seen = eventsAt(state, at, state.week, state.week).filter((e) => e.severity >= 2 && e.kind !== 'hull_arrived')
+  const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world), { events: seen })
   if (!friendlyPort(state, ship, at)) {
     mail.status = { kind: 'aboard', ship: ship.id }
     ship.mailbag.push(mail.id)
@@ -166,8 +175,9 @@ export function departShips(state: GameState): void {
     }
     const to = path[1]
     const lane = laneBetween(state.lanes, from, to)
-    // Packets keep the lane's timetable; anything else sails as soon as it can.
+    // Packets keep the lane's timetable, and will not sail into a port that is closed to them; anything else sails as soon as it can.
     if (ship.role === 'packet' && lane && nextDeparture(lane, from, state.week) !== state.week) continue
+    if (ship.role === 'packet' && !portOpenTo(state, to, ship.faction)) continue
     loadMail(state, ship, from, to, path)
     hullDepartedEvent(state, from, ship)
     ship.location = { kind: 'transit', from, to, arrives: state.week + 1 }
