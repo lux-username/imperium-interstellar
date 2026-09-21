@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { fightAtWorlds } from './combat'
 import { advanceWeek, newGame, requestReport } from './game'
-import { PIRATES } from './factions'
+import { governorLetter } from './governors'
+import { PIRATES, WARLORD } from './factions'
 import { HULLS, newShip } from './fleet'
 import { playerTraits } from './characters'
-import { isHaven, raided, seizePirates, spawnPirate } from './pirates'
+import { STARTING_PIRATES, isHaven, raided, seizePirates, spawnPirate } from './pirates'
 import { createRng } from './rng'
 import type { CharacterId, GameState, ShipId, WorldId } from './types'
 import { line } from './fixtures.test-helper'
@@ -22,7 +23,7 @@ function raider(s: GameState, at: WorldId, id = 's-raider' as ShipId): void {
   s.ships[id].order = { kind: 'patrol', world: at, weeks: 4, posture: 'favourable', then: { kind: 'world', world: Y }, began: 0 }
 }
 
-/** A warship of the desk's at `at`. */
+/** A warship of Government House's at `at`. */
 function warship(s: GameState, at: WorldId, posture: 'never' | 'favourable' | 'always' = 'favourable', id = 's-war' as ShipId): void {
   const cid = `c-${id}` as CharacterId
   s.characters[cid] = { id: cid, name: 'Captain', faction: s.characters[s.player].faction, post: { kind: 'commander', ship: id }, traits: playerTraits() }
@@ -39,6 +40,7 @@ describe('a raider off a port', () => {
     const mail = requestReport(s, X, 'c-x' as CharacterId)
     mail.status = { kind: 'aboard', ship: packet.id }
     packet.mailbag.push(mail.id)
+    s.worlds[X].profile.starport = 'A' // the packet already at the quay is safe under an A port; the one arriving is in the open
     raider(s, X)
     advanceWeek(s)
     const robbed = Object.values(s.events).find((e) => e.kind === 'ship_robbed')
@@ -50,8 +52,9 @@ describe('a raider off a port', () => {
     expect(packet.location.kind).toBe('transit')
   })
 
-  it('leaves a packet docked at her own port alone: she cannot be forced out from under the guns', () => {
+  it('leaves a packet docked at her own A port alone: she cannot be forced out from under the guns', () => {
     const s = line()
+    s.worlds[X].profile.starport = 'A'
     // P2 sits in port at X (her own faction's port) until week 1.
     const packet = s.ships['s-xy' as ShipId]
     expect(packet.location).toEqual({ kind: 'world', world: X })
@@ -162,21 +165,58 @@ describe('warship against raider', () => {
 })
 
 describe('scouts', () => {
-  it('almost always get clear of a raider', () => {
-    let escaped = 0
-    for (let seed = 1; seed <= 30; seed++) {
+  /** An unnamed scout of ours landing at `at` this week. */
+  function scout(s: GameState, at: WorldId): void {
+    s.ships['s-sc' as ShipId] = newShip('s-sc' as ShipId, 'Kestrel', HULLS.scout, 'f-admin' as never, C, null)
+    s.ships['s-sc' as ShipId].location = { kind: 'transit', from: C, to: at, arrives: 1 }
+    s.ships['s-sc' as ShipId].standing = { rally: null, onContact: 'always' } // the posture is ignored: a scout never fights
+    s.ships['s-sc' as ShipId].order = { kind: 'hold' }
+  }
+
+  it('are left alone by pirates, who have nothing to take from them', () => {
+    for (let seed = 1; seed <= 20; seed++) {
       const s = line()
       s.rng = createRng(seed)
       raider(s, X)
-      const cid = 'c-sc' as CharacterId
-      s.characters[cid] = { id: cid, name: 'Scout', faction: 'f-admin' as never, post: { kind: 'commander', ship: 's-sc' as ShipId }, traits: playerTraits() }
-      s.ships['s-sc' as ShipId] = newShip('s-sc' as ShipId, 'Kestrel', HULLS.scout, 'f-admin' as never, C, s.characters[cid])
-      s.ships['s-sc' as ShipId].location = { kind: 'transit', from: C, to: X, arrives: 1 }
-      s.ships['s-sc' as ShipId].standing.onContact = 'never'
+      scout(s, X)
       advanceWeek(s)
-      if (Object.values(s.events).some((e) => e.kind === 'ship_fled' && e.ship?.id === 's-sc')) escaped += 1
+      expect(Object.values(s.events).some((e) => e.ship?.id === 's-sc' && e.kind !== 'hull_arrived')).toBe(false)
+      expect(s.ships['s-sc' as ShipId].location).toEqual({ kind: 'world', world: X })
+    }
+  })
+
+  it('never join an action and almost always get clear of anyone else who comes for them', () => {
+    let escaped = 0
+    let caught = 0
+    for (let seed = 1; seed <= 30; seed++) {
+      const s = line()
+      s.rng = createRng(seed)
+      s.worlds[X].faction = WARLORD
+      warship(s, X, 'always')
+      s.ships['s-war' as ShipId].faction = WARLORD
+      s.characters['c-s-war' as CharacterId].faction = WARLORD
+      scout(s, X)
+      advanceWeek(s)
+      const events = Object.values(s.events)
+      expect(events.some((e) => e.kind === 'battle')).toBe(false)
+      if (events.some((e) => e.kind === 'ship_fled' && e.ship?.id === 's-sc')) escaped += 1
+      if (events.some((e) => e.kind === 'ship_captured' && e.ship?.id === 's-sc')) caught += 1
     }
     expect(escaped).toBeGreaterThanOrEqual(25)
+    expect(escaped + caught).toBe(30)
+  })
+
+  it('at the quay of her own port she sits out an action in orbit rather than running', () => {
+    const s = line()
+    s.worlds[X].profile.starport = 'A'
+    warship(s, X, 'always')
+    raider(s, X)
+    s.ships['s-sc' as ShipId] = newShip('s-sc' as ShipId, 'Kestrel', HULLS.scout, 'f-admin' as never, X, null)
+    s.ships['s-sc' as ShipId].order = { kind: 'hold' }
+    fightAtWorlds(s)
+    expect(Object.values(s.events).some((e) => e.kind === 'battle')).toBe(true)
+    expect(Object.values(s.events).some((e) => e.ship?.id === 's-sc')).toBe(false)
+    expect(s.ships['s-sc' as ShipId].location).toEqual({ kind: 'world', world: X })
   })
 })
 
@@ -211,7 +251,7 @@ describe('havens', () => {
     for (const seed of [1, 2, 3, 4]) {
       const s = newGame(seed)
       const pirates = Object.values(s.ships).filter((x) => x.faction === PIRATES)
-      expect(pirates.length).toBeGreaterThanOrEqual(5)
+      expect(pirates.length).toBe(STARTING_PIRATES)
       for (const p of pirates) expect(p.havens?.length).toBeGreaterThan(0)
       let seen = false
       for (let i = 0; i < 40; i++) {
@@ -225,19 +265,22 @@ describe('havens', () => {
 })
 
 describe("the port's guns", () => {
-  it('a lone raider leaves a packet docked at a B port alone: the port’s two guns make the odds even, not favourable', () => {
+  it('a lone raider leaves a packet docked at an A port alone: the port’s two guns make the odds even, not favourable', () => {
     const s = line()
-    raider(s, X) // Exe is a B port
+    s.worlds[X].profile.starport = 'A'
+    raider(s, X)
     fightAtWorlds(s)
     expect(Object.values(s.events).some((e) => e.kind === 'ship_robbed' || e.kind === 'battle')).toBe(false)
   })
 
-  it('the same raider robs a packet docked at a D port, where there are no guns to speak of', () => {
-    const s = line()
-    s.worlds[X].profile.starport = 'D'
-    raider(s, X)
-    fightAtWorlds(s)
-    expect(Object.values(s.events).some((e) => e.kind === 'ship_robbed' && e.ship?.id === 's-xy')).toBe(true)
+  it('the same raider robs a packet docked at a B port, whose single gun does not make the odds even, and at a D port with none', () => {
+    for (const port of ['B', 'D'] as const) {
+      const s = line()
+      s.worlds[X].profile.starport = port
+      raider(s, X)
+      fightAtWorlds(s)
+      expect(Object.values(s.events).some((e) => e.kind === 'ship_robbed' && e.ship?.id === 's-xy'), port).toBe(true)
+    }
   })
 
   it('two raiders together will go for the packet under a B port’s guns, and the port shoots back', () => {
@@ -255,6 +298,24 @@ describe("the port's guns", () => {
     }
     expect(attacked).toBe(20) // 4 against 2: favourable every time
     expect(raiderHurt).toBeGreaterThan(0) // and the port's guns count in the exchange
+  })
+
+  it('the record names the raiders, not the packet, and the governor says the port fought: a packet is unarmed', () => {
+    const s = line()
+    s.rng = createRng(3)
+    raider(s, X, 's-r1' as ShipId)
+    raider(s, X, 's-r2' as ShipId)
+    fightAtWorlds(s)
+    const battle = Object.values(s.events).find((e) => e.kind === 'battle')
+    expect(battle).toBeDefined()
+    expect(battle?.ship?.faction).toBe(PIRATES)
+    expect(battle?.level).toBe(0) // nothing of ours with guns: only the batteries
+    const events = Object.values(s.events).filter((e) => e.at === X && e.kind !== 'hull_arrived')
+    const mail = governorLetter(s, s.worlds[X], events)!
+    const report = mail.contents.kind === 'report' ? mail.contents.report : null
+    expect(report?.subject).toMatch(/port|quay/i)
+    expect(report?.subject).not.toMatch(/our forces|Victory|Defeated/)
+    expect(report?.lede).toMatch(/the port's batteries|under the port's guns/)
   })
 
   it('a docked warship fights from under the guns rather than running', () => {

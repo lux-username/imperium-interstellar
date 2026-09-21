@@ -1,11 +1,11 @@
 /**
  * Fighting in space, resolved by the sim when hostile hulls share a
  * system. Strength, posture, commander traits and dice produce damage,
- * destruction, capture or retreat; there is no tactical layer. The desk
+ * destruction, capture or retreat; there is no tactical layer. Government House
  * learns of it from the commanders' own after-action letters (see
  * ./ships.ts), which a self-serving commander shades.
  *
- * A port has guns of its own — more the better the port — and they count
+ * A port has guns of its own — A ports more, B ports some, nothing below — and they count
  * for any side docked there, both in weighing the odds and in the
  * exchange. Docked hulls stand and fight from under them rather than
  * running; a hull that only came out of jump this week is still in the
@@ -36,13 +36,23 @@ export function effectiveStrength(ship: Ship): number {
   return Math.max(0, ship.strength - ship.damage)
 }
 
+/** A hull with nothing left: knocked out in action, or a prize. She cannot fight, and only a dockyard can put her back together. */
+export function knockedOut(ship: Pick<Ship, 'strength' | 'damage'>): boolean {
+  return ship.strength > 0 && ship.damage >= ship.strength
+}
+
+/** Ports with a dockyard, which can rebuild a knocked-out hull. A C port can only patch one that still fights. */
+export function hasDockyard(starport: string): boolean {
+  return starport === 'A' || starport === 'B'
+}
+
 function hullStrength(ships: Ship[]): number {
   return ships.reduce((sum, s) => sum + effectiveStrength(s), 0)
 }
 
-/** What a port's own batteries are worth to a side docked there. Placeholders for the playtest. */
+/** What a port's own batteries are worth to a side docked there: enough to make a lone raider think twice at an A port, not enough to stop two anywhere. Placeholders for the playtest. */
 export function portGuns(starport: string): number {
-  return starport === 'A' ? 3 : starport === 'B' ? 2 : starport === 'C' ? 1 : 0
+  return starport === 'A' ? 2 : starport === 'B' ? 1 : 0
 }
 
 /** Where an encounter is and who is only just arriving; the port's guns count for whoever is docked. */
@@ -86,9 +96,18 @@ function odds(posture: Posture, own: number, enemy: number): boolean {
   }
 }
 
+/**
+ * Pirates at a haven they know are guests, and keep the peace: no robbery
+ * at the port that shelters them, whatever comes in. They still fight back
+ * if someone starts it.
+ */
+function keepsPeace(us: Ship[], at: WorldId): boolean {
+  return us.length > 0 && us[0].faction === PIRATES && us.every((s) => s.havens?.includes(at))
+}
+
 /** Whether a side, taken all together and with its port, would come out and fight. A port's guns never sortie on their own. */
 function wouldSortie(state: GameState, us: Ship[], them: Ship[], scene: Scene): boolean {
-  if (hullStrength(us) === 0) return false
+  if (hullStrength(us) === 0 || keepsPeace(us, scene.at)) return false
   return odds(postureOf(state, us), sideStrength(state, us, scene), sideStrength(state, them, scene))
 }
 
@@ -99,7 +118,7 @@ function wouldSortie(state: GameState, us: Ship[], them: Ship[], scene: Scene): 
  * only if those would actually come out to meet her.
  */
 function engages(state: GameState, us: Ship[], them: Ship[], scene: Scene): boolean {
-  if (hullStrength(us) === 0) return false
+  if (hullStrength(us) === 0 || keepsPeace(us, scene.at)) return false
   const own = sideStrength(state, us, scene)
   const open = them.filter((s) => !docked(state, s, scene.at, scene.arriving))
   const enemy = wouldSortie(state, them, us, scene) ? sideStrength(state, them, scene) : hullStrength(open)
@@ -135,8 +154,9 @@ export function docked(state: GameState, ship: Ship, at: WorldId, arriving: Read
  * arrives next week with whatever she carries.
  */
 function breakOff(state: GameState, ship: Ship, at: WorldId): boolean {
+  // A scout's crew go unnamed and her getting clear is a matter of the hull, not the hand on the helm.
   const target = ship.role === 'scout' ? 4 : ship.role === 'packet' ? 7 : 9
-  const commander = ship.commander ? state.characters[ship.commander] : null
+  const commander = ship.role !== 'scout' && ship.commander ? state.characters[ship.commander] : null
   if (!check(state.rng, target, commander?.traits.competence.naval ?? 0)) return false
   const to = refuge(state, ship, at)
   if (!to) return false
@@ -171,6 +191,7 @@ function loseMail(state: GameState, ship: Ship): void {
 
 /** A hull with no guns caught in the open: pirates rob her and let her go; anyone else takes her. */
 function overtaken(state: GameState, ship: Ship, at: WorldId, by: Ship[]): void {
+  if (by.length === 0) return
   if (by[0].faction === PIRATES) {
     loseMail(state, ship)
     recordEvent(state, at, { kind: 'ship_robbed', valence: 'neutral', against: ship.faction, favours: PIRATES, severity: 2, ship })
@@ -234,8 +255,19 @@ function destroy(state: GameState, ship: Ship, at: WorldId, by: FactionId): void
  */
 function battle(state: GameState, scene: Scene, a: Ship[], b: Ship[]): void {
   const { at } = scene
+  // Scouts never join an action. One at the quay stays out of it; one in the open makes for a jump point as the shooting
+  // starts, and if she cannot get clear she is caught.
+  const scouts = [...a, ...b].filter((s) => s.role === 'scout' && s.location.kind === 'world' && !docked(state, s, at, scene.arriving))
+  for (const s of scouts) if (!breakOff(state, s, at)) overtaken(state, s, at, (a.includes(s) ? b : a).filter((x) => x.role !== 'scout'))
+  a = a.filter((s) => s.role !== 'scout' && state.ships[s.id] && s.location.kind === 'world')
+  b = b.filter((s) => s.role !== 'scout' && state.ships[s.id] && s.location.kind === 'world')
+  if (a.length === 0 || b.length === 0) return
   const lead = (side: Ship[]) => [...side].sort((x, y) => effectiveStrength(y) - effectiveStrength(x) || (x.id < y.id ? -1 : 1))[0]
-  recordEvent(state, at, { kind: 'battle', valence: 'bad', severity: 2, ship: lead(b) })
+  // The record names the intruder — the side that is not the port's own — and says whether the port's side had any
+  // guns of its own to answer with, or only the batteries: a packet at the quay does not fight, the port does.
+  const holder = state.worlds[at]?.faction
+  const [intruders, defenders] = a[0].faction === holder ? [b, a] : [a, b]
+  recordEvent(state, at, { kind: 'battle', valence: 'bad', severity: 2, ship: lead(intruders), level: defenders[0].faction === holder ? hullStrength(defenders) : null })
   // Sides are who flew which flag when the action began: a hull taken mid-action leaves her side, and does not flee as a prize.
   const flagA = a[0].faction
   const flagB = b[0].faction
@@ -294,8 +326,10 @@ function encounter(state: GameState, scene: Scene, a: Ship[], b: Ship[]): void {
     return
   }
   const [hunters, quarry] = wantsA ? [a, b] : [b, a]
-  const open = quarry.filter((s) => !docked(state, s, at, arriving))
-  const underGuns = quarry.filter((s) => docked(state, s, at, arriving))
+  // Pirates want cargo and mail; a scout carries neither, so they let her be. Anyone else will take her if they can catch her.
+  const worth = hunters[0].faction === PIRATES ? quarry.filter((s) => s.role !== 'scout') : quarry
+  const open = worth.filter((s) => !docked(state, s, at, arriving))
+  const underGuns = worth.filter((s) => docked(state, s, at, arriving))
   const targets = open.filter((s) => !breakOff(state, s, at))
   // The port is a harder proposition: its guns and everything under them, taken together.
   if (underGuns.length > 0 && odds(postureOf(state, hunters), sideStrength(state, hunters, scene), sideStrength(state, underGuns, scene))) targets.push(...underGuns)
@@ -330,12 +364,19 @@ export function fightAtWorlds(state: GameState, landed: readonly ShipId[] = []):
   }
 }
 
-/** A knocked-about hull lying docked at a port of class C or better is patched up a point a week. Pirates refit only at a haven of that class. */
+/**
+ * A knocked-about hull lying docked at a port of class C or better is
+ * patched up a point a week. A hull knocked out — nothing left to fight
+ * with — is a job for a dockyard: a C port cannot begin on her, and she
+ * lies there a hulk until she is got to a B or better. Pirates refit only
+ * at a haven they know.
+ */
 export function repairShips(state: GameState): void {
   for (const ship of Object.values(state.ships)) {
     if (ship.damage === 0 || ship.location.kind !== 'world') continue
     const world = state.worlds[ship.location.world]
     if (!docked(state, ship, world.id) || !['A', 'B', 'C'].includes(world.profile.starport)) continue
+    if (knockedOut(ship) && !hasDockyard(world.profile.starport)) continue
     ship.damage -= 1
   }
 }

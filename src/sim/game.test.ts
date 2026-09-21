@@ -6,7 +6,7 @@ import { buildPlayerView } from './player'
 import { playerTraits } from './characters'
 import { clone, deserialize, serialize } from './save'
 import type { CharacterId, FactionId, WorldId } from './types'
-import { isRumour } from './view'
+import { isGovernmentHouseObservation, isRumour, mentionsShip } from './view'
 import { line, runUntil } from './fixtures.test-helper'
 
 describe('report propagation', () => {
@@ -123,7 +123,7 @@ describe('a generated game', () => {
       if (m.contents.kind !== 'report' || m.status.kind !== 'delivered') continue
       const r = m.contents.report
       if (isRumour(r.channel) || r.envelope.eta === null) continue // talk keeps no timetable
-      // Governors' letters to the desk ride the packets; a commander's letter may come home faster aboard his own hull,
+      // Governors' letters to Government House ride the packets; a commander's letter may come home faster aboard his own hull,
       // and a packet chased off her lane by a raider may land a letter early by another route (the envelope shows the re-routing).
       if (r.envelope.destination.kind !== 'world' || r.envelope.destination.world !== s.capital || s.characters[r.observer]?.post.kind !== 'governor') continue
       if (r.envelope.route[0] !== r.envelope.origin) continue
@@ -147,33 +147,33 @@ describe('a generated game', () => {
     for (const sighting of sightings) {
       const source = view.inbox.find((r) => r.id === sighting.report)
       if (!source) {
-        // Seen from the desk itself: the capital is observed directly, not by mail.
-        expect(sighting.report).toMatch(/^r-desk-/)
+        // Seen from Government House itself: the capital is observed directly, not by mail.
+        expect(sighting.report).toMatch(/^r-gh-/)
         expect(sighting.ship.at).toBe(s.capital)
         continue
       }
       fromMail++
-      const cited = source.snapshot.kind === 'world' ? source.snapshot.world.ships.some((sh) => sh.id === sighting.ship.id) : source.snapshot.kind === 'ship' && source.snapshot.ship.id === sighting.ship.id
-      expect(cited).toBe(true)
-      expect(sighting.observed).toBe(source.observed)
+      // The letter listed the hull in port, was about her, or told of something that befell her — on the week it did.
+      expect(mentionsShip(source, sighting.ship.id)).toBe(true)
+      expect(sighting.observed).toBeLessThanOrEqual(source.observed)
     }
     expect(fromMail).toBeGreaterThan(0)
   })
 
   it('never gets mail out of an off-lane world', () => {
     const s = newGame(12)
-    // The desk's own worlds off the lanes; the Warlord's write to his seat, not ours.
+    // Government House's own worlds off the lanes; the Warlord's write to his seat, not ours.
     const offLane = Object.values(s.worlds).filter((w) => w.id !== s.capital && w.faction === s.characters[s.player].faction && route(s.lanes, w.id, s.capital) === null)
     expect(offLane.length).toBeGreaterThan(0)
     for (let i = 0; i < 30; i++) advanceWeek(s)
     for (const w of offLane) {
       for (const m of Object.values(s.mail)) {
-        if (m.contents.kind !== 'report' || m.contents.report.observedAt !== w.id) continue
+        if (m.contents.kind !== 'report' || m.contents.report.observedAt !== w.id || isGovernmentHouseObservation(m.contents.report.id)) continue
         const dest = m.contents.report.envelope.destination
         if (dest.kind !== 'world' || dest.world !== s.capital) continue // the Warlord's people write to his seat
         expect(m.status).toEqual({ kind: 'awaiting_carrier', at: w.id })
       }
-      // The desk still shows only the opening survey for it.
+      // Government House still shows only the opening survey for it.
       expect(s.beliefs[s.player].worlds[w.id].observed).toBeLessThan(0)
     }
   })
@@ -193,7 +193,7 @@ describe('a generated game', () => {
     const s = newGame(4)
     advanceWeek(s)
     const view = buildPlayerView(s)
-    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'ending', 'faction', 'factions', 'inbox', 'known', 'lanes', 'outgoing', 'pool', 'reserve', 'roster', 'rumours', 'week'])
+    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'ending', 'faction', 'factions', 'havens', 'inbox', 'known', 'lanes', 'names', 'observations', 'outgoing', 'pool', 'reserve', 'roster', 'rumours', 'week'])
     // The view is independent of the state it came from: mutating truth doesn't move it.
     const copy = clone(s)
     for (const w of Object.values(copy.worlds)) w.unrest = 10
@@ -201,7 +201,7 @@ describe('a generated game', () => {
   })
 })
 
-describe('the desk reads only its own mail', () => {
+describe('Government House reads only its own mail', () => {
   it('never shows a letter addressed to the Warlord’s seat, nor talk heard there', () => {
     const s = newGame(7)
     for (let i = 0; i < 30; i++) advanceWeek(s)

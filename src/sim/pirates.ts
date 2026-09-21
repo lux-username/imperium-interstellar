@@ -6,14 +6,14 @@
  * busy port for a few weeks, robbing what comes and goes, then puts back
  * in to a haven she knows. A pirate who puts in anywhere else is seized by
  * the port. So a pirate problem on a lane is usually also a governor
- * problem at one end of it, and the desk learns where from what its
+ * problem at one end of it, and Government House learns where from what its
  * hulls see in port and from the docks.
  */
 import { neighbours } from './chart'
-import { newCharacter } from './characters'
+import { isBold, newCharacter } from './characters'
 import { recordEvent } from './events'
 import { PIRATES, REBELS, hostile } from './factions'
-import { HULLS, newShip, shipName } from './fleet'
+import { HULLS, crewed, newShip, shipName } from './fleet'
 import { hexDistance } from './hex'
 import { snapshotShip, writeReport } from './mail'
 import { check, nextFloat, nextInt } from './rng'
@@ -21,10 +21,10 @@ import type { CharacterId, GameState, Ship, ShipId, World, WorldId } from './typ
 import type { Event, EventId } from './view'
 
 /** Chance per haven per week of a new hull putting out. Small: catching the ones at large should be enough to keep piracy down. */
-export const SPAWN_CHANCE = 0.01
+export const SPAWN_CHANCE = 0.005
 
 /** How many are at large when the game begins (spec.md → Starting position). */
-export const STARTING_PIRATES = 5
+export const STARTING_PIRATES = 3
 
 export function isHaven(state: GameState, world: World): boolean {
   const port = world.profile.starport
@@ -105,14 +105,13 @@ export function spawnPirates(state: GameState): void {
 // ---------------------------------------------------------------------------
 // What a raider does
 
-/** Ports worth lying off: charted A/B ports with traffic, hostile to pirates, not a haven she means to keep, and never a faction's seat — that is where the fleet lies. */
+/** Ports worth lying off: any world on the lanes — that is where the trade is — hostile to pirates, not a haven she means to keep, and never a faction's seat, which is where the fleet lies. */
 function huntingGrounds(state: GameState, ship: Ship, from: WorldId): WorldId[] {
   const here = state.worlds[from]
   const seats = new Set(Object.values(state.factions).map((f) => f.capital))
   return (Object.keys(state.worlds).sort() as WorldId[]).filter((id) => {
     const w = state.worlds[id]
     if (id === from || ship.havens?.includes(id) || seats.has(id)) return false
-    if (w.profile.starport !== 'A' && w.profile.starport !== 'B') return false
     if (!hostile(w.faction, PIRATES) || neighbours(state.lanes, id).length === 0) return false
     return hexDistance(w.hex, here.hex) <= ship.jump * 2
   })
@@ -120,23 +119,84 @@ function huntingGrounds(state: GameState, ship: Ship, from: WorldId): WorldId[] 
 
 /**
  * The nearest haven she *knows of*. She sails on her knowledge, not the
- * truth: a haven cleaned up since she heard of it will seize her. With the
- * tanks low she prefers one with a port that can fill them (B or better).
+ * truth: a haven cleaned up since she heard of it will seize her. Every
+ * haven has a working port (C or better), so any of them can fill her tanks.
  */
 function nearestHaven(state: GameState, ship: Ship, from: WorldId): WorldId | null {
   const known = (ship.havens ?? []).filter((h) => state.worlds[h])
   if (known.length === 0) return null
   const here = state.worlds[from]
-  const fuelled = known.filter((h) => ['A', 'B'].includes(state.worlds[h].profile.starport))
+  const fuelled = known.filter((h) => ['A', 'B', 'C'].includes(state.worlds[h].profile.starport))
   const pool = ship.fuel <= 2 && fuelled.length > 0 ? fuelled : known
   return [...pool].sort((a, b) => hexDistance(state.worlds[a].hex, here.hex) - hexDistance(state.worlds[b].hex, here.hex) || (a < b ? -1 : 1))[0]
 }
 
+/** A hull with nothing left to fight with: a C port cannot begin on her; she needs a haven with a dockyard. */
+function needsDockyard(ship: Ship): boolean {
+  return ship.strength > 0 && ship.damage >= ship.strength
+}
+
+/** The nearest haven she knows with a dockyard (B or better), if any. */
+function nearestDockyard(state: GameState, ship: Ship, from: WorldId): WorldId | null {
+  const here = state.worlds[from]
+  const yards = (ship.havens ?? []).filter((h) => state.worlds[h] && ['A', 'B'].includes(state.worlds[h].profile.starport))
+  if (yards.length === 0) return null
+  return [...yards].sort((a, b) => hexDistance(state.worlds[a].hex, here.hex) - hexDistance(state.worlds[b].hex, here.hex) || (a < b ? -1 : 1))[0]
+}
+
 /**
- * Raiders in port decide the week. Hurt, at a haven: stay and refit. Fit,
- * at a haven: pick a port to lie off for a few weeks, then come back to
- * some haven she knows. Anywhere else — she fled here, or her haven was
- * cleaned up — make for the nearest haven she knows of.
+ * Pirates talk. Two hulls lying at the same world pool what they know of
+ * havens; and a hull docked at a haven hears what the docks there are
+ * saying — a port where pirates were harboured, or a governor putting it
+ * about that hers asks no questions, is a haven to try; a pirate seized
+ * somewhere is a haven to strike off. Talk is talk: she sails on it and
+ * may be seized for it.
+ */
+export function pirateTalk(state: GameState): void {
+  const pirates = (Object.keys(state.ships).sort() as ShipId[]).map((id) => state.ships[id]).filter((s) => s.faction === PIRATES && s.location.kind === 'world' && s.havens)
+  const byWorld: Record<string, Ship[]> = {}
+  for (const s of pirates) if (s.location.kind === 'world') (byWorld[s.location.world] ??= []).push(s)
+  for (const [at, crews] of Object.entries(byWorld)) {
+    const pooled = new Set<WorldId>(crews.flatMap((s) => s.havens ?? []))
+    const docked = crews.some((s) => s.havens?.includes(at as WorldId))
+    if (docked) {
+      for (const rumour of state.rumours) {
+        if (!(at in rumour.heard)) continue
+        const e = rumour.event
+        if (e.kind === 'pirates_harboured' || e.kind === 'haven_touted') pooled.add(e.at)
+        if (e.kind === 'pirate_seized') pooled.delete(e.at)
+      }
+    }
+    const havens = [...pooled].sort()
+    for (const s of crews) s.havens = [...havens]
+  }
+}
+
+/**
+ * A governor who is corrupt enough to harbour pirates and bold enough to
+ * say so puts it about, now and then, that their port asks no questions
+ * — talk meant for pirate ears, which Government House's docks may also pick up.
+ * It is talk from the start, never an event in the record.
+ */
+export function toutHavens(state: GameState): void {
+  const ids = Object.keys(state.worlds).sort() as WorldId[]
+  for (const id of ids) {
+    const world = state.worlds[id]
+    if (!isHaven(state, world) || world.faction === REBELS || !world.actingGovernor) continue
+    const governor = state.characters[world.actingGovernor]
+    if (!governor || governor.traits.loyalty !== 'self' || !isBold(governor)) continue
+    if (!check(state.rng, 10)) continue
+    const event: Event = { id: `e-tout-${state.nextId++}` as EventId, at: id, week: state.week, kind: 'haven_touted', valence: 'bad', against: null, favours: PIRATES, severity: 2, ship: null, person: governor.name, level: null }
+    state.rumours.push({ event, origin: id, born: state.week, heard: { [id]: 0 } })
+  }
+}
+
+/**
+ * Raiders in port decide the week. Hurt, at a haven: stay and refit — or,
+ * knocked out at a haven with no dockyard, limp to one that has. Fit, at
+ * a haven: pick a port to lie off for a few weeks, then come back to some
+ * haven she knows. Anywhere else — she fled here, or her haven was cleaned
+ * up — make for the nearest haven she knows of.
  */
 export function pirateOrders(state: GameState): void {
   const ids = Object.keys(state.ships).sort() as ShipId[]
@@ -148,7 +208,8 @@ export function pirateOrders(state: GameState): void {
     if (busy) continue
     const atHaven = ship.havens?.includes(at) ?? false
     if (atHaven && ship.damage > 0) {
-      ship.order = { kind: 'hold' }
+      const yard = needsDockyard(ship) && !['A', 'B'].includes(state.worlds[at].profile.starport) ? nearestDockyard(state, ship, at) : null
+      ship.order = yard && yard !== at && ship.fuel > 0 ? { kind: 'move', to: yard, then: null } : { kind: 'hold' }
       continue
     }
     const home = nearestHaven(state, ship, at)
@@ -235,6 +296,33 @@ export function seizePirates(state: GameState): void {
     ship.standing = { rally: null, onContact: 'never' }
     for (const m of ship.mailbag) if (state.mail[m]) state.mail[m].status = { kind: 'lost', week: state.week }
     ship.mailbag = []
+  }
+}
+
+/**
+ * A pirate who docks at a haven and is not seized has been seen to be
+ * harboured, and so has one already lying there when another hull makes
+ * port and finds her. Either is entered in the record: once per world for
+ * the week, naming the governor who let it pass. Runs after the port has
+ * had its chance to seize her. A captain who sees it writes home about
+ * the governor; a scout's watch carries it; the docks may talk of it.
+ */
+export function harbourPirates(state: GameState, landed: readonly ShipId[]): void {
+  const arrived = new Set(landed)
+  const ids = Object.keys(state.worlds).sort() as WorldId[]
+  for (const at of ids) {
+    const world = state.worlds[at]
+    if (!isHaven(state, world)) continue
+    const here = Object.values(state.ships)
+      .filter((s) => s.location.kind === 'world' && s.location.world === at)
+      .sort((a, b) => (a.id < b.id ? -1 : 1))
+    const sheltered = here.filter((s) => s.faction === PIRATES && s.havens?.includes(at))
+    if (sheltered.length === 0) continue
+    const newlyDocked = sheltered.some((s) => arrived.has(s.id))
+    const witnessArrived = here.some((s) => s.faction !== PIRATES && crewed(s) && arrived.has(s.id))
+    if (!newlyDocked && !witnessArrived) continue
+    const governor = world.actingGovernor ? state.characters[world.actingGovernor] : null
+    recordEvent(state, at, { kind: 'pirates_harboured', valence: 'bad', favours: PIRATES, severity: 3, ship: sheltered[0], level: sheltered.length, person: governor?.name ?? null })
   }
 }
 

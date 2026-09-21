@@ -8,11 +8,13 @@
  * before it — but the tables, thresholds and modifiers here are ours to tune.
  */
 import { allHexes, hexDistance, hexLabel, SUBSECTOR_COLS, SUBSECTOR_ROWS, type Hex } from './hex'
+import { neighbours } from './chart'
 import { newCharacter, playerTraits } from './characters'
+import { chartLanes } from './lanes'
 import { worldCultures, worldName } from './names'
 import { createRng, nextInt, roll, type Rng } from './rng'
 import { ADMINISTRATION, PLAYER, startingFactions } from './factions'
-import type { Character, CharacterId, Faction, FactionId, StarportClass, World, WorldId, WorldProfile } from './types'
+import type { Character, CharacterId, Faction, FactionId, Lane, LaneId, StarportClass, World, WorldId, WorldProfile } from './types'
 
 export { ADMINISTRATION, EMPIRE, PLAYER } from './factions'
 
@@ -75,8 +77,11 @@ export function profileString(p: WorldProfile): string {
 // ---------------------------------------------------------------------------
 // Placement and the capital
 
-/** A hex holds a world on 8+ (about 42%). Sparser than the rules-default so clusters and gaps both exist. */
-const WORLD_TARGET = 8
+/** A hex holds a world on 9+ (about 28%): some twenty-odd worlds, so every one of them matters and the gaps between them are real. */
+const WORLD_TARGET = 9
+
+/** The fewest worlds a subsector may have; a sparse roll is topped up to this. */
+const MIN_WORLDS = 16
 
 function isEdge({ col, row }: Hex): boolean {
   return col === 1 || col === SUBSECTOR_COLS || row === 1 || row === SUBSECTOR_ROWS
@@ -150,10 +155,9 @@ export function generateWorlds(rng: Rng): Generated {
     list.push(world)
   }
 
-  // A subsector with fewer than a handful of worlds is no game; reroll the
-  // sparse tail by filling random empty hexes until there are at least twelve.
+  // A subsector with too few worlds is no game; fill random empty hexes until there are enough.
   const hexes = allHexes()
-  while (list.length < 12) {
+  while (list.length < MIN_WORLDS) {
     const hex = hexes[nextInt(rng, 0, hexes.length - 1)]
     const id = worldId(hex)
     if (worlds[id]) continue
@@ -175,7 +179,7 @@ export function generateWorlds(rng: Rng): Generated {
     const rolled = Math.floor(world.profile.population / 2) + roll(rng) - 7
     world.garrison = world.profile.population === 0 ? 0 : rolled >= 1 ? rolled : roll(rng) <= 3 ? 0 : 1
     if (world === capital) {
-      // The capital's own garrison, plus the desk's reserve: 4 army and 2 marine detachments (spec.md → Starting position).
+      // The capital's own garrison, plus Government House's reserve: 4 army and 2 marine detachments (spec.md → Starting position).
       world.unrest = 0
       world.garrison = Math.max(world.garrison, 2) + 4
       world.marines = 2
@@ -190,13 +194,90 @@ export function generateWorlds(rng: Rng): Generated {
 
   const factions: Record<FactionId, Faction> = startingFactions(capital.id)
 
-  // A handful of officers without posts at the capital, for the desk to send out to seats and prizes.
+  // A handful of officers without posts at the capital, for Government House to send out to seats and prizes.
   for (let i = 1; i <= 4; i++) {
     const id = `c-officer-${i}` as CharacterId
     characters[id] = newCharacter(rng, id, ADMINISTRATION, { kind: 'unassigned', at: capital.id })
   }
 
   return { worlds, characters, factions, capital: capital.id }
+}
+
+// ---------------------------------------------------------------------------
+// The shape of the campaign
+
+/** The most worlds a subsector may have before it is rerolled: too many and no single one matters. */
+const MAX_WORLDS = 28
+
+/** How many worlds a chokepoint must cut off from the capital to count as one. */
+const CHOKE_MIN = 3
+
+/** How far from the capital the Warlord's seat must be able to lie. */
+const FRONTIER = 6
+
+/** The worlds reachable from `from` over the lanes, leaving `without` out of the chart. */
+function reachable(lanes: Record<LaneId, Lane>, from: WorldId, without: WorldId | null = null): Set<WorldId> {
+  const seen = new Set<WorldId>([from])
+  const queue = [from]
+  while (queue.length > 0) {
+    const w = queue.pop() as WorldId
+    for (const n of neighbours(lanes, w)) {
+      if (n === without || seen.has(n)) continue
+      seen.add(n)
+      queue.push(n)
+    }
+  }
+  return seen
+}
+
+/**
+ * Why a laid-out subsector is, or is not, a campaign worth playing. A
+ * layout passes when every reason is null:
+ *
+ * - it has neither too few worlds nor too many;
+ * - the capital's chart reaches most of them, so the packets and the
+ *   rumours cover the ground the game is played on;
+ * - a few worlds lie off the lanes altogether, dark until a hull is sent;
+ * - there is a chokepoint: a world whose loss cuts a real piece of the
+ *   chart off from the capital, which is something to hold, to patrol, and
+ *   for the Warlord to want;
+ * - and there is a far corner: a populated port far enough from the
+ *   capital for the Warlord to seat himself with room between.
+ */
+export function layoutFaults(worlds: Record<WorldId, World>, lanes: Record<LaneId, Lane>, capital: WorldId): string[] {
+  const faults: string[] = []
+  const all = Object.values(worlds)
+  const n = all.length
+  if (n < MIN_WORLDS || n > MAX_WORLDS) faults.push(`${n} worlds`)
+  const chart = reachable(lanes, capital)
+  if (chart.size < Math.ceil(n * 0.55)) faults.push(`capital's chart reaches only ${chart.size} of ${n}`)
+  const dark = all.filter((w) => neighbours(lanes, w.id).length === 0).length
+  if (dark < 1 || dark > 8) faults.push(`${dark} dark worlds`)
+  const choke = [...chart].some((w) => w !== capital && chart.size - reachable(lanes, capital, w).size - 1 >= CHOKE_MIN)
+  if (!choke) faults.push('no chokepoint')
+  const here = worlds[capital].hex
+  const far = all.some((w) => w.id !== capital && w.profile.population > 0 && (w.profile.starport === 'A' || w.profile.starport === 'B') && hexDistance(w.hex, here) >= FRONTIER)
+  if (!far) faults.push('no far corner')
+  return faults
+}
+
+/** How many layouts are tried before the last is taken as it comes. Deterministic: the same seed makes the same tries. */
+export const LAYOUT_TRIES = 40
+
+/**
+ * A subsector and its lanes, rolled again until the layout passes (see
+ * layoutFaults) or the tries run out. Everything after this — ships,
+ * pirates, the Warlord — is laid over what comes back.
+ */
+export function generateSubsector(rng: Rng): Generated & { lanes: Record<LaneId, Lane>; tries: number } {
+  let last: (Generated & { lanes: Record<LaneId, Lane> }) | null = null
+  for (let i = 1; i <= LAYOUT_TRIES; i++) {
+    const g = generateWorlds(rng)
+    const lanes = chartLanes(rng, g.worlds)
+    last = { ...g, lanes }
+    if (layoutFaults(g.worlds, lanes, g.capital).length === 0) return { ...last, tries: i }
+  }
+  return { ...(last as Generated & { lanes: Record<LaneId, Lane> }), tries: LAYOUT_TRIES }
 }
 
 /** Convenience for tests: a fresh RNG and a generated subsector from one seed. */

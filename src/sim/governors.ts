@@ -1,17 +1,19 @@
 /**
- * What a governor chooses to tell the desk. A governor writes when
+ * What a governor chooses to tell Government House. A governor writes when
  * something happened that they are willing to mention, and otherwise only
  * now and then to say all is quiet — so silence is itself a signal. Good
  * news always goes; bad news gets a disclosure roll shaded by who the
- * governor is; and the letter itself is coloured by the same traits, so a
- * self-serving governor's world always looks a little calmer than it is.
+ * governor is; and the letter itself is coloured by the same traits: a
+ * governor who harbours pirates leaves them out of it.
  *
  * The same shape holds one level up: the player's own monthly report to the
  * Council is selective in exactly this way (Phase 1c).
  */
 import { isBold, isCautious } from './characters'
 import { eventsAt, valenceFor } from './events'
+import { PIRATES } from './factions'
 import { snapshotWorld, writeReport } from './mail'
+import { isHaven } from './pirates'
 import { check, type Rng } from './rng'
 import type { Character, GameState, Mail, World, WorldId } from './types'
 import type { Event, Snapshot } from './view'
@@ -24,6 +26,22 @@ export function quietInterval(world: World): number {
 /** Bad news that reflects on the governor's own handling of their world. */
 function implicates(event: Event): boolean {
   return event.kind === 'unrest_rose'
+}
+
+/** Whether an event is about a pirate hull: her comings and goings, or the port's failure to seize her. */
+function aboutPirates(event: Event): boolean {
+  if (event.kind === 'pirates_harboured') return true
+  return (event.kind === 'hull_arrived' || event.kind === 'hull_departed') && event.ship?.faction === PIRATES
+}
+
+/**
+ * A governor who lets pirates use their port says nothing of them: not
+ * their coming and going, and never that they lay there unmolested —
+ * to do so would be to inform on themselves. A battle in orbit they may
+ * still report, since silence about that would look worse.
+ */
+export function harbours(governor: Character): boolean {
+  return governor.traits.loyalty === 'self'
 }
 
 /** Bad news whose natural letter is a request for help. */
@@ -42,6 +60,7 @@ export function discloses(rng: Rng, governor: Character, event: Event): boolean 
   const valence = valenceFor(event, governor.faction)
   if (valence === 'good') return true
   if (valence === 'neutral') return event.kind === 'governor_changed'
+  if (harbours(governor) && aboutPirates(event)) return false
   let dm = event.severity
   if (governor.traits.loyalty === 'self' && implicates(event)) dm -= 3
   if (asksForHelp(event)) {
@@ -51,23 +70,16 @@ export function discloses(rng: Rng, governor: Character, event: Event): boolean 
   return check(rng, 8, dm)
 }
 
-/** How much a governor shades their world's unrest downward in what they write. */
-function shading(governor: Character): number {
-  return governor.traits.loyalty === 'self' ? 2 : 0
-}
-
-/** A copy of the world as the governor describes it, not quite as it is. */
+/** A copy of the world as the governor describes it: as it is, but with no pirates in port if theirs is a haven. */
 export function colouredSnapshot(state: GameState, world: World, governor: Character): Snapshot {
   const snapshot = snapshotWorld(state, world)
-  if (snapshot.kind === 'world') snapshot.world.unrest = Math.max(0, snapshot.world.unrest - shading(governor))
+  if (snapshot.kind === 'world' && harbours(governor) && isHaven(state, world)) snapshot.world.ships = snapshot.world.ships.filter((s) => s.faction !== PIRATES)
   return snapshot
 }
 
-/** A copy of an event as the governor tells it. */
-function colouredEvent(event: Event, governor: Character): Event {
-  const copy = JSON.parse(JSON.stringify(event)) as Event
-  if (copy.level !== null && (copy.kind === 'unrest_rose' || copy.kind === 'unrest_fell')) copy.level = Math.max(0, copy.level - shading(governor))
-  return copy
+/** A copy of an event as the governor tells it. What they choose to mention is the colouring; the event itself is told straight. */
+function colouredEvent(event: Event): Event {
+  return JSON.parse(JSON.stringify(event)) as Event
 }
 
 /**
@@ -79,7 +91,7 @@ export function governorLetter(state: GameState, world: World, mention: Event[],
   const id = world.actingGovernor
   const governor = id ? state.characters[id] : null
   if (!id || !governor) return null
-  const mail = writeReport(state, id, world.id, colouredSnapshot(state, world, governor), { events: mention.map((e) => colouredEvent(e, governor)), occasion: requested ? 'requested' : 'letter' })
+  const mail = writeReport(state, id, world.id, colouredSnapshot(state, world, governor), { events: mention.map(colouredEvent), occasion: requested ? 'requested' : 'letter' })
   world.lastLetter = state.week
   return mail
 }
@@ -90,11 +102,11 @@ export function eventsWorthMentioning(state: GameState, world: World, governor: 
 }
 
 /**
- * Each week, every governor decides whether to write: yes if the desk
+ * Each week, every governor decides whether to write: yes if Government House
  * wrote asking (a full report, everything since the last letter that they
  * will admit to), yes if something happened this week that they will
  * mention, yes if it has been long enough since the last letter, otherwise
- * no. News buried this week stays buried unless the desk asks.
+ * no. News buried this week stays buried unless Government House asks.
  */
 export function governorsWrite(state: GameState): void {
   const ids = Object.keys(state.worlds).sort() as WorldId[]

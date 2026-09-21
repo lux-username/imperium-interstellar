@@ -13,19 +13,35 @@ describe('rumour', () => {
   it('spawns from bad or good events at ports, never from routine traffic or events at the capital', () => {
     const s = line()
     s.week = 1
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 100; i++) {
       recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 2, level: 6 })
       recordEvent(s, Y, { kind: 'hull_arrived', valence: 'neutral', against: null, favours: null, severity: 0 })
       recordEvent(s, s.capital, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 3, level: 8 })
     }
     spawnRumours(s)
-    expect(s.rumours.length).toBeGreaterThan(10)
-    expect(s.rumours.length).toBeLessThan(40)
+    // News becomes talk on 2d6 ≥ 9, good or bad alike: a bit over a quarter of the time.
+    expect(s.rumours.length).toBeGreaterThan(15)
+    expect(s.rumours.length).toBeLessThan(45)
     for (const r of s.rumours) {
       expect(r.origin).toBe(Y)
       expect(r.event.kind).toBe('unrest_rose')
       expect(r.heard).toEqual({ [Y]: 0 })
     }
+  })
+
+  it('the better the story, the more likely it is told: a world lost outruns a step of unrest', () => {
+    const s = line()
+    s.week = 1
+    for (let i = 0; i < 100; i++) {
+      recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 1, level: 2 })
+      recordEvent(s, Y, { kind: 'world_fell', valence: 'bad', against: null, favours: null, severity: 3 })
+    }
+    spawnRumours(s)
+    const mild = s.rumours.filter((r) => r.event.kind === 'unrest_rose').length
+    const grave = s.rumours.filter((r) => r.event.kind === 'world_fell').length
+    expect(grave).toBeGreaterThan(40)
+    expect(mild).toBeLessThan(20)
+    expect(grave).toBeGreaterThan(mild * 3)
   })
 
   it('a port with no working starport starts no talk', () => {
@@ -37,7 +53,7 @@ describe('rumour', () => {
     expect(s.rumours).toHaveLength(0)
   })
 
-  it('hops lane to lane and is delivered to the desk as a merchant\'s word or docks talk, kept apart from the mail', () => {
+  it('hops lane to lane and is delivered to Government House as a merchant\'s word or docks talk, kept apart from the mail', () => {
     const s = line()
     for (const w of Object.values(s.worlds)) w.profile.population = 0 // nothing else happens
     s.week = 1
@@ -74,7 +90,9 @@ describe('rumour', () => {
     let movedWeek = 0
     let movedWorld = 0
     for (const r of s.rumours) {
-      expect(Math.abs(r.event.week - 5)).toBeLessThanOrEqual(2)
+      // Talk may make it older than it was, never newer.
+      expect(r.event.week).toBeLessThanOrEqual(5)
+      expect(r.event.week).toBeGreaterThanOrEqual(3)
       if (r.event.week !== 5) movedWeek++
       if (r.event.at !== Y) {
         movedWorld++
@@ -87,6 +105,20 @@ describe('rumour', () => {
     expect(movedWorld).toBeLessThan(movedWeek)
   })
 
+  it('goes no faster than a hull: nothing is heard of the week it happens, and a lane away takes a week', () => {
+    const s = line()
+    s.week = 1
+    const e = recordEvent(s, 'w-x' as WorldId, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 3, level: 8 })
+    for (let i = 0; i < 50; i++) s.rumours.push({ event: { ...e }, origin: e.at, born: 1, heard: { [e.at]: 0 } })
+    spreadRumours(s)
+    expect(s.rumours.every((r) => !(s.capital in r.heard))).toBe(true)
+    expect(buildPlayerView(s).rumours).toHaveLength(0)
+    s.week = 2
+    spreadRumours(s)
+    expect(s.rumours.some((r) => s.capital in r.heard)).toBe(true)
+    expect(buildPlayerView(s).rumours.every((r) => r.delivered === 2 && r.observed <= 1)).toBe(true)
+  })
+
   it('a rumour of a hull puts nothing on the map', () => {
     const s = line()
     s.week = 1
@@ -95,7 +127,7 @@ describe('rumour', () => {
     const before = JSON.stringify(s.beliefs[s.player].ships)
     s.rumours.push({ event: { ...e }, origin: Y, born: 1, heard: { [Y]: 0, ['w-x' as WorldId]: 1 } })
     for (let i = 0; i < 20; i++) advanceWeek(s)
-    // The rumour reached the desk (X is a lane away), but the ship sightings are exactly what the desk saw for itself.
+    // The rumour reached Government House (X is a lane away), but the ship sightings are exactly what Government House saw for itself.
     const view = buildPlayerView(s)
     expect(view.rumours.some((r) => r.snapshot.kind === 'event' && r.snapshot.event.ship?.id === ship.id)).toBe(true)
     const rumourIds = new Set(view.rumours.map((r) => r.id))
@@ -103,7 +135,7 @@ describe('rumour', () => {
     expect(before).toBeDefined()
   })
 
-  it('in a generated game the docks tell the desk of worlds no official letter has come from', () => {
+  it('in a generated game the docks tell Government House of worlds no official letter has come from', () => {
     const s = newGame(21)
     for (let i = 0; i < 40; i++) advanceWeek(s)
     const view = buildPlayerView(s)

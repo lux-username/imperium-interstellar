@@ -1,7 +1,7 @@
 /**
  * Fighting on the ground: one attrition model for every contest over a
  * world — a garrison against a rising, a landing against a garrison, the
- * Warlord's troops against the desk's. Each week both sides roll; a hit
+ * Warlord's troops against Government House's. Each week both sides roll; a hit
  * costs the other side a detachment. Nothing is decided in a tick, so a
  * report that a world is contested is still true weeks later, and a relief
  * force can arrive in time. Numbers are placeholders for the 1b playtest.

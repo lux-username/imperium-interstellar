@@ -22,7 +22,7 @@ const reports = (s: GameState, observer: CharacterId): Report[] =>
     .filter((m) => m.contents.kind === 'report' && m.contents.report.observer === observer)
     .map((m) => (m.contents.kind === 'report' ? m.contents.report : null)!)
 
-/** A warship of the desk's at `at`, rallying on C. */
+/** A warship of Government House's at `at`, rallying on C. */
 function warship(s: GameState, at: WorldId, id = 's-war' as ShipId, initiative = 0): void {
   const cid = `c-${id}` as CharacterId
   s.characters[cid] = { id: cid, name: 'Amelia Middleton', faction: s.characters[s.player].faction, post: { kind: 'commander', ship: id }, traits: { ...playerTraits(), initiative } }
@@ -141,7 +141,7 @@ describe('captains write on occasion', () => {
     recordEvent(s, Y, { kind: 'unrest_rose', valence: 'neutral', against: s.worlds[Y].faction, severity: 2, level: 6 })
     logWitnessed(s) // as the week's events would have been, had it happened during the week
     runUntil(s, (g) => g.ships['s-war' as ShipId].location.kind === 'world' && (g.ships['s-war' as ShipId].location as { world: WorldId }).world === C && g.ships['s-war' as ShipId].order?.kind === 'hold', 20)
-    // Her log carried the event home; the general report is not written at the capital itself, where the desk sees her directly.
+    // Her log carried the event home; the general report is not written at the capital itself, where Government House sees her directly.
     const all = reports(s, 'c-s-war' as CharacterId)
     expect(all.some((r) => r.subject.startsWith('General report'))).toBe(false)
     expect(s.ships['s-war' as ShipId].log.some((e) => e.kind === 'unrest_rose')).toBe(true)

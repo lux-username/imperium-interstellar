@@ -1,29 +1,62 @@
 /**
  * The last-known map. Every marker is drawn from the newest delivered
  * report about that world, and carries the age of that report. Colour is
- * who the desk believes holds the world; age is the badge above it and a
- * dashed outline once the word is old. The lane chart and world positions
- * are public; everything else is belief.
+ * who Government House believes holds the world; age is the badge above it and a
+ * dashed outline once the word is old. Hulls are drawn where they were
+ * last seen, in the colours they flew; a hull picked out is ringed and,
+ * if it is ours, the run its orders describe is drawn. The lane chart and
+ * world positions are public; everything else is belief — as of the week
+ * the view says, which may be a week gone by.
  */
 import { SUBSECTOR_COLS, SUBSECTOR_ROWS, hexLabel, type Hex } from '../sim/hex'
-import type { PlayerView, WorldId } from '../sim/view'
-import { ago, freshness, stateOf } from './format'
+import { hexRoute, route, type PlayerView, type Sighting, type WorldId } from '../sim/view'
+import { ago, coloursOf, freshness, hullKind, lastOrderSent, orderStops, stateOf } from './format'
 import { H, HEIGHT, SIZE, WIDTH, hexCenter, hexPoints, type Overlay } from './geometry'
+import type { Selection } from './selection'
 
 interface Props {
   view: PlayerView
-  selected: WorldId | null
-  onSelect: (id: WorldId) => void
+  selected: Selection | null
+  onSelect: (s: Selection) => void
   overlay?: Overlay | null
+}
+
+/** How many hulls are drawn beside a world before the rest are counted. */
+const SHOWN = 5
+
+function triangle(x: number, y: number, r: number): string {
+  return `${x},${y - r} ${x + r * 1.2},${y} ${x},${y + r}`
 }
 
 export function Map({ view, selected, onSelect, overlay }: Props) {
   const grid: Hex[] = []
   for (let col = 1; col <= SUBSECTOR_COLS; col++) for (let row = 1; row <= SUBSECTOR_ROWS; row++) grid.push({ col, row })
 
-  // Ships last seen at each world, from delivered reports.
-  const shipsSeen: Record<string, number> = {}
-  for (const s of Object.values(view.known.ships)) shipsSeen[s.ship.at] = (shipsSeen[s.ship.at] ?? 0) + 1
+  const chosenShip = selected?.kind === 'ship' ? selected.id : null
+
+  // Hulls last seen at each world, ours first, then by name. The order never changes with the selection, so the ring lands on the triangle that was clicked.
+  const shipsSeen: Record<string, Sighting[]> = {}
+  for (const s of Object.values(view.known.ships)) (shipsSeen[s.ship.at] ??= []).push(s)
+  for (const pile of Object.values(shipsSeen)) {
+    pile.sort((a, b) => Number(b.ship.faction === view.faction) - Number(a.ship.faction === view.faction) || (a.ship.name < b.ship.name ? -1 : 1))
+  }
+  const havens = new Set(view.havens)
+  const lanes = Object.fromEntries(view.lanes.map((l) => [l.id, l]))
+
+  // The run the selected hull's orders describe, from where she was last seen.
+  const roster = chosenShip ? view.roster.find((r) => r.id === chosenShip) : null
+  const order = chosenShip && roster ? lastOrderSent(view, chosenShip)?.payload : null
+  const run: WorldId[] = []
+  if (roster && order?.kind === 'order') {
+    let from: WorldId = view.known.ships[roster.id]?.ship.at ?? view.capital
+    run.push(from)
+    for (const stop of orderStops(order.order)) {
+      if (stop === from) continue
+      const leg = route(lanes, from, stop) ?? hexRoute(view.chart, from, stop, roster.jump) ?? [from, stop]
+      run.push(...leg.slice(1))
+      from = stop
+    }
+  }
 
   return (
     <svg className="map" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Subsector map">
@@ -58,6 +91,18 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
         })}
       </g>
 
+      {run.length > 1 && (
+        <g className="run">
+          <polyline points={run.map((id) => view.chart[id]).filter(Boolean).map((e) => { const c = hexCenter(e.hex); return `${c.x},${c.y}` }).join(' ')} />
+          {run.slice(1).map((id, i) => {
+            const entry = view.chart[id]
+            if (!entry) return null
+            const { x, y } = hexCenter(entry.hex)
+            return <circle key={`${id}-${i}`} cx={x} cy={y} r={SIZE - 4} />
+          })}
+        </g>
+      )}
+
       <g className="worlds">
         {Object.values(view.chart).map((entry) => {
           const { x, y } = hexCenter(entry.hex)
@@ -67,34 +112,58 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
           const fresh = report ? freshness(view.week, report.observed) : 'ancient'
           const port = snap?.profile.starport ?? '?'
           const radius = port === 'A' ? 9 : port === 'B' ? 8 : port === 'C' ? 7 : 6
-          const ships = shipsSeen[entry.id] ?? 0
+          const pile = shipsSeen[entry.id] ?? []
+          // The first few, plus the chosen hull if she is further down the row: she is drawn at the end so the ring has something to sit on.
+          const hidden = pile.slice(SHOWN)
+          const ships = [...pile.slice(0, SHOWN), ...hidden.filter((s) => s.ship.id === chosenShip)]
+          const more = hidden.filter((s) => s.ship.id !== chosenShip).length
           const state = snap ? stateOf(view, snap) : 'unknown'
-          const cls = ['world', fresh, state, isCapital ? 'capital' : '', selected === entry.id ? 'selected' : ''].join(' ')
+          const isSelected = selected?.kind === 'world' && selected.id === entry.id
+          const cls = ['world', fresh, state, isCapital ? 'capital' : '', isSelected ? 'selected' : '', havens.has(entry.id) ? 'haven' : ''].join(' ')
           return (
-            <g key={entry.id} className={cls} onClick={() => onSelect(entry.id)} style={{ cursor: 'pointer' }}>
-              {selected === entry.id && <polygon points={hexPoints(x, y, SIZE - 2)} className="halo" />}
-              <circle cx={x} cy={y} r={radius} />
-              <text x={x} y={y + 3.5} className="port">
-                {port}
-              </text>
-              <text x={x} y={y + H / 2 - 4} className="name">
-                {entry.name}
-              </text>
-              {!isCapital && report && (
-                <text x={x} y={y - radius - 3} className="age">
-                  {ago(view.week, report.observed)}
+            <g key={entry.id} className={cls}>
+              <g onClick={() => onSelect({ kind: 'world', id: entry.id })} style={{ cursor: 'pointer' }}>
+                {isSelected && <polygon points={hexPoints(x, y, SIZE - 2)} className="halo" />}
+                {havens.has(entry.id) && <circle cx={x} cy={y} r={radius + 4} className="haven-ring" />}
+                <circle cx={x} cy={y} r={radius} />
+                <text x={x} y={y + 3.5} className="port">
+                  {port}
                 </text>
-              )}
-              {isCapital && (
-                <text x={x} y={y - radius - 3} className="age">
-                  the desk
+                <text x={x} y={y + H / 2 - 4} className="name">
+                  {entry.name}
                 </text>
-              )}
-              {ships > 0 && (
+                {!isCapital && report && (
+                  <text x={x} y={y - radius - 3} className="age">
+                    {ago(view.week, report.observed)}
+                  </text>
+                )}
+                {isCapital && (
+                  <text x={x} y={y - radius - 3} className="age">
+                    {view.week === report?.observed ? 'Government House' : ago(view.week, report?.observed ?? view.week)}
+                  </text>
+                )}
+              </g>
+              {ships.length > 0 && (
                 <g className="ships">
-                  {Array.from({ length: Math.min(ships, 3) }, (_, i) => (
-                    <polygon key={i} points={`${x + radius + 3 + i * 5},${y - 3} ${x + radius + 7 + i * 5},${y} ${x + radius + 3 + i * 5},${y + 3}`} />
-                  ))}
+                  {ships.map((s, i) => {
+                    const chosen = chosenShip === s.ship.id
+                    const sx = x + radius + 4 + i * 6
+                    return (
+                      <g key={s.ship.id} className={[coloursOf(view, s.ship.faction), chosen ? 'chosen' : ''].join(' ')} onClick={() => onSelect({ kind: 'ship', id: s.ship.id })} style={{ cursor: 'pointer' }}>
+                        {chosen && <circle cx={sx + 2} cy={y} r={6} className="ring" />}
+                        <polygon points={triangle(sx, y, 3.5)}>
+                          <title>
+                            {s.ship.name} ({hullKind(view, s.ship)}), seen {ago(view.week, s.observed)}
+                          </title>
+                        </polygon>
+                      </g>
+                    )
+                  })}
+                  {more > 0 && (
+                    <text x={x + radius + 4 + ships.length * 6} y={y + 3} className="more">
+                      +{more}
+                    </text>
+                  )}
                 </g>
               )}
             </g>

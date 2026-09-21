@@ -2,10 +2,10 @@
  * The one place orders are written. Opened from a world ("send a hull
  * here") or from a ship ("give orders"), it asks the same things either
  * way: which hull, where to send the order, where the hull should go, what
- * to do there — hold, patrol, look, watch, or carry troops and people —
+ * to do there — just go, patrol, look, watch, or carry troops and people —
  * its disposition if it meets trouble, and where to go afterwards. The
  * order leaves as a dispatch to the address chosen — by default wherever
- * the desk last saw the ship.
+ * Government House last saw the ship.
  */
 import { useMemo, useState } from 'react'
 import { expectedArrival, hexRoute, route, type CharacterId, type Order, type PlayerView, type Posture, type Purpose, type ShipId, type StandingOrders, type WorldId } from '../sim/view'
@@ -44,7 +44,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const [address, setAddress] = useState<WorldId>(lastSeenAt(draft.ship ?? ''))
   const [addressEdited, setAddressEdited] = useState(false)
   const [destination, setDestination] = useState<WorldId | ''>(draft.destination ?? '')
-  const [task, setTask] = useState<Task>('patrol')
+  const [task, setTask] = useState<Task>(draft.ship && view.roster.find((r) => r.id === draft.ship)?.role === 'scout' ? 'watch' : 'patrol')
   const [weeks, setWeeks] = useState(4)
   const [watchWeeks, setWatchWeeks] = useState(4)
   const [army, setArmy] = useState(0)
@@ -60,6 +60,10 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const setShip = (id: ShipId | '') => {
     setShipState(id)
     if (!addressEdited) setAddress(lastSeenAt(id))
+    // Only a scout lies off and watches, and a scout never patrols: a task the hull cannot do falls back to the one it can.
+    const role = id ? view.roster.find((r) => r.id === id)?.role : undefined
+    if (role && role !== 'scout' && task === 'watch') setTask('patrol')
+    if (role === 'scout' && task === 'patrol') setTask('watch')
   }
 
   const entry = ship ? view.roster.find((r) => r.id === ship) : null
@@ -73,7 +77,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const landsAt = address === view.capital ? view.week : path ? expectedArrival(lanes, path, view.week + 1) : null
   const readAtOnce = address === view.capital && seen?.ship.at === view.capital && seen.observed === view.week
 
-  // Where the hull is due, from the orders the desk sent it: write to where she will be, not where she was.
+  // Where the hull is due, from the orders Government House sent it: write to where she will be, not where she was.
   const prior = ship ? lastOrderSent(view, ship) : null
   const priorOrder = prior?.payload.kind === 'order' ? prior.payload.order : null
   const dueAt = priorOrder && 'to' in priorOrder ? priorOrder.to : priorOrder && 'world' in priorOrder ? priorOrder.world : null
@@ -86,7 +90,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   // A courier in port here could carry the orders itself: needed where no packet goes, worth it where it would land sooner.
   const couriers = view.roster.filter((r) => {
     const s = view.known.ships[r.id]
-    return r.id !== ship && r.commanderName !== null && s?.ship.at === view.capital && s.observed === view.week && !lastOrderSent(view, r.id)
+    return r.id !== ship && !r.prize && s?.ship.at === view.capital && s.observed === view.week && !lastOrderSent(view, r.id)
   })
   const chosenCourier = couriers.find((c) => c.id === courier) ?? couriers.find((c) => c.role === 'scout') ?? couriers[0] ?? null
   const courierPath = chosenCourier && address !== view.capital ? hexRoute(view.chart, view.capital, address, chosenCourier.jump) : null
@@ -94,7 +98,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const courierOffered = couriers.length > 0 && address !== view.capital && (landsAt === null || (courierLands !== null && courierLands < landsAt - 1))
   const useCourier = courierOffered && (byCourier || landsAt === null) && chosenCourier !== null && courierPath !== null
 
-  // Cargo is taken aboard wherever the order is read: from the desk's reserve here, from that world's garrison elsewhere.
+  // Cargo is taken aboard wherever the order is read: from Government House's reserve here, from that world's garrison elsewhere.
   const loadsHere = address === view.capital
   const capacity = entry?.troops ?? 0
   const carriesTroops = capacity > 0
@@ -141,7 +145,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
           <select value={ship} onChange={(e) => setShip(e.target.value as ShipId | '')}>
             <option value="">— choose a ship —</option>
             {view.roster
-              .filter((r) => r.commanderName !== null)
+              .filter((r) => !r.prize)
               .map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name} ({r.role}) — {seenText(r.id)}
@@ -218,20 +222,21 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
         <fieldset className="field">
           <legend>On arrival</legend>
           <label>
-            <input type="radio" name="task" checked={task === 'hold'} onChange={() => setTask('hold')} /> hold there
+            <input type="radio" name="task" checked={task === 'hold'} onChange={() => setTask('hold')} /> go there
+            {task === 'hold' && <small className="muted"> (no stay: with “proceed to” below she calls there and carries on; choose “hold at the destination” to keep her there)</small>}
           </label>
-          <label>
-            <input type="radio" name="task" checked={task === 'patrol'} onChange={() => setTask('patrol')} /> patrol for{' '}
-            <input type="number" min={1} max={52} value={weeks} onChange={(e) => setWeeks(Math.max(1, Number.parseInt(e.target.value, 10) || 1))} /> wk
+          <label className={entry?.role === 'scout' ? 'muted' : ''}>
+            <input type="radio" name="task" checked={task === 'patrol'} disabled={entry?.role === 'scout'} onChange={() => setTask('patrol')} /> patrol for{' '}
+            <input type="number" min={1} max={52} value={weeks} disabled={entry?.role === 'scout'} onChange={(e) => setWeeks(Math.max(1, Number.parseInt(e.target.value, 10) || 1))} /> wk
+            {entry?.role === 'scout' && <small className="muted"> (a scout has no guns to patrol with; she looks or watches)</small>}
           </label>
           <label>
             <input type="radio" name="task" checked={task === 'look'} onChange={() => setTask('look')} /> look for a week and report
           </label>
-          <label>
-            <input type="radio" name="task" checked={task === 'watch'} onChange={() => setTask('watch')} /> lie off and watch for{' '}
-            <input type="number" min={2} max={20} value={watchWeeks} onChange={(e) => setWatchWeeks(Math.min(20, Math.max(2, Number.parseInt(e.target.value, 10) || 2)))} /> wk, then send the full
-            truth
-            {entry && entry.role !== 'scout' && <small className="muted"> (any hull can watch; only a scout is likely to get clear if warships come)</small>}
+          <label className={entry && entry.role !== 'scout' ? 'muted' : ''}>
+            <input type="radio" name="task" checked={task === 'watch'} disabled={!!entry && entry.role !== 'scout'} onChange={() => setTask('watch')} /> lie off and watch for{' '}
+            <input type="number" min={2} max={20} value={watchWeeks} disabled={!!entry && entry.role !== 'scout'} onChange={(e) => setWatchWeeks(Math.min(20, Math.max(2, Number.parseInt(e.target.value, 10) || 2)))} /> wk, then send a report
+            {entry && entry.role !== 'scout' && <small className="muted"> (scouts only)</small>}
           </label>
           <label>
             <input type="radio" name="task" checked={task === 'transport'} onChange={() => setTask('transport')} /> put down troops or a passenger

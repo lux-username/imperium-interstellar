@@ -3,7 +3,7 @@
  * one sentence with the most important news — composed here when it is
  * written, from what the writer chose to say and which side they are on.
  * The wording is standard for now; later it varies with the writer's
- * character, which is why it is decided in the sim and not at the desk.
+ * character, which is why it is decided in the sim and not at Government House.
  *
  * The wording of single events lives here too, so the sim and the inbox
  * say the same thing about the same event.
@@ -22,7 +22,7 @@ export interface Heading {
 export type Occasion =
   /** A governor's letter home: something to mention, or nothing for a while. */
   | 'letter'
-  /** A governor answering the desk's request for a full report. */
+  /** A governor answering Government House's request for a full report. */
   | 'requested'
   /** A captain making port. */
   | 'arrival'
@@ -166,6 +166,10 @@ export function eventLabel(e: Event): string {
       return `${e.person ?? 'an officer'} took command of ${e.ship?.name ?? 'a prize'}`
     case 'haven_named':
       return `named as a pirate haven`
+    case 'pirates_harboured':
+      return `${plural(e.level ?? 1, 'pirate hull')} harboured in port`
+    case 'haven_touted':
+      return 'the port asks no questions'
   }
 }
 
@@ -226,6 +230,10 @@ export function eventText(e: Event): string {
       return `${e.person ?? 'An officer'} has taken command of ${e.ship?.name ?? 'the prize'}.`
     case 'haven_named':
       return `Under questioning, ${e.person ?? 'the prisoners'} named this world as a haven where pirates put in.`
+    case 'pirates_harboured':
+      return `${e.ship?.name ? `The pirate ${e.ship.name}` : 'A pirate hull'}${(e.level ?? 1) > 1 ? ` and ${plural((e.level ?? 1) - 1, 'other')}` : ''} lay docked at the port unmolested; ${e.person ? `Governor ${e.person}` : 'the port'} made no move to seize ${(e.level ?? 1) > 1 ? 'them' : 'her'}.`
+    case 'haven_touted':
+      return `Word is that ${e.person ? `Governor ${e.person}` : 'the governor'} asks no questions of any hull that pays the port its fees.`
   }
 }
 
@@ -256,14 +264,23 @@ function tally(events: readonly Event[], side: FactionId) {
 /**
  * How an action reads to one side of it: from the hulls the letter says
  * were lost or broke off. `own` is the writer's hull if they were in it.
+ * The record names the intruders; a writer on the intruders' side reads
+ * the port's holder as the enemy. A governor whose side had nothing but
+ * the port's batteries in it says so: the port fought, not the hulls.
  */
 function battleHeading(state: GameState, e: Event, events: readonly Event[], side: FactionId, own: ShipId | null): Heading {
-  const enemy = e.ship?.faction
+  const holder = state.worlds[e.at]?.faction
+  const enemy = e.ship && e.ship.faction === side ? holder : e.ship?.faction
   const them = enemyName(state, enemy)
   const word = enemyWord(state, enemy)
   const involved = enemy !== undefined && hostile(enemy, side)
   if (!involved) return { subject: 'Battle in orbit', lede: `Action was fought in orbit against ${them}.` }
   const t = tally(events, side)
+  if (own === null && side === holder && e.level === 0) {
+    if (t.theirs > 0 && t.ours === 0) return { subject: `Port batteries beat off ${word}`, lede: `${capitalise(them)} came for the hulls at the quay; the port's batteries had the better of them, and ${plural(t.theirs, 'hull')} of theirs ${t.theirs === 1 ? 'was' : 'were'} lost.` }
+    if (t.ours > 0) return { subject: `${capitalise(word)} raided the quay`, lede: `${capitalise(them)} came for the hulls at the quay under the port's guns; ${plural(t.ours, 'hull')} of ours ${t.ours === 1 ? 'was' : 'were'} taken or robbed.` }
+    return { subject: `${capitalise(word)} beaten off by the port`, lede: `${capitalise(them)} came for the hulls at the quay and the port's batteries drove them off.` }
+  }
   if (own && events.some((x) => x.kind === 'ship_fled' && x.ship?.id === own)) return { subject: `Defeated by ${word}`, lede: `${capitalise(them)} outnumbered us and I broke off.` }
   if (t.ours > 0 && t.theirs === 0) return { subject: `Defeated by ${word}`, lede: own ? `We were beaten by ${them}; ${plural(t.ours, 'hull')} lost.` : `Our forces in orbit were beaten by ${them}.` }
   if (t.theirs > 0 && t.ours === 0) return { subject: `Victory over ${word}`, lede: own ? `We engaged ${them} and had the better of it; ${plural(t.theirs, 'hull')} of theirs lost.` : `Our forces in orbit had the better of ${them}.` }
@@ -337,6 +354,10 @@ export function eventHeading(state: GameState, e: Event, events: readonly Event[
       return { subject: 'Prize under command', lede: eventText(e) }
     case 'haven_named':
       return { subject: 'Pirate haven named', lede: eventText(e) }
+    case 'pirates_harboured':
+      return { subject: 'Pirates harboured in port!', lede: `${e.person ? `Governor ${e.person} harbours pirates` : 'The port harbours pirates'}: ${uncapitalise(eventText(e))}` }
+    case 'haven_touted':
+      return { subject: 'A port that asks no questions', lede: eventText(e) }
     case 'dispatch_received':
       return { subject: 'Your letter received', lede: eventText(e) }
     case 'hull_departed':

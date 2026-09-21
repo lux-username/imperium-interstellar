@@ -2,7 +2,7 @@
  * Troops and passengers: what a transport takes aboard where its order is
  * read, and what happens when it puts them down. Detachments travel
  * cryofrozen and one in ten does not survive revival, so a force arrives
- * weaker than it left by an amount the desk learns only from the
+ * weaker than it left by an amount Government House learns only from the
  * commander's letter. On a friendly world troops reinforce the garrison;
  * on a hostile one they land under fire — cleanly only behind a beachhead
  * of marines — and the ground contest begins (see ./ground.ts, ./world.ts).
@@ -13,7 +13,7 @@
  */
 import { recordEvent } from './events'
 import { capitalOf, hostile } from './factions'
-import { troopCapacity } from './fleet'
+import { crewed, troopCapacity, wantsOfficer } from './fleet'
 import { CRYO_LOSS, landUnderFire, troopStrength } from './ground'
 import { nextFloat } from './rng'
 import type { GameState, Ship, Troops, WorldId } from './types'
@@ -76,7 +76,7 @@ export function unloadCargo(state: GameState, ship: Ship, at: WorldId, order: Tr
   }
   if (order.purpose === 'command') {
     const prize = Object.values(state.ships)
-      .filter((s) => s.faction === ship.faction && s.commander === null && s.role !== 'packet' && s.location.kind === 'world' && s.location.world === at)
+      .filter((s) => s.faction === ship.faction && wantsOfficer(s) && s.location.kind === 'world' && s.location.world === at)
       .sort((a, b) => (a.id < b.id ? -1 : 1))[0]
     if (!prize) return
     disembark()
@@ -143,7 +143,7 @@ export function disembarkAtHome(state: GameState, ship: Ship, at: WorldId): void
 
 /** Anyone of the ship's own side stranded on a quay that is not theirs — an unseated governor, say — comes aboard for a ride home. */
 export function takeOnWaiting(state: GameState, ship: Ship, at: WorldId): void {
-  if (ship.role === 'packet' || !ship.commander || state.worlds[at]?.faction === ship.faction) return
+  if (ship.role === 'packet' || !crewed(ship) || state.worlds[at]?.faction === ship.faction) return
   for (const c of Object.values(state.characters)) {
     if (c.faction !== ship.faction || c.post.kind !== 'unassigned' || c.post.at !== at) continue
     c.post = { kind: 'passenger', ship: ship.id }

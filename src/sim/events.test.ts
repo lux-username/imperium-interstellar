@@ -5,7 +5,7 @@ import { buildPlayerView } from './player'
 import type { WorldId } from './types'
 
 describe('events', () => {
-  it('a new game has no events yet: nothing that happened before the desk sat down is news', () => {
+  it('a new game has no events yet: nothing that happened before Government House sat down is news', () => {
     const s = newGame(7)
     expect(Object.keys(s.events)).toHaveLength(0)
   })
@@ -103,7 +103,7 @@ describe('events', () => {
     expect(s.events[recent.id]).toBeDefined()
   })
 
-  it('every report the desk holds names its channel, and rumours and mail are separate piles', () => {
+  it('every report Government House holds names its channel, and rumours and mail are separate piles', () => {
     const s = newGame(7)
     for (let i = 0; i < 8; i++) advanceWeek(s)
     const view = buildPlayerView(s)

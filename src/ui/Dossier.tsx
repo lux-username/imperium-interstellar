@@ -1,50 +1,49 @@
 /**
- * One world, as the desk knows it: the newest report, its age, who holds
+ * One world, as Government House knows it: the newest report, its age, who holds
  * the world in that telling, the hulls last seen there, every report ever
  * received about it, and the things the player can do — write to its
  * governor, or send a hull.
  */
 import { hexLabel } from '../sim/hex'
-import { expectedArrival, nextDeparture, route, type CharacterId, type PlayerView, type ReportId, type WorldId } from '../sim/view'
-import { ago, eventText, holderText, profileString, sailsText, signature, stateOf, weekLabel, worldName } from './format'
+import { expectedArrival, isGovernmentHouseObservation, nextDeparture, route, type CharacterId, type PlayerView, type ReportId, type ShipId, type WorldId } from '../sim/view'
+import { ago, conditionText, eventText, holderText, hullKind, profileString, sailsText, signature, stateOf, weekLabel, worldName } from './format'
 
 interface Props {
+  /** The picture being shown: the present, or what Government House now knows of an earlier week. */
   view: PlayerView
-  world: WorldId | null
+  /** The present, for the timetable and Government House's own mail, which are not a matter of belief. */
+  now: PlayerView
+  world: WorldId
   onRequest: (world: WorldId, governor: CharacterId) => void
   /** Open the orders dialog with this world as the destination. */
   onOrders: (world: WorldId) => void
+  onSelectShip: (ship: ShipId) => void
   /** Show the report a claim rests on. */
   onShowReport: (id: ReportId) => void
 }
 
-/** Reports the desk made itself (the capital, seen directly) have no message behind them. */
-function isDeskObservation(id: ReportId): boolean {
-  return id.startsWith('r-desk-') || id.startsWith('r-survey-')
-}
-
-export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Props) {
-  if (!world) return <p className="empty">Select a world on the map or a report in the inbox.</p>
+export function Dossier({ view, now, world, onRequest, onOrders, onSelectShip, onShowReport }: Props) {
   const entry = view.chart[world]
   const report = view.known.worlds[world]
   const snap = report?.snapshot.kind === 'world' ? report.snapshot.world : null
   const isCapital = world === view.capital
   const lanes = Object.fromEntries(view.lanes.map((l) => [l.id, l]))
   const path = route(lanes, view.capital, world)
-  const eta = path ? expectedArrival(lanes, path, view.week + 1) : null
+  const eta = path ? expectedArrival(lanes, path, now.week + 1) : null
   const replyEta = path && eta !== null ? expectedArrival(lanes, [...path].reverse(), eta) : null
   const state = snap ? stateOf(view, snap) : null
   const ours = snap?.faction === view.faction
+  const haven = view.havens.includes(world)
 
   const shipsHere = Object.values(view.known.ships)
     .filter((s) => s.ship.at === world)
     .sort((a, b) => b.observed - a.observed || (a.ship.name < b.ship.name ? -1 : 1))
-  const history = view.inbox.filter((r) => r.snapshot.kind === 'world' && r.snapshot.world.id === world)
-  const talk = view.rumours.filter((r) => r.snapshot.kind === 'event' && r.snapshot.event.at === world)
-  const pending = view.outgoing.filter((d) => d.envelope.destination.kind === 'world' && d.envelope.destination.world === world)
+  const history = now.inbox.filter((r) => r.snapshot.kind === 'world' && r.snapshot.world.id === world)
+  const talk = now.rumours.filter((r) => r.snapshot.kind === 'event' && r.snapshot.event.at === world)
+  const pending = now.outgoing.filter((d) => d.envelope.destination.kind === 'world' && d.envelope.destination.world === world)
   const touching = view.lanes.filter((l) => l.ends.includes(world))
-  // What prisoners have said about this world. Not all of it is true.
-  const named = view.inbox.flatMap((r) => r.events.filter((e) => e.kind === 'haven_named' && e.at === world).map((e) => ({ report: r, event: e })))
+  // What prisoners have said about this world, and what a captain saw. Not all of the former is true.
+  const named = now.inbox.flatMap((r) => r.events.filter((e) => (e.kind === 'haven_named' || e.kind === 'pirates_harboured') && e.at === world).map((e) => ({ report: r, event: e })))
 
   return (
     <div className="dossier">
@@ -52,15 +51,16 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
         {entry?.name ?? world} <span className="muted">{entry ? hexLabel(entry.hex) : ''}</span>
         {isCapital && <span className="tag">capital</span>}
         {state && !isCapital && <span className={`tag ${state}`}>{state === 'warlord' ? 'Warlord' : state}</span>}
+        {haven && <span className="tag pirates">pirate haven</span>}
       </h3>
 
-      {!snap && <p className="empty">No report about this world has ever reached the desk.</p>}
+      {!snap && <p className="empty">No report about this world has ever reached Government House.</p>}
       {snap && report && (
         <>
           <p className="asof">
-            {isCapital && 'Seen directly from the desk.'}
-            {!isCapital && isDeskObservation(report.id) && `As of ${weekLabel(report.observed)} — ${ago(view.week, report.observed)}, from ${signature(report)}.`}
-            {!isCapital && !isDeskObservation(report.id) && (
+            {isCapital && (report.observed === now.week ? 'Seen directly from Government House.' : `As seen from Government House, ${weekLabel(report.observed)}.`)}
+            {!isCapital && isGovernmentHouseObservation(report.id) && `As of ${weekLabel(report.observed)} — ${ago(view.week, report.observed)}, from ${signature(report)}.`}
+            {!isCapital && !isGovernmentHouseObservation(report.id) && (
               <>
                 As of {weekLabel(report.observed)} — {ago(view.week, report.observed)}, reported by {signature(report)}
                 {report.channel === 'agent' ? ' (a scout’s watch: nothing shaded)' : ''}.{' '}
@@ -77,18 +77,16 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
             <dd>
               {profileString(snap.profile)} <span className="muted">(port · size · atmo · hydro · pop · gov · law – tech)</span>
             </dd>
-            <dt>Settled by</dt>
-            <dd>{entry.cultures.join(', ')}</dd>
             <dt>Governor</dt>
             <dd>{snap.governorName ?? <span className="muted">none — unpopulated</span>}</dd>
             <dt>Garrison</dt>
             <dd>
               {snap.garrison} army{snap.marines > 0 ? `, ${snap.marines} marine` : ''} <span className="muted">detachments</span>
-              {isCapital && <span className="muted"> — the desk’s reserve; transports draw on it</span>}
+              {isCapital && <span className="muted"> — Government House’s reserve; transports draw on it</span>}
             </dd>
             <dt>Route</dt>
             <dd>
-              {isCapital && 'This is the desk.'}
+              {isCapital && 'This is Government House.'}
               {!isCapital && !path && <span className="warn">Off the lanes. No packet calls here; nothing will arrive unless a hull is sent.</span>}
               {!isCapital && path && (
                 <>
@@ -112,7 +110,7 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
                     const other = l.ends[0] === world ? l.ends[1] : l.ends[0]
                     return (
                       <div key={l.id}>
-                        to {worldName(view, other)} every {l.schedule.interval} wk; {sailsText(view.week, nextDeparture(l, world, view.week))}
+                        to {worldName(view, other)} every {l.schedule.interval} wk; {sailsText(now.week, nextDeparture(l, world, now.week))}
                       </div>
                     )
                   })}
@@ -154,13 +152,15 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
           <ul className="ships">
             {shipsHere.map((s) => (
               <li key={s.ship.id}>
-                {s.ship.name}{' '}
+                <button type="button" className="link" onClick={() => onSelectShip(s.ship.id)}>
+                  {s.ship.name}
+                </button>{' '}
                 <span className="muted">
-                  ({s.ship.faction === view.faction ? s.ship.role : `${view.factions[s.ship.faction]?.name ?? 'unknown'} ${s.ship.role}`}
-                  {s.ship.damaged ? ', damaged' : ''}) — {ago(view.week, s.observed)}
+                  ({hullKind(view, s.ship)}
+                  {conditionText(s.ship)}) — {weekLabel(s.observed)}, {ago(view.week, s.observed)}
                 </span>{' '}
-                {isDeskObservation(s.report) ? (
-                  <span className="muted">(seen from the desk)</span>
+                {isGovernmentHouseObservation(s.report) ? (
+                  <span className="muted">(seen from Government House)</span>
                 ) : (
                   <button type="button" className="link" onClick={() => onShowReport(s.report)}>
                     show report
@@ -190,11 +190,11 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
       )}
       {named.length > 0 && (
         <>
-          <h4>Named as a haven</h4>
+          <h4>Pirates and this port</h4>
           <ul className="history">
             {named.map(({ report: r, event: e }) => (
               <li key={`${r.id}-${e.id}`}>
-                <span className="muted">{weekLabel(e.week)}, {signature(r)}:</span> {e.person ?? 'prisoners'} named this world as a haven under questioning.{' '}
+                <span className="muted">{weekLabel(e.week)}, {signature(r)}:</span> {e.kind === 'haven_named' ? `${e.person ?? 'prisoners'} named this world as a haven under questioning.` : eventText(e)}{' '}
                 <button type="button" className="link" onClick={() => onShowReport(r.id)}>
                   show
                 </button>

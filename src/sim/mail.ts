@@ -7,12 +7,14 @@
  * for the next hull along the next leg. The arithmetic the whole game rests
  * on is: arrival = written + waiting + one week per jump.
  */
-import type { CharacterId, DispatchId, GameState, Mail, MailId, ReportId, Ship, ShipId, Week, World, WorldId } from './types'
+import type { CharacterId, DispatchId, FactionId, GameState, Mail, MailId, ReportId, Ship, ShipId, Week, World, WorldId } from './types'
 import type { Order } from './orders'
 import type { Channel, Dispatch, DispatchPayload, Envelope, Event, Recipient, Report, ShipSnapshot, Snapshot, Title } from './view'
+import { absorb, emptyBelief } from './belief'
 import { expectedArrival, route } from './chart'
 import { dispatchReceivedEvent } from './events'
 import { capitalOf, hostile } from './factions'
+import { burnsFuel } from './fleet'
 import { heading, type Occasion } from './letters'
 
 // ---------------------------------------------------------------------------
@@ -45,8 +47,8 @@ function envelope(state: GameState, origin: WorldId, destination: WorldId, sent:
 
 export function snapshotShip(ship: Ship, at: WorldId, holder?: Ship['faction']): ShipSnapshot {
   const { id, name, role, faction, commander } = ship
-  const fuel = holder === faction && role !== 'packet' && role !== 'merchant' ? ship.fuel : null
-  return { id, name, role, faction, at, commander, damaged: ship.damage > 0, fuel }
+  const fuel = holder === faction && burnsFuel(role) ? ship.fuel : null
+  return { id, name, role, faction, at, commander, damaged: ship.damage > 0, hulk: ship.strength > 0 && ship.damage >= ship.strength, fuel }
 }
 
 /** A world as seen from its own port this week: its state and every hull lying there. */
@@ -77,35 +79,41 @@ export interface Writing {
   occasion?: Occasion
   /** For a general or watch report: the week its span begins. */
   since?: Week
+  /** The hull the letter is written from, when the writer is not a person on the rolls: a scout's unnamed crew. */
+  ship?: ShipId
+  /** The writer's side, when the writer is not a person on the rolls. */
+  faction?: FactionId
 }
 
-/** The office a writer holds and, for a captain, the hull they write from. */
-function signature(state: GameState, observer: CharacterId): { title: Title; ship: ShipId | null; shipName: string | null } {
+/** The office a writer holds and, for a captain or a scout's crew, the hull they write from. */
+function signature(state: GameState, observer: CharacterId, ship?: ShipId): { title: Title; ship: ShipId | null; shipName: string | null } {
   const post = state.characters[observer]?.post
   if (post?.kind === 'governor') return { title: 'governor', ship: null, shipName: null }
   if (post?.kind === 'commander') return { title: 'captain', ship: post.ship, shipName: state.ships[post.ship]?.name ?? null }
+  if (ship) return { title: 'scout', ship, shipName: state.ships[ship]?.name ?? null }
   return { title: null, ship: null, shipName: null }
 }
 
 /**
  * An observer at `at` writes a report of `snapshot` addressed to their
- * faction's seat — the desk, for the player's people — and hands it to the
+ * faction's seat — Government House, for the player's people — and hands it to the
  * port. Returns the mail. If `at` is the seat itself the report is
  * delivered on the spot.
  */
 export function writeReport(state: GameState, observer: CharacterId, at: WorldId, snapshot: Snapshot, writing: Writing = {}): Mail {
-  const faction = state.characters[observer]?.faction
+  const faction = state.characters[observer]?.faction ?? writing.faction
   const home = (faction && capitalOf(state, faction)) ?? state.capital
   const events = writing.events ?? []
-  const who = signature(state, observer)
+  const who = signature(state, observer, writing.ship)
   const head = heading(state, { side: faction ?? state.characters[state.player].faction, ship: who.ship, at, week: state.week, snapshot, events, occasion: writing.occasion ?? 'letter', since: writing.since })
   const report: Report = {
     id: mint<ReportId>(state, 'r'),
     channel: writing.channel ?? 'official',
     observer,
-    observerName: writing.observerName ?? state.characters[observer]?.name ?? 'Unknown',
+    observerName: writing.observerName ?? state.characters[observer]?.name ?? who.shipName ?? 'Unknown',
     observerTitle: who.title,
     observerShip: who.shipName,
+    observerShipId: who.ship,
     subject: head.subject,
     lede: head.lede,
     observedAt: at,
@@ -183,7 +191,7 @@ function pathReaches(state: GameState, path: WorldId[], dest: WorldId): boolean 
  * A ship about to jump from `from` to `to` takes everything at `from` whose
  * next leg is that jump. A hull someone sent on purpose — with `path` the
  * run it is making — also takes a *copy* of every report lying at the port
- * for the desk (the original waits for its packet) and takes outright
+ * for Government House (the original waits for its packet) and takes outright
  * whatever has no scheduled way home; but only when its run calls at the
  * destination or at a port on lanes that reach it. A hull bound the wrong
  * way leaves the letters where they are.
@@ -267,7 +275,7 @@ export function unloadMail(state: GameState, ship: Ship, at: WorldId): void {
   }
 }
 
-/** Ports throw out reports nobody has collected beyond the newest few. The capital keeps everything: that is the desk's outgoing tray. */
+/** Ports throw out reports nobody has collected beyond the newest few. The capital keeps everything: that is Government House's outgoing tray. */
 export function pruneMail(state: GameState): void {
   const waiting: Record<string, Mail[]> = {}
   for (const mail of Object.values(state.mail)) {
@@ -298,7 +306,7 @@ export function characterLocation(state: GameState, character: CharacterId): Wor
  * Whether a dispatch can be handed over at `at`. A ship must actually be in
  * port. A person must be there too — except that a letter addressed to a
  * world's governor is delivered to the governor's office, whoever now sits
- * in it: the desk may not know the name has changed.
+ * in it: Government House may not know the name has changed.
  */
 function recipientAt(state: GameState, dispatch: Dispatch, at: WorldId): boolean {
   const { recipient, envelope: env } = dispatch
@@ -358,26 +366,22 @@ export function deliverHeld(state: GameState): void {
   }
 }
 
-/**
- * A report enters a reader's belief where it is newer than what they already
- * know. A world report updates the world and every hull it lists in port.
- */
+/** A report enters a reader's belief where it is newer than what they already know (see ./belief.ts). */
 export function learn(state: GameState, reader: CharacterId, report: Report): void {
-  const belief = (state.beliefs[reader] ??= { worlds: {}, ships: {} })
-  const sight = (ship: ShipSnapshot) => {
-    const known = belief.ships[ship.id]
-    if (!known || report.observed >= known.observed) belief.ships[ship.id] = { ship, observed: report.observed, report: report.id }
-  }
-  if (report.snapshot.kind === 'ship') {
-    sight(report.snapshot.ship)
-    return
-  }
-  // Talk is not knowledge: a rumour goes in the rumours pile and nowhere else, so the map never rests on it.
-  if (report.snapshot.kind === 'event') return
-  const world = report.snapshot.world
-  const known = belief.worlds[world.id]
-  if (!known || report.observed >= known.observed) belief.worlds[world.id] = report
-  for (const ship of world.ships) sight(ship)
+  absorb((state.beliefs[reader] ??= emptyBelief()), report)
+}
+
+/**
+ * A report that never travelled — talk heard at a port, Government House's own
+ * view from the window — is entered as delivered mail and read at once,
+ * so the reader's pile of reports holds everything their picture rests on.
+ */
+export function deliverDirect(state: GameState, reader: CharacterId, report: Report): Mail {
+  report.delivered = state.week
+  const mail: Mail = { id: mint<MailId>(state, 'm'), contents: { kind: 'report', report }, status: { kind: 'delivered', week: state.week } }
+  state.mail[mail.id] = mail
+  learn(state, reader, report)
+  return mail
 }
 
 /**

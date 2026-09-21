@@ -1,5 +1,5 @@
 /**
- * The inbox: every report that has reached the desk. Each row starts
+ * The inbox: every report that has reached Government House. Each row starts
  * compressed — who wrote it, a subject line, when it was sent and when it
  * arrived — and opens on click to show the full stamps and the report.
  * This week's arrivals are highlighted. Sortable by arrival or observation.
@@ -131,7 +131,7 @@ function body(view: PlayerView, r: Report): string {
     const w = r.snapshot.world
     const gov = w.governorName ? `Governor ${w.governorName}` : 'no governor'
     const hull = (s: Report['snapshot'] extends infer S ? (S extends { kind: 'world'; world: { ships: (infer H)[] } } ? H : never) : never) =>
-      `${s.name} (${s.faction === view.faction ? s.role : `${view.factions[s.faction]?.name ?? 'unknown'} ${s.role}`}${s.damaged ? ', damaged' : ''})`
+      `${s.name} (${s.faction === view.faction ? s.role : `${view.factions[s.faction]?.name ?? 'unknown'} ${s.role}`}${s.hulk ? ', a hulk' : s.damaged ? ', damaged' : ''})`
     const hulls = w.ships.length > 0 ? ` In port: ${w.ships.map(hull).join(', ')}.` : ' No hulls in port.'
     const marines = w.marines > 0 ? ` and ${w.marines} marine` : ''
     return `${gov}. The world is ${holderText(view, w)} (unrest ${w.unrest}); garrison ${w.garrison} army${marines} detachment${w.garrison + w.marines === 1 ? '' : 's'}.${hulls}`

@@ -1,11 +1,12 @@
 /** Small formatting helpers shared by the panes. Everything takes PlayerView data only. */
-import { unrestWord, worldStateOf, type Dispatch, type Order, type PlayerView, type Report, type ShipId, type Week, type WorldId, type WorldProfile, type WorldSnapshot, type WorldState } from '../sim/view'
+import { unrestWord, worldStateOf, type Dispatch, type FactionId, type Order, type PlayerView, type Report, type ShipId, type ShipSnapshot, type Week, type WorldId, type WorldProfile, type WorldSnapshot, type WorldState } from '../sim/view'
 
 // The wording of events is the sim's (see src/sim/letters.ts): the panes say only what a letter said.
 export { UNREST_WORDS, eventLabel, eventText, unrestWord } from '../sim/view'
 
-/** How a writer signs: "Governor Sarah Bradley", "Captain Amelia Middleton — Blackwing". A merchant or the docks sign as they are named. */
+/** How a writer signs: "Governor Sarah Bradley", "Captain Amelia Middleton — Blackwing", "Scout Wren" (her crew go unnamed). A merchant or the docks sign as they are named. */
 export function signature(r: Report): string {
+  if (r.observerTitle === 'scout') return `Scout ${r.observerShip ?? r.observerName}`
   const title = r.observerTitle === 'governor' ? 'Governor ' : r.observerTitle === 'captain' ? 'Captain ' : ''
   return `${title}${r.observerName}${r.observerShip ? ` — ${r.observerShip}` : ''}`
 }
@@ -14,11 +15,12 @@ export function signature(r: Report): string {
 export function headline(view: PlayerView, r: Report): string {
   if (r.channel === 'agent') return `${r.observerShip ?? r.observerName} watch report: ${r.subject}`
   if (r.observerTitle === 'captain') return `${r.observerShip ?? r.observerName} captain's report: ${r.subject}`
+  if (r.observerTitle === 'scout') return `${r.observerShip ?? r.observerName} scout's report: ${r.subject}`
   if (r.observerTitle === 'governor') return `${worldName(view, r.observedAt)} governor's report: ${r.subject}`
   return `${worldName(view, subjectWorld(r))}: ${r.subject}`
 }
 
-/** A world's state as the desk believes it, from the newest snapshot. */
+/** A world's state as Government House believes it, from the newest snapshot. */
 export function stateOf(view: PlayerView, snap: WorldSnapshot): WorldState {
   return worldStateOf(view.factions[snap.faction]?.kind, snap.contest, snap.unrest, snap.contest ? view.factions[snap.contest.attacker]?.kind : undefined)
 }
@@ -77,6 +79,27 @@ export function subjectWorld(report: Report): WorldId {
   return s.kind === 'world' ? s.world.id : s.kind === 'ship' ? s.ship.at : s.event.at
 }
 
+/** Whose colours a hull flies, for the map and the tags: ours, the Warlord's, pirate, independent, or nobody's we know. */
+export type Colours = 'own' | 'warlord' | 'pirates' | 'rebels' | 'other'
+
+export function coloursOf(view: PlayerView, faction: FactionId): Colours {
+  if (faction === view.faction) return 'own'
+  const kind = view.factions[faction]?.kind
+  return kind === 'rival' ? 'warlord' : kind === 'pirates' ? 'pirates' : kind === 'rebels' ? 'rebels' : 'other'
+}
+
+/** ", damaged" or ", a hulk — wants a dockyard": how a sighting describes her state, if it is worth a word. */
+export function conditionText(ship: ShipSnapshot): string {
+  return ship.hulk ? ', a hulk — wants a dockyard (B or better)' : ship.damaged ? ', damaged' : ''
+}
+
+/** "patrol craft", "Warlord escort", "pirate raider": a hull's kind with whose it is, unless ours. */
+export function hullKind(view: PlayerView, ship: ShipSnapshot): string {
+  const colours = coloursOf(view, ship.faction)
+  const whose = colours === 'own' ? '' : colours === 'warlord' ? 'Warlord ' : colours === 'pirates' ? 'pirate ' : colours === 'rebels' ? 'independent ' : `${view.factions[ship.faction]?.name ?? 'unknown'} `
+  return `${whose}${ship.role}`
+}
+
 /** Freshness bucket for colouring: how old is what we know. */
 export function freshness(week: Week, observed: Week): 'fresh' | 'aging' | 'stale' | 'ancient' {
   const n = week - observed
@@ -87,7 +110,7 @@ export function freshness(week: Week, observed: Week): 'fresh' | 'aging' | 'stal
 }
 
 
-/** An order as the desk would write it. */
+/** An order as Government House would write it. */
 export function orderText(view: PlayerView, order: Order): string {
   const target = order.kind === 'move' || order.kind === 'transport' ? order.to : order.kind === 'patrol' || order.kind === 'scout' ? order.world : null
   const then = 'then' in order && order.then?.kind === 'world' && order.then.world !== target ? `, then ${worldName(view, order.then.world)}` : ''
@@ -115,10 +138,32 @@ function transportCargo(order: Extract<Order, { kind: 'transport' }>): string {
   return `carry ${[troopText, person].filter(Boolean).join(' and ') || 'nothing'}`
 }
 
-/** The newest order the desk has sent to a ship, if any. */
+/** The newest order Government House has sent to a ship, if any. */
 export function lastOrderSent(view: PlayerView, ship: ShipId): Dispatch | null {
   for (const d of view.outgoing) {
     if (d.payload.kind === 'order' && d.payload.ship === ship) return d
   }
   return null
+}
+
+/** The worlds an order calls at, in turn, ending with the rendezvous if it names one. */
+export function orderStops(order: Order): WorldId[] {
+  const stops: WorldId[] = []
+  switch (order.kind) {
+    case 'hold':
+      break
+    case 'move':
+    case 'transport':
+      stops.push(order.to)
+      break
+    case 'patrol':
+    case 'scout':
+      stops.push(order.world)
+      break
+    case 'courier':
+      stops.push(...order.route)
+      break
+  }
+  if ('then' in order && order.then?.kind === 'world' && order.then.world !== stops[stops.length - 1]) stops.push(order.then.world)
+  return stops
 }

@@ -1,5 +1,5 @@
 /**
- * The hulls the desk starts with, and the officers who command them. All
+ * The hulls Government House starts with, and the officers who command them. All
  * of it sits in port at the capital on week 0 with no orders: the player's
  * first job is to send it somewhere. Numbers per spec.md → First campaign →
  * Starting position; tune there, not here.
@@ -22,14 +22,30 @@ export interface HullClass {
 /**
  * What each kind of hull is: patrol craft fight, escorts shepherd,
  * transports carry troops in numbers, scouts run and watch. A warship
- * takes a detachment in her spare berths; a scout has none.
+ * takes a detachment in her spare berths; a scout has none. A scout
+ * carries fuel scoops and skims what she burns, so her tanks are never
+ * on the books.
  */
 export const HULLS: Record<Exclude<ShipRole, 'packet' | 'merchant'>, HullClass> = {
   patrol: { role: 'patrol', jump: 2, strength: 3, fuel: 4, troops: 1 },
   escort: { role: 'escort', jump: 2, strength: 2, fuel: 4, troops: 1 },
   transport: { role: 'transport', jump: 2, strength: 1, fuel: 4, troops: 3 },
-  scout: { role: 'scout', jump: 2, strength: 0, fuel: 6, troops: 0 },
+  scout: { role: 'scout', jump: 2, strength: 0, fuel: 0, troops: 0 },
   raider: { role: 'raider', jump: 2, strength: 2, fuel: 4, troops: 1 },
+}
+
+/**
+ * Whether a hull can act on orders. A warship or transport needs an officer
+ * aboard; a scout's crew go unnamed and need none, so a scout is always
+ * crewed; packets run themselves and are nobody's to order.
+ */
+export function crewed(ship: Pick<Ship, 'commander' | 'role'>): boolean {
+  return ship.commander !== null || ship.role === 'scout'
+}
+
+/** A hull lying idle for want of an officer: a prize that is not a scout. */
+export function wantsOfficer(ship: Pick<Ship, 'commander' | 'role'>): boolean {
+  return ship.commander === null && ship.role !== 'scout' && ship.role !== 'packet' && ship.role !== 'merchant'
 }
 
 /** How many detachments a hull can carry. */
@@ -37,14 +53,14 @@ export function troopCapacity(role: ShipRole): number {
   return role === 'packet' || role === 'merchant' ? 0 : HULLS[role].troops
 }
 
-/** How many jumps a full tank gives a hull of this class. Packets carry none on the books: the lanes they serve keep them fuelled. */
+/** How many jumps a full tank gives a hull of this class. Packets carry none on the books: the lanes they serve keep them fuelled; scouts scoop their own. */
 export function fuelCapacity(role: ShipRole): number {
-  return role === 'packet' || role === 'merchant' ? 0 : HULLS[role].fuel
+  return burnsFuel(role) ? HULLS[role as keyof typeof HULLS].fuel : 0
 }
 
-/** Whether a hull of this class burns fuel at all. */
+/** Whether a hull of this class burns fuel at all. Packets are kept fuelled by their lanes; scouts have scoops. */
 export function burnsFuel(role: ShipRole): boolean {
-  return role !== 'packet' && role !== 'merchant'
+  return role !== 'packet' && role !== 'merchant' && role !== 'scout'
 }
 
 /** Hulls in port at the capital on week 0. */
@@ -106,8 +122,9 @@ export function startingFleet(rng: Rng, faction: FactionId, capital: WorldId): {
       const id = `s-${role}-${n}` as ShipId
       const cid = `c-cmdr-${n}` as CharacterId
       n += 1
-      const commander = newCharacter(rng, cid, faction, { kind: 'commander', ship: id })
-      characters[cid] = commander
+      // A scout's crew go unnamed: no officer is rolled for her.
+      const commander = role === 'scout' ? null : newCharacter(rng, cid, faction, { kind: 'commander', ship: id })
+      if (commander) characters[cid] = commander
       ships[id] = newShip(id, shipName(rng, role, taken), HULLS[role], faction, capital, commander)
     }
   }

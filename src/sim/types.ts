@@ -113,7 +113,7 @@ export interface World {
   marines: number
   /** A revolt or a landing being fought out, or null when the world is quiet. */
   contest: GroundContest | null
-  /** When the governor's office last wrote to the desk. Drives the "all quiet" letter. */
+  /** When the governor's office last wrote to Government House. Drives the "all quiet" letter. */
   lastLetter: Week
 }
 
@@ -145,14 +145,14 @@ export interface Lane {
  */
 export type ShipRole = 'packet' | 'scout' | 'patrol' | 'escort' | 'transport' | 'raider' | 'merchant'
 
-/** Hulls the desk can give orders to; the rest run themselves. A captured raider is as commandable as anything else. */
+/** Hulls Government House can give orders to; the rest run themselves. A captured raider is as commandable as anything else. */
 export const COMMANDABLE_ROLES: readonly ShipRole[] = ['scout', 'patrol', 'escort', 'transport', 'raider']
 
 /** What a ship does when its order runs out or something unexpected happens. Phase 1b adds a damage threshold. */
 export interface StandingOrders {
   /** Where to go when there is nothing else to do. Null: hold wherever the last order ended. */
   rally: WorldId | null
-  /** Disposition on meeting a hostile. Read by combat in Phase 1b; set by the desk now. */
+  /** Disposition on meeting a hostile. Read by combat in Phase 1b; set by Government House now. */
   onContact: Posture
 }
 
@@ -167,7 +167,7 @@ export interface Ship {
   strength: number
   /** Points of strength knocked off in action; repaired a point a week at a friendly port of class C or better. A hull with damage ≥ strength cannot fight. */
   damage: number
-  /** Jumps left in the tanks. Every jump costs one; a port of class B or better that is open to her fills them. Packets carry none and burn none: the lanes keep them fuelled. */
+  /** Jumps left in the tanks. Every jump costs one; a port of class C or better that is open to her fills them. Packets carry none and burn none: the lanes keep them fuelled. */
   fuel: number
   location: Location
   /** Null for a prize waiting for an officer, and for packets, which run themselves. */
@@ -183,7 +183,7 @@ export interface Ship {
   standing: StandingOrders
   /** Mail in the hold, by MailId. */
   mailbag: MailId[]
-  /** When her commander last read orders from the desk. A general report covers everything since. */
+  /** When her commander last read orders from Government House. A general report covers everything since. */
   lastOrders: Week
   /** What she has seen since those orders, for the general report: copies of the events at the worlds she lay at. Cleared when orders are read. */
   log: Event[]
@@ -217,7 +217,7 @@ export interface Traits {
 export interface Character {
   id: CharacterId
   name: string
-  /** The culture the name was drawn from, and the sex it was drawn for. Absent on seats that are not rolled people: the player's desk, the Warlord. */
+  /** The culture the name was drawn from, and the sex it was drawn for. Absent on seats that are not rolled people: the player's own seat, Government House, the Warlord. */
   culture?: string
   sex?: Sex
   faction: FactionId

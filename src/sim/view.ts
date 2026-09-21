@@ -39,6 +39,10 @@ export { expectedArrival, hexRoute, nextDeparture, route } from './chart'
 // anything a letter did not.
 export { UNREST_WORDS, eventLabel, eventText, unrestWord } from './letters'
 
+// The fold from reports to a picture, so Government House can ask what it now
+// knows about an earlier week with the same sums the sim uses.
+export { beliefFrom, knownHavens, mentionsShip } from './belief'
+
 // The public-knowledge primitives the UI needs, re-exported so it never has
 // a reason to reach into types.ts.
 export type {
@@ -78,6 +82,8 @@ export interface ShipSnapshot {
   commander: CharacterId | null
   /** Whether she looked knocked about. */
   damaged: boolean
+  /** Whether she looked a wreck: nothing left to fight with, wanting a dockyard. */
+  hulk: boolean
   /** Jumps in her tanks, when the port that saw her is her own side's and knows; null otherwise. */
   fuel: number | null
 }
@@ -89,7 +95,7 @@ export interface WorldSnapshot {
   profile: WorldProfile
   faction: FactionId
   governor: CharacterId | null
-  /** As the observer knew it; carried in the snapshot so the desk learns a new name only when a report says so. */
+  /** As the observer knew it; carried in the snapshot so Government House learns a new name only when a report says so. */
   governorName: string | null
   unrest: number
   garrison: number
@@ -138,7 +144,7 @@ export type EventKind =
   /** A landing was thrown back or a garrison overcome. `ship` null; `person` the new holder's name. */
   | 'world_taken'
   | 'landing_repulsed'
-  /** Hulls fought here. `ship` is the enemy's lead hull. */
+  /** Hulls fought here. `ship` is the intruders' lead hull — the side that is not the port's own; `level` is the armed strength the port's own side had, 0 when only the batteries answered, null when neither side was the port's. */
   | 'battle'
   | 'ship_fled'
   | 'ship_damaged'
@@ -155,6 +161,10 @@ export type EventKind =
   | 'officer_took_command'
   /** Under questioning a captured pirate named the world as a haven. `person` is the pirate; `at` the world named. Not always true. */
   | 'haven_named'
+  /** A pirate lay docked at the port and the port made no move to seize her. `ship` is the pirate, `level` how many, `person` the governor who let it pass. */
+  | 'pirates_harboured'
+  /** Talk put about by a governor that their port asks no questions of any hull that pays. Only ever a rumour; `person` is the governor. */
+  | 'haven_touted'
 
 /** Good or bad news. On an event this is the reading for a bystander; a party to it reads it by `against` and `favours`. */
 export type Valence = 'good' | 'bad' | 'neutral'
@@ -228,8 +238,14 @@ export function isRumour(channel: Channel): boolean {
   return channel === 'merchant' || channel === 'docks'
 }
 
-/** The office a writer holds. A governor writes for a world, a captain for a hull; a survey, the desk, a merchant and the docks hold none. */
-export type Title = 'governor' | 'captain' | null
+/** The office a writer holds. A governor writes for a world, a captain for a hull, a scout's unnamed crew for their scout; a survey, Government House, a merchant and the docks hold none. */
+export type Title = 'governor' | 'captain' | 'scout' | null
+
+/** Reports Government House made itself — the capital seen from the window, the survey it inherited — have no letter behind them. */
+export function isGovernmentHouseObservation(id: ReportId): boolean {
+  // 'r-desk-' and 'r-home-' are the prefixes earlier saves used for the same thing.
+  return id.startsWith('r-gh-') || id.startsWith('r-desk-') || id.startsWith('r-home-') || id.startsWith('r-survey-')
+}
 
 export interface Report {
   id: ReportId
@@ -239,6 +255,7 @@ export interface Report {
   observerTitle: Title
   /** The hull a captain writes from, by name. */
   observerShip: string | null
+  observerShipId: ShipId | null
   /** What the letter is about, in a few words, as the writer put it. */
   subject: string
   /** The first sentence: the most important news, in the writer's words. */
@@ -250,7 +267,7 @@ export interface Report {
   /** The events the writer chose to mention. A letter says what happened; the snapshot says how things stand. */
   events: Event[]
   envelope: Envelope
-  /** Set when it reaches the desk. Age at reading is `week - observed`. */
+  /** Set when it reaches Government House. Age at reading is `week - observed`. */
   delivered: Week | null
 }
 
@@ -302,7 +319,7 @@ export interface ChartEntry {
 }
 
 /**
- * A hull on the desk's books: what it is and who was given it. Where it is
+ * A hull on Government House's books: what it is and who was given it. Where it is
  * and what it is doing are belief, in `known.ships` and `outgoing`.
  */
 export interface RosterEntry {
@@ -310,15 +327,18 @@ export interface RosterEntry {
   name: string
   role: ShipRole
   jump: number
-  /** Null for a prize: taken in action and waiting for an officer to be sent out to her. */
+  /** Null for a prize waiting for an officer, and for a scout, whose crew go unnamed. */
+  commander: CharacterId | null
   commanderName: string | null
+  /** Taken in action and lying idle until an officer is sent out to her. Never a scout. */
+  prize: boolean
   /** Detachments she can carry; a fact of her class. */
   troops: number
   /** Jumps a full tank gives her; a fact of her class. */
   fuel: number
 }
 
-/** An officer at the capital without a post, whom the desk can send out to a seat or a prize. */
+/** An officer at the capital without a post, whom Government House can send out to a seat or a prize. */
 export interface PoolEntry {
   id: CharacterId
   name: string
@@ -348,14 +368,20 @@ export interface PlayerView {
   /** The player's own faction, so the UI can tell a friendly snapshot from a hostile one. */
   faction: FactionId
   known: Belief
-  /** The hulls the desk commands, as listed on its books. Their whereabouts are in `known.ships`. */
+  /** The hulls Government House commands, as listed on its books. Their whereabouts are in `known.ships`. */
   roster: RosterEntry[]
-  /** Officers at the capital with nothing to do, seen directly from the desk. */
+  /** Officers at the capital with nothing to do, seen directly from Government House. */
   pool: PoolEntry[]
-  /** Troops at the capital, seen directly from the desk. */
+  /** The names on the administration's rolls, by id: everyone Government House has ever appointed or could. Names only; where they are is belief. */
+  names: Record<CharacterId, string>
+  /** Troops at the capital, seen directly from Government House. */
   reserve: { army: number; marines: number }
-  /** Every official and agent report that has reached the desk, newest arrival first. This week's news is whatever has `delivered === week`. */
+  /** Every official and agent report that has reached Government House, newest arrival first. This week's news is whatever has `delivered === week`. */
   inbox: Report[]
+  /** What Government House saw for itself: the capital each week, and the survey it inherited. Not mail, but reports all the same, so a week gone by can be pictured. */
+  observations: Report[]
+  /** Worlds a letter has seen harbouring pirates, whose governor has not changed since as far as Government House knows. */
+  havens: WorldId[]
   /** What the docks are saying: merchant and docks-channel reports, kept apart from the mail so the two piles are never confused. */
   rumours: Report[]
   /** Dispatches the player has sent, newest first. Their fate is unknown until a report says otherwise. */

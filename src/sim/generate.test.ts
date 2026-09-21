@@ -16,7 +16,7 @@ describe('subsector generation', () => {
     expect(generateFromSeed(1).worlds).not.toEqual(generateFromSeed(2).worlds)
   })
 
-  it('places roughly 40% of hexes, all inside the grid, with unique names', () => {
+  it('places roughly a quarter of hexes — some twenty-odd worlds — all inside the grid, with unique names', () => {
     const counts: number[] = []
     for (let seed = 1; seed <= 40; seed++) {
       const { worlds } = generateFromSeed(seed)
@@ -32,7 +32,8 @@ describe('subsector generation', () => {
       }
     }
     const mean = counts.reduce((a, b) => a + b, 0) / counts.length
-    expect(mean / (SUBSECTOR_COLS * SUBSECTOR_ROWS)).toBeGreaterThan(0.33)
+    expect(mean / (SUBSECTOR_COLS * SUBSECTOR_ROWS)).toBeGreaterThan(0.22)
+    expect(mean / (SUBSECTOR_COLS * SUBSECTOR_ROWS)).toBeLessThan(0.35)
     expect(mean / (SUBSECTOR_COLS * SUBSECTOR_ROWS)).toBeLessThan(0.5)
   })
 

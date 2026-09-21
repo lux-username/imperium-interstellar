@@ -7,17 +7,17 @@
  * `docks` if it has been through several mouths.
  *
  * A rumour is delivered to whoever reads reports at a world it reaches:
- * the desk at the capital now, the Warlord's and the Council's seats later.
- * Bad news travels best.
+ * Government House at the capital now, the Warlord's and the Council's seats later.
+ * The docks have no preference: good news and bad become talk alike.
  */
 import { neighbours } from './chart'
 import { EVENT_MEMORY, valenceFor } from './events'
 import { capitalise, eventLabel, eventText } from './letters'
-import { learn } from './mail'
+import { deliverDirect } from './mail'
 import { personName, rollSex } from './names'
 import { raided } from './pirates'
 import { check, nextInt } from './rng'
-import type { CharacterId, GameState, Mail, MailId, ReportId, Week, WorldId } from './types'
+import type { CharacterId, GameState, ReportId, Week, WorldId } from './types'
 import type { Event, Report } from './view'
 
 /** Nobody in particular: the observer of a rumour that came off the docks. */
@@ -38,43 +38,63 @@ function hasPort(state: GameState, at: WorldId): boolean {
   return port === 'A' || port === 'B' || port === 'C'
 }
 
-/** A copy of an event as talk would have it: mostly right, sometimes off by a week or two, now and then pinned on the wrong world. */
+/**
+ * A copy of an event as talk would have it: mostly right, sometimes said
+ * to be a week or two older than it was, now and then pinned on the wrong
+ * world. Never newer: nothing is heard of before it happens.
+ */
 function degrade(state: GameState, event: Event): Event {
   const copy = JSON.parse(JSON.stringify(event)) as Event
-  if (check(state.rng, 9)) copy.week += nextInt(state.rng, -2, 2)
+  if (check(state.rng, 9)) copy.week -= nextInt(state.rng, 0, 2)
   if (check(state.rng, 11)) {
-    // Never the capital: the desk sees that for itself, and talk about it would only confuse.
+    // Never the capital: Government House sees that for itself, and talk about it would only confuse.
     const near = neighbours(state.lanes, event.at).filter((w) => w !== state.capital)
     if (near.length > 0) copy.at = near[nextInt(state.rng, 0, near.length - 1)]
   }
   return copy
 }
 
-/** This week's events at ports may become rumours. Bad news does so more readily than good; routine traffic never. */
+/**
+ * The 2d6 target for an event to become talk, by how interesting it is:
+ * its severity. A world risen or lost, a hull sunk (3) is told nearly
+ * always; a battle or a robbery (2) about a quarter of the time; a step of
+ * unrest or a new governor (1) now and then. The docks have no preference
+ * between good news and bad; routine traffic (0) never becomes talk.
+ */
+export function talkTarget(severity: number): number {
+  return severity >= 3 ? 7 : severity === 2 ? 9 : 11
+}
+
+/** This week's events at ports may become rumours, good and bad alike. */
 export function spawnRumours(state: GameState): void {
   // The docks tell it as the port's own side would hear it.
   const events = Object.values(state.events)
     .filter((e) => e.week === state.week && valenceFor(e, state.worlds[e.at].faction) !== 'neutral' && e.severity >= 1 && e.at !== state.capital && hasPort(state, e.at))
     .sort((a, b) => (a.id < b.id ? -1 : 1))
   for (const e of events) {
-    if (!check(state.rng, valenceFor(e, state.worlds[e.at].faction) === 'bad' ? 7 : 9)) continue
+    if (!check(state.rng, talkTarget(e.severity))) continue
     state.rumours.push({ event: degrade(state, e), origin: e.at, born: state.week, heard: { [e.at]: 0 } })
   }
 }
 
 /**
  * Talk spreads one lane at a time, with a chance each week per lane, and
- * is delivered wherever someone reads. Old rumours are forgotten.
+ * is delivered wherever someone reads. It goes no faster than a hull: a
+ * rumour born this week makes its first hop next week at the soonest, so
+ * nothing is heard of the week it happens. Old rumours are forgotten.
  */
 export function spreadRumours(state: GameState): void {
   state.rumours = state.rumours.filter((r) => state.week - r.born <= EVENT_MEMORY)
   for (const rumour of state.rumours) {
+    if (rumour.born >= state.week) continue
     const froms = Object.keys(rumour.heard).sort() as WorldId[]
     for (const from of froms) {
       for (const to of neighbours(state.lanes, from)) {
         if (to in rumour.heard) continue
         // Merchants think twice about a lane with a raider lying at either end, and their talk goes with them.
-        if (!check(state.rng, raided(state, from) || raided(state, to) ? 11 : 9)) continue
+        // The better the story, the further it goes: a serious piece of news hops a lane more readily.
+        const dm = rumour.event.severity >= 3 ? 1 : 0
+        if (!check(state.rng, raided(state, from) || raided(state, to) ? 11 : 9, dm)) continue
         rumour.heard[to] = rumour.heard[from] + 1
         hearRumour(state, rumour, to)
       }
@@ -102,6 +122,7 @@ function hearRumour(state: GameState, rumour: Rumour, at: WorldId): void {
     observerName: channel === 'merchant' ? merchantName(state, at) : 'the docks',
     observerTitle: null,
     observerShip: null,
+    observerShipId: null,
     subject: capitalise(eventLabel(rumour.event)),
     lede: eventText(rumour.event),
     observedAt: rumour.event.at,
@@ -112,8 +133,5 @@ function hearRumour(state: GameState, rumour: Rumour, at: WorldId): void {
     delivered: state.week,
   }
   state.nextId += 1
-  const mail: Mail = { id: `m-${state.nextId}` as MailId, contents: { kind: 'report', report }, status: { kind: 'delivered', week: state.week } }
-  state.nextId += 1
-  state.mail[mail.id] = mail
-  learn(state, reader, report)
+  deliverDirect(state, reader, report)
 }

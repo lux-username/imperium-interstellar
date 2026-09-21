@@ -6,13 +6,13 @@
  */
 import { hexLabel } from './hex'
 import { route } from './chart'
-import { chartLanes, packetShips } from './lanes'
-import { deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
+import { packetShips } from './lanes'
+import { deliverDirect, deliverHeld, learn, postDispatch, pruneMail, snapshotWorld } from './mail'
 import { governorsWrite } from './governors'
 import { spawnRumours, spreadRumours } from './rumours'
 import { afterActionReports, departShips, impoundAtPorts, landShips, logWitnessed, shipRoute, unloadArrivals } from './ships'
 import { fightAtWorlds, repairShips } from './combat'
-import { pirateOrders, placePirates, seizePirates, spawnPirates } from './pirates'
+import { harbourPirates, pirateOrders, pirateTalk, placePirates, seizePirates, spawnPirates, toutHavens } from './pirates'
 import { placeWarlord, warlordActs } from './warlord'
 import { THE_WARLORD, WARLORD, capitalOf } from './factions'
 import { hexDistance } from './hex'
@@ -20,7 +20,7 @@ import { forgetOldEvents, governorChangedEvent, unrestEvent, unrestIsNews } from
 import { beginRevolt, fightContests, regrowGarrisons } from './world'
 import { newCharacter } from './characters'
 import { createRng, roll } from './rng'
-import { generateWorlds, ADMINISTRATION, PLAYER } from './generate'
+import { generateSubsector, ADMINISTRATION, PLAYER } from './generate'
 import { startingFleet } from './fleet'
 import type { CharacterId, GameState, Mail, ShipId, StandingOrders, World, WorldId } from './types'
 import type { Order } from './orders'
@@ -31,8 +31,7 @@ import type { Report, ReportId } from './view'
 
 export function newGame(seed: number): GameState {
   const rng = createRng(seed)
-  const { worlds, characters, factions, capital } = generateWorlds(rng)
-  const lanes = chartLanes(rng, worlds)
+  const { worlds, characters, factions, capital, lanes } = generateSubsector(rng)
   const ships = packetShips(rng, lanes)
   const fleet = startingFleet(rng, ADMINISTRATION, capital)
   Object.assign(ships, fleet.ships)
@@ -69,7 +68,7 @@ export function newGame(seed: number): GameState {
 }
 
 /**
- * The desk inherits a survey of the subsector from the previous
+ * Government House inherits a survey of the subsector from the previous
  * administration. Every world is on it, but the entries are old — a few
  * weeks for worlds on the capital's packet routes, a year or more for
  * worlds nobody visits — and the worlds have moved on since.
@@ -112,6 +111,7 @@ function surveyEntry(state: GameState, reader: CharacterId, home: WorldId, world
     observerName: world.governor ? state.characters[world.governor].name : 'Survey of the previous administration',
     observerTitle: world.governor ? 'governor' : null,
     observerShip: null,
+    observerShipId: null,
     subject: 'Survey entry',
     lede: 'An entry from the survey of the previous administration.',
     observedAt: world.id,
@@ -121,7 +121,9 @@ function surveyEntry(state: GameState, reader: CharacterId, home: WorldId, world
     envelope: { origin: world.id, destination: { kind: 'world', world: home }, sent: -age, route: path ?? [world.id], eta: 0 },
     delivered: 0,
   }
-  learn(state, reader, report)
+  // Government House keeps its survey with its mail, so it can look back; the Warlord's is only his picture.
+  if (reader === PLAYER) deliverDirect(state, reader, report)
+  else learn(state, reader, report)
 }
 
 // ---------------------------------------------------------------------------
@@ -141,6 +143,7 @@ export function advanceWeek(state: GameState): void {
   const landed = landShips(state)
   fightAtWorlds(state, landed)
   seizePirates(state)
+  harbourPirates(state, landed)
   impoundAtPorts(state, landed)
   unloadArrivals(state, landed)
   afterActionReports(state)
@@ -152,7 +155,9 @@ export function advanceWeek(state: GameState): void {
   governorsWrite(state)
   warlordActs(state)
   spawnPirates(state)
+  pirateTalk(state)
   pirateOrders(state)
+  toutHavens(state)
   spawnRumours(state)
   spreadRumours(state)
   repairShips(state)
@@ -167,7 +172,7 @@ export function advanceWeek(state: GameState): void {
  * roll and settles on a low one, more readily where the garrison is thin
  * and less readily while a fight is on; at the top of the scale the world
  * rises (see ./world.ts). Now and then a governor dies, resigns, or is
- * quietly replaced by their own council, and the desk hears of it only
+ * quietly replaced by their own council, and Government House hears of it only
  * when the new one writes.
  */
 export function driftWorld(state: GameState, world: World, record = true): void {
@@ -199,19 +204,21 @@ function replaceGovernor(state: GameState, world: World, record: boolean): void 
 
 /**
  * The player sits above the capital and sees it directly: no mail, no delay.
- * Recorded straight into belief rather than the inbox, since it is not news.
+ * Kept with the reports rather than shown as news, so Government House can look
+ * back at what lay in port on any week.
  */
 function observeCapital(state: GameState): void {
   const capital = state.worlds[state.capital]
   const report: Report = {
-    id: `r-desk-${state.week}` as ReportId,
+    id: `r-gh-${state.week}` as ReportId,
     channel: 'official',
     observer: PLAYER,
     observerName: state.characters[PLAYER].name,
     observerTitle: null,
     observerShip: null,
+    observerShipId: null,
     subject: 'The capital',
-    lede: 'Seen from the desk.',
+    lede: 'Seen from Government House.',
     observedAt: capital.id,
     observed: state.week,
     snapshot: snapshotWorld(state, capital),
@@ -219,7 +226,7 @@ function observeCapital(state: GameState): void {
     envelope: { origin: capital.id, destination: { kind: 'world', world: capital.id }, sent: state.week, route: [capital.id], eta: state.week },
     delivered: state.week,
   }
-  learn(state, PLAYER, report)
+  deliverDirect(state, PLAYER, report)
 }
 
 // ---------------------------------------------------------------------------
@@ -236,7 +243,7 @@ export function requestReport(state: GameState, world: WorldId, governor: Charac
 
 /**
  * Give a ship an order. The dispatch goes to `address` — by default where
- * the desk last saw the hull, the capital if nowhere else — and is held
+ * Government House last saw the hull, the capital if nowhere else — and is held
  * there until the ship turns up. A ship in port at the capital reads it at
  * once. New standing orders may ride along.
  */
@@ -264,7 +271,7 @@ export function sendByCourier(state: GameState, courier: ShipId, mail: Mail): bo
   if (!path) return false
   env.route = path
   env.eta = state.week + path.length // sails next week, one jump a week
-  // The run is an order like any other, so it shows on the desk's books; in port here, it is read at once.
+  // The run is an order like any other, so it shows on Government House's books; in port here, it is read at once.
   const run: Order = { kind: 'move', to: dest, then: { kind: 'world', world: state.capital } }
   postDispatch(state, { kind: 'ship', ship: courier }, state.capital, { kind: 'order', ship: courier, order: run })
   return true
