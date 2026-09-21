@@ -221,6 +221,11 @@ Things this campaign requires beyond what *Requirements* already lists:
 
 None at present. The twelve raised while building 1b were settled on 2026-09-20 (decisions.md, *Settling the 1b questions*) and folded into *Combat*, *Threats → Pirates*, *Endings*, *Consequences → Troops* and *Prizes*, and *Information model*.
 
+**Needs fleshing out** (deliberately vague until a later pass; tracked as issue #55):
+
+- **Economy / money.** The trade-route model above says where revenue comes from, not how much, nor what it buys. Upkeep, treasury, specie travelling as mail, extractive taxation, bonus pay — and everything that waits on money: bribes and fear (treason), aid requests, tribute. Phase 1c makes a first cut (#35).
+- **Recruiting troops.** Army and marine detachments have no source yet: the desk's reserve is set at generation and only ever spent; the Warlord's seat raises a detachment a month and a marine every eight weeks by fiat. Both want a real source — population, money, time — and a way for the desk to ask for more.
+
 **Standing principle:** an event records whom it went *against* and whom it *favoured*, and every reader — a governor deciding whether to write, the docks deciding whether to talk — judges it from their own side, so the Warlord's people see his losses as losses and the desk's as good news. The choices subordinates make about what to write, when, and to whom must stay realistic for who they are and whom they serve; revisit whenever a new kind of subordinate decision is added.
 
 ## Architecture
