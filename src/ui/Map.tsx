@@ -34,11 +34,11 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
 
   const chosenShip = selected?.kind === 'ship' ? selected.id : null
 
-  // Hulls last seen at each world: the one picked out first, then ours, then by name.
+  // Hulls last seen at each world, ours first, then by name. The order never changes with the selection, so the ring lands on the triangle that was clicked.
   const shipsSeen: Record<string, Sighting[]> = {}
   for (const s of Object.values(view.known.ships)) (shipsSeen[s.ship.at] ??= []).push(s)
   for (const pile of Object.values(shipsSeen)) {
-    pile.sort((a, b) => Number(b.ship.id === chosenShip) - Number(a.ship.id === chosenShip) || Number(b.ship.faction === view.faction) - Number(a.ship.faction === view.faction) || (a.ship.name < b.ship.name ? -1 : 1))
+    pile.sort((a, b) => Number(b.ship.faction === view.faction) - Number(a.ship.faction === view.faction) || (a.ship.name < b.ship.name ? -1 : 1))
   }
   const havens = new Set(view.havens)
   const lanes = Object.fromEntries(view.lanes.map((l) => [l.id, l]))
@@ -112,7 +112,11 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
           const fresh = report ? freshness(view.week, report.observed) : 'ancient'
           const port = snap?.profile.starport ?? '?'
           const radius = port === 'A' ? 9 : port === 'B' ? 8 : port === 'C' ? 7 : 6
-          const ships = shipsSeen[entry.id] ?? []
+          const pile = shipsSeen[entry.id] ?? []
+          // The first few, plus the chosen hull if she is further down the row: she is drawn at the end so the ring has something to sit on.
+          const hidden = pile.slice(SHOWN)
+          const ships = [...pile.slice(0, SHOWN), ...hidden.filter((s) => s.ship.id === chosenShip)]
+          const more = hidden.filter((s) => s.ship.id !== chosenShip).length
           const state = snap ? stateOf(view, snap) : 'unknown'
           const isSelected = selected?.kind === 'world' && selected.id === entry.id
           const cls = ['world', fresh, state, isCapital ? 'capital' : '', isSelected ? 'selected' : '', havens.has(entry.id) ? 'haven' : ''].join(' ')
@@ -141,7 +145,7 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
               </g>
               {ships.length > 0 && (
                 <g className="ships">
-                  {ships.slice(0, SHOWN).map((s, i) => {
+                  {ships.map((s, i) => {
                     const chosen = chosenShip === s.ship.id
                     const sx = x + radius + 4 + i * 6
                     return (
@@ -155,9 +159,9 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
                       </g>
                     )
                   })}
-                  {ships.length > SHOWN && (
-                    <text x={x + radius + 4 + SHOWN * 6} y={y + 3} className="more">
-                      +{ships.length - SHOWN}
+                  {more > 0 && (
+                    <text x={x + radius + 4 + ships.length * 6} y={y + 3} className="more">
+                      +{more}
                     </text>
                   )}
                 </g>
