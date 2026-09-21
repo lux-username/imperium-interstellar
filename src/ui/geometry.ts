@@ -28,7 +28,7 @@ export function hexPoints(cx: number, cy: number, r: number): string {
 
 /** Ground-truth markers the god view may lay over the map. Computed elsewhere; the map only draws them. */
 export interface Overlay {
-  ships: { hex: Hex; label: string; inTransit: boolean }[]
+  ships: { hex: Hex; label: string; inTransit: boolean; faction: string }[]
   unrest: Record<WorldId, number>
 }
 

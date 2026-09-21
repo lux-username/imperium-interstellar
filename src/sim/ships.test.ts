@@ -26,8 +26,13 @@ function fleet(): GameState {
     faction: s.characters[s.player].faction,
     jump: 2,
     strength: 3,
+    damage: 0,
+    fuel: 4,
     location: { kind: 'world', world: C },
     commander: cmdr,
+    troops: { army: 0, marines: 0 },
+    passengers: [],
+    havens: null,
     order: null,
     standing: { rally: C, onContact: 'favourable' },
     mailbag: [],
@@ -84,10 +89,10 @@ describe('ordered hulls', () => {
     // Zed's governor wrote long ago; nothing ever called.
     const stranded = governorLetter(s, s.worlds[Z], [])!
     expect(stranded.status).toEqual({ kind: 'awaiting_carrier', at: Z })
-    patrol(s).order = { kind: 'scout', world: Z, then: null, lookedOn: null }
+    patrol(s).order = { kind: 'scout', world: Z, weeks: 1, then: null, lookedOn: null }
     runUntil(s, (g) => at(g) === Z, 10)
     const arrived = s.week
-    expect(patrol(s).order).toEqual({ kind: 'scout', world: Z, then: null, lookedOn: arrived }) // the week is spent looking
+    expect(patrol(s).order).toEqual({ kind: 'scout', world: Z, weeks: 1, then: null, lookedOn: arrived }) // the week is spent looking
     advanceWeek(s)
     expect(patrol(s).location.kind).toBe('transit')
     expect(stranded.status.kind).toBe('aboard')
@@ -121,7 +126,7 @@ describe('ordered hulls', () => {
     const s = newGame(9)
     const view = buildPlayerView(s)
     expect(view.roster).toHaveLength(14)
-    expect(view.roster.map((r) => r.role).sort()).toEqual(['courier', 'courier', 'courier', 'courier', 'escort', 'escort', 'patrol', 'patrol', 'patrol', 'patrol', 'scout', 'scout', 'transport', 'transport'])
+    expect(view.roster.map((r) => r.role).sort()).toEqual(['escort', 'escort', 'patrol', 'patrol', 'patrol', 'patrol', 'scout', 'scout', 'scout', 'scout', 'scout', 'scout', 'transport', 'transport'])
     for (const entry of view.roster) {
       expect(entry.commanderName).not.toBeNull()
       expect(view.known.ships[entry.id]?.ship.at).toBe(s.capital)
@@ -207,7 +212,8 @@ describe('ordered hulls', () => {
     patrol(s).location = { kind: 'world', world: Z }
     patrol(s).order = { kind: 'hold' }
     const courierId = 's-courier' as ShipId
-    s.ships[courierId] = { ...patrol(s), id: courierId, name: 'Swift', role: 'courier', strength: 0, location: { kind: 'world', world: C }, commander: null, order: null, mailbag: [] }
+    s.characters['c-swift' as CharacterId] = { id: 'c-swift' as CharacterId, name: 'Swift', faction: patrol(s).faction, post: { kind: 'commander', ship: courierId }, traits: playerTraits() }
+    s.ships[courierId] = { ...patrol(s), id: courierId, name: 'Swift', role: 'scout', strength: 0, location: { kind: 'world', world: C }, commander: 'c-swift' as CharacterId, order: null, mailbag: [] }
     const order = orderShip(s, 's-patrol' as ShipId, { kind: 'move', to: C, then: null }, Z)
     expect(order.contents.kind === 'dispatch' && order.contents.dispatch.envelope.eta).toBeNull() // no packet goes to Z
     expect(sendByCourier(s, courierId, order)).toBe(true)

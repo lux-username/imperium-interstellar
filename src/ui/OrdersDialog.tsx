@@ -1,13 +1,14 @@
 /**
  * The one place orders are written. Opened from a world ("send a hull
- * here") or from a ship ("give orders"), it asks the same six things
- * either way: which hull, where to send the order, where the hull should
- * go, what to do there, its disposition if it meets trouble, and where to
- * go afterwards. The order leaves as a dispatch to the address chosen —
- * by default wherever the desk last saw the ship.
+ * here") or from a ship ("give orders"), it asks the same things either
+ * way: which hull, where to send the order, where the hull should go, what
+ * to do there — hold, patrol, look, watch, or carry troops and people —
+ * its disposition if it meets trouble, and where to go afterwards. The
+ * order leaves as a dispatch to the address chosen — by default wherever
+ * the desk last saw the ship.
  */
 import { useMemo, useState } from 'react'
-import { expectedArrival, hexRoute, route, type Order, type PlayerView, type Posture, type ShipId, type StandingOrders, type WorldId } from '../sim/view'
+import { expectedArrival, hexRoute, route, type CharacterId, type Order, type PlayerView, type Posture, type Purpose, type ShipId, type StandingOrders, type WorldId } from '../sim/view'
 import { hexLabel } from '../sim/hex'
 import { ago, lastOrderSent, orderText, weekLabel, worldName } from './format'
 
@@ -23,7 +24,7 @@ interface Props {
   onClose: () => void
 }
 
-type Task = 'hold' | 'patrol' | 'scout'
+type Task = 'hold' | 'patrol' | 'look' | 'watch' | 'transport'
 
 const POSTURES: { value: Posture; label: string }[] = [
   { value: 'never', label: 'never engage — run' },
@@ -45,6 +46,11 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const [destination, setDestination] = useState<WorldId | ''>(draft.destination ?? '')
   const [task, setTask] = useState<Task>('patrol')
   const [weeks, setWeeks] = useState(4)
+  const [watchWeeks, setWatchWeeks] = useState(4)
+  const [army, setArmy] = useState(0)
+  const [marines, setMarines] = useState(0)
+  const [passenger, setPassenger] = useState<CharacterId | ''>('')
+  const [purpose, setPurpose] = useState<Purpose>('land')
   const [posture, setPosture] = useState<Posture>('favourable')
   const [afterwards, setAfterwards] = useState<'return' | 'stay'>('return')
   const [rally, setRally] = useState<WorldId>(view.capital)
@@ -56,6 +62,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
     if (!addressEdited) setAddress(lastSeenAt(id))
   }
 
+  const entry = ship ? view.roster.find((r) => r.id === ship) : null
   const seen = ship ? view.known.ships[ship] : null
   const seenText = (id: ShipId) => {
     const s = view.known.ships[id]
@@ -79,24 +86,38 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   // A courier in port here could carry the orders itself: needed where no packet goes, worth it where it would land sooner.
   const couriers = view.roster.filter((r) => {
     const s = view.known.ships[r.id]
-    return r.id !== ship && s?.ship.at === view.capital && s.observed === view.week && !lastOrderSent(view, r.id)
+    return r.id !== ship && r.commanderName !== null && s?.ship.at === view.capital && s.observed === view.week && !lastOrderSent(view, r.id)
   })
-  const chosenCourier = couriers.find((c) => c.id === courier) ?? couriers.find((c) => c.role === 'courier') ?? couriers[0] ?? null
+  const chosenCourier = couriers.find((c) => c.id === courier) ?? couriers.find((c) => c.role === 'scout') ?? couriers[0] ?? null
   const courierPath = chosenCourier && address !== view.capital ? hexRoute(view.chart, view.capital, address, chosenCourier.jump) : null
   const courierLands = courierPath ? view.week + courierPath.length : null
   const courierOffered = couriers.length > 0 && address !== view.capital && (landsAt === null || (courierLands !== null && courierLands < landsAt - 1))
   const useCourier = courierOffered && (byCourier || landsAt === null) && chosenCourier !== null && courierPath !== null
+
+  // Cargo is taken aboard wherever the order is read: from the desk's reserve here, from that world's garrison elsewhere.
+  const loadsHere = address === view.capital
+  const capacity = entry?.troops ?? 0
+  const carriesTroops = capacity > 0
+  const maxArmy = loadsHere ? Math.min(capacity, view.reserve.army) : capacity
+  const maxMarines = loadsHere ? Math.min(capacity - army, view.reserve.marines) : capacity - army
+  const passengers = loadsHere ? view.pool : []
+  const needsPassenger = purpose !== 'land'
 
   const then = afterwards === 'return' ? { kind: 'world' as const, world: rally } : null
   const order: Order | null = !destination
     ? null
     : task === 'hold'
       ? { kind: 'move', to: destination, then }
-      : task === 'scout'
-        ? { kind: 'scout', world: destination, then, lookedOn: null }
-        : { kind: 'patrol', world: destination, weeks, posture, then, began: null }
+      : task === 'look'
+        ? { kind: 'scout', world: destination, weeks: 1, then, lookedOn: null }
+        : task === 'watch'
+          ? { kind: 'scout', world: destination, weeks: watchWeeks, then, lookedOn: null }
+          : task === 'transport'
+            ? { kind: 'transport', army: carriesTroops ? army : 0, marines: carriesTroops ? marines : 0, passenger: passenger || null, purpose, to: destination, then, loaded: false }
+            : { kind: 'patrol', world: destination, weeks, posture, then, began: null }
 
-  const deliverable = readAtOnce || landsAt !== null || useCourier
+  const cargoOk = task !== 'transport' || (needsPassenger ? passenger !== '' : carriesTroops ? army + marines > 0 : passenger !== '')
+  const deliverable = (readAtOnce || landsAt !== null || useCourier) && cargoOk
 
   const submit = () => {
     if (!ship || !order || !deliverable) return
@@ -119,20 +140,19 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
           <span>Hull</span>
           <select value={ship} onChange={(e) => setShip(e.target.value as ShipId | '')}>
             <option value="">— choose a ship —</option>
-            {view.roster.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} ({r.role}) — {seenText(r.id)}
-                {lastOrderSent(view, r.id) ? ' · has orders' : ''}
-              </option>
-            ))}
+            {view.roster
+              .filter((r) => r.commanderName !== null)
+              .map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name} ({r.role}) — {seenText(r.id)}
+                  {lastOrderSent(view, r.id) ? ' · has orders' : ''}
+                </option>
+              ))}
           </select>
           {ship && (
             <small className="muted">
               {seen ? `Last known location: ${worldName(view, seen.ship.at)} (${seen.observed === view.week ? 'seen this week' : ago(view.week, seen.observed)}).` : 'Never seen.'}{' '}
-              {(() => {
-                const prior = lastOrderSent(view, ship)
-                return prior && prior.payload.kind === 'order' ? `Standing orders sent ${weekLabel(prior.envelope.sent)}: ${orderText(view, prior.payload.order)}.` : 'No orders sent.'
-              })()}
+              {prior && prior.payload.kind === 'order' ? `Standing orders sent ${weekLabel(prior.envelope.sent)}: ${orderText(view, prior.payload.order)}.` : 'No orders sent.'}
             </small>
           )}
         </label>
@@ -205,8 +225,58 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
             <input type="number" min={1} max={52} value={weeks} onChange={(e) => setWeeks(Math.max(1, Number.parseInt(e.target.value, 10) || 1))} /> wk
           </label>
           <label>
-            <input type="radio" name="task" checked={task === 'scout'} onChange={() => setTask('scout')} /> look for a week and report
+            <input type="radio" name="task" checked={task === 'look'} onChange={() => setTask('look')} /> look for a week and report
           </label>
+          <label>
+            <input type="radio" name="task" checked={task === 'watch'} onChange={() => setTask('watch')} /> lie off and watch for{' '}
+            <input type="number" min={2} max={20} value={watchWeeks} onChange={(e) => setWatchWeeks(Math.min(20, Math.max(2, Number.parseInt(e.target.value, 10) || 2)))} /> wk, then send the full
+            truth
+            {entry && entry.role !== 'scout' && <small className="muted"> (any hull can watch; only a scout is likely to get clear if warships come)</small>}
+          </label>
+          <label>
+            <input type="radio" name="task" checked={task === 'transport'} onChange={() => setTask('transport')} /> put down troops or a passenger
+          </label>
+          {task === 'transport' && (
+            <div className="cargo">
+              {carriesTroops ? (
+                <div>
+                  army{' '}
+                  <input type="number" min={0} max={maxArmy} value={army} onChange={(e) => setArmy(Math.min(maxArmy, Math.max(0, Number.parseInt(e.target.value, 10) || 0)))} /> marines{' '}
+                  <input type="number" min={0} max={maxMarines} value={marines} onChange={(e) => setMarines(Math.min(maxMarines, Math.max(0, Number.parseInt(e.target.value, 10) || 0)))} />{' '}
+                  <small className="muted">
+                    detachments, {capacity} at most for a {entry?.role}.{' '}
+                    {loadsHere ? `The reserve here: ${view.reserve.army} army, ${view.reserve.marines} marine.` : 'Taken from the garrison where the order is read.'} One in ten does not wake from the passage. On a
+                    world held against us, {2} marines make a beachhead; fewer and the landing costs a detachment.
+                  </small>
+                </div>
+              ) : (
+                <small className="muted">A scout has no berths for troops; she can take a passenger.</small>
+              )}
+              <div>
+                passenger{' '}
+                <select value={passenger} onChange={(e) => setPassenger(e.target.value as CharacterId | '')} disabled={passengers.length === 0}>
+                  <option value="">{passengers.length === 0 ? (loadsHere ? '— nobody in the pool —' : '— only from the capital —') : '— nobody —'}</option>
+                  {passengers.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label>
+                  <input type="radio" name="purpose" checked={purpose === 'land'} onChange={() => setPurpose('land')} /> reinforce the garrison, or assault it if the world is held against us
+                </label>
+                <label>
+                  <input type="radio" name="purpose" checked={purpose === 'appoint'} onChange={() => setPurpose('appoint')} /> the passenger takes the governor’s seal{' '}
+                  <small className="muted">(an unwilling incumbent gives way only to marines)</small>
+                </label>
+                <label>
+                  <input type="radio" name="purpose" checked={purpose === 'command'} onChange={() => setPurpose('command')} /> the passenger takes command of a prize lying there
+                </label>
+              </div>
+            </div>
+          )}
         </fieldset>
 
         <label className="field">
@@ -235,7 +305,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
 
         {order && ship && (
           <p className="summary">
-            {view.roster.find((r) => r.id === ship)?.name}: {orderText(view, order)}; {POSTURES.find((p) => p.value === posture)?.label}.
+            {entry?.name}: {orderText(view, order)}; {POSTURES.find((p) => p.value === posture)?.label}.
           </p>
         )}
 

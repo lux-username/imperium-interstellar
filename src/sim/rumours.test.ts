@@ -14,9 +14,9 @@ describe('rumour', () => {
     const s = line()
     s.week = 1
     for (let i = 0; i < 40; i++) {
-      recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', severity: 2, level: 6 })
-      recordEvent(s, Y, { kind: 'hull_arrived', valence: 'neutral', severity: 0 })
-      recordEvent(s, s.capital, { kind: 'unrest_rose', valence: 'bad', severity: 3, level: 8 })
+      recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 2, level: 6 })
+      recordEvent(s, Y, { kind: 'hull_arrived', valence: 'neutral', against: null, favours: null, severity: 0 })
+      recordEvent(s, s.capital, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 3, level: 8 })
     }
     spawnRumours(s)
     expect(s.rumours.length).toBeGreaterThan(10)
@@ -32,7 +32,7 @@ describe('rumour', () => {
     const s = line()
     s.worlds[Y].profile.starport = 'E'
     s.week = 1
-    for (let i = 0; i < 40; i++) recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', severity: 3, level: 8 })
+    for (let i = 0; i < 40; i++) recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 3, level: 8 })
     spawnRumours(s)
     expect(s.rumours).toHaveLength(0)
   })
@@ -41,7 +41,7 @@ describe('rumour', () => {
     const s = line()
     for (const w of Object.values(s.worlds)) w.profile.population = 0 // nothing else happens
     s.week = 1
-    const e = recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', severity: 3, level: 8 })
+    const e = recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 3, level: 8 })
     s.rumours.push({ event: { ...e }, origin: Y, born: 1, heard: { [Y]: 0 } })
     let weeks = 0
     while (buildPlayerView(s).rumours.length === 0 && weeks < 60) {
@@ -69,7 +69,7 @@ describe('rumour', () => {
   it('what is told stays near the truth: a week or two off, and only ever a neighbouring world', () => {
     const s = line()
     s.week = 5
-    for (let i = 0; i < 200; i++) recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', severity: 3, level: 8 })
+    for (let i = 0; i < 200; i++) recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 3, level: 8 })
     spawnRumours(s)
     let movedWeek = 0
     let movedWorld = 0
@@ -91,7 +91,7 @@ describe('rumour', () => {
     const s = line()
     s.week = 1
     const ship = s.ships['s-xy' as ShipId]
-    const e = recordEvent(s, Y, { kind: 'hull_arrived', valence: 'bad', severity: 2, ship })
+    const e = recordEvent(s, Y, { kind: 'hull_arrived', valence: 'bad', against: null, favours: null, severity: 2, ship })
     const before = JSON.stringify(s.beliefs[s.player].ships)
     s.rumours.push({ event: { ...e }, origin: Y, born: 1, heard: { [Y]: 0, ['w-x' as WorldId]: 1 } })
     for (let i = 0; i < 20; i++) advanceWeek(s)

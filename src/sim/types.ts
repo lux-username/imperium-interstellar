@@ -70,11 +70,33 @@ export interface WorldProfile {
   tech: number
 }
 
+/**
+ * Troops on the ground, in detachments. Army detachments garrison; marines
+ * board, seize and land under fire (see ./ground.ts). One detachment is one
+ * point of strength.
+ */
+export interface Troops {
+  army: number
+  marines: number
+}
+
+/**
+ * A fight for a world, resolved a round a week (see ./ground.ts). A revolt
+ * is a contest whose attackers are the rebels; a landing is one whose
+ * attackers came off a transport. It ends when one side is gone.
+ */
+export interface GroundContest {
+  since: Week
+  attacker: FactionId
+  attackers: Troops
+}
+
 export interface World {
   id: WorldId
   name: string
   hex: Hex
   profile: WorldProfile
+  /** Who holds the port and the palace. Loyal worlds belong to the administration; the rest are lost until retaken. */
   faction: FactionId
   /** The appointed governor, if any. */
   governor: CharacterId | null
@@ -82,8 +104,12 @@ export interface World {
   actingGovernor: CharacterId | null
   /** 0–10. */
   unrest: number
-  /** Abstract strength of the garrison. */
+  /** Army detachments holding the port and the palace. */
   garrison: number
+  /** Marine detachments stationed here. They count in the garrison's strength and are what a landing needs. */
+  marines: number
+  /** A revolt or a landing being fought out, or null when the world is quiet. */
+  contest: GroundContest | null
   /** When the governor's office last wrote to the desk. Drives the "all quiet" letter. */
   lastLetter: Week
 }
@@ -109,14 +135,15 @@ export interface Lane {
 // Ships, characters, factions
 
 /**
- * What a hull is for. Packets run the lanes on schedule; scouts are tiny
- * two-person hulls that look and run; patrol craft, escorts and transports
- * are the warships the desk commands.
+ * What a hull is for. Packets run the lanes on schedule and are nobody's to
+ * command; scouts are the small fast unarmed hulls that look, watch and
+ * carry — there is no separate courier; patrol craft, escorts, transports
+ * and raiders are the warships.
  */
-export type ShipRole = 'packet' | 'courier' | 'scout' | 'patrol' | 'escort' | 'transport' | 'merchant'
+export type ShipRole = 'packet' | 'scout' | 'patrol' | 'escort' | 'transport' | 'raider' | 'merchant'
 
-/** Hulls the desk can give orders to; the rest run themselves. */
-export const COMMANDABLE_ROLES: readonly ShipRole[] = ['courier', 'scout', 'patrol', 'escort', 'transport']
+/** Hulls the desk can give orders to; the rest run themselves. A captured raider is as commandable as anything else. */
+export const COMMANDABLE_ROLES: readonly ShipRole[] = ['scout', 'patrol', 'escort', 'transport', 'raider']
 
 /** What a ship does when its order runs out or something unexpected happens. Phase 1b adds a damage threshold. */
 export interface StandingOrders {
@@ -133,10 +160,21 @@ export interface Ship {
   faction: FactionId
   /** Jump rating: the most parsecs one jump can cover. */
   jump: number
-  /** Abstract fighting strength. Zero for hulls that only run. */
+  /** Abstract fighting strength when undamaged. Zero for hulls that only run. */
   strength: number
+  /** Points of strength knocked off in action; repaired a point a week at a friendly port of class C or better. A hull with damage ≥ strength cannot fight. */
+  damage: number
+  /** Jumps left in the tanks. Every jump costs one; a port of class B or better that is open to her fills them. Packets carry none and burn none: the lanes keep them fuelled. */
+  fuel: number
   location: Location
+  /** Null for a prize waiting for an officer, and for packets, which run themselves. */
   commander: CharacterId | null
+  /** Detachments aboard, cryofrozen. */
+  troops: Troops
+  /** People riding as passengers: an officer going out to a post, a governor who fled. */
+  passengers: CharacterId[]
+  /** Pirates only: the havens this hull knows it can put in at. Null for everyone else. */
+  havens: WorldId[] | null
   /** What the ship is doing. Null means holding where it is. */
   order: Order | null
   standing: StandingOrders
@@ -147,7 +185,10 @@ export interface Ship {
 export type Post =
   | { kind: 'governor'; world: WorldId }
   | { kind: 'commander'; ship: ShipId }
-  | { kind: 'unassigned' }
+  /** Riding in a hull. */
+  | { kind: 'passenger'; ship: ShipId }
+  /** At `at` with nothing to do: the officers' pool at the capital, a governor who fled or was unseated. */
+  | { kind: 'unassigned'; at: WorldId }
 
 /** Whose interest a person serves when it comes to it. Corruption is loyalty to self. */
 export type Loyalty = 'player' | 'empire' | 'self'
@@ -176,10 +217,22 @@ export interface Character {
 
 export type FactionKind = 'empire' | 'administration' | 'rival' | 'pirates' | 'rebels'
 
+/**
+ * Who is at war with whom. The administration and the Warlord fight each
+ * other and both fight pirates; rebels fight whoever holds their world;
+ * nobody fights the Empire. Allegiance will need a neutral state when the
+ * rogue path arrives (Phase 2), which is why this is not a two-value enum.
+ */
+export type Stance = 'friendly' | 'neutral' | 'hostile'
+
 export interface Faction {
   id: FactionId
   name: string
   kind: FactionKind
+  /** Where this faction's reports go and its leader sits, if it has a seat. */
+  capital: WorldId | null
+  /** The character whose belief state the faction acts on. */
+  leader: CharacterId | null
 }
 
 // ---------------------------------------------------------------------------
@@ -196,7 +249,7 @@ export type MailStatus =
   /** Reached its address but the recipient wasn't there. Kept until they arrive or `expires`. */
   | { kind: 'held'; at: WorldId; expires: Week | null }
   | { kind: 'delivered'; week: Week }
-  /** The hull carrying it never arrived. */
+  /** The hull carrying it never arrived, or was taken and the bag destroyed. */
   | { kind: 'lost'; week: Week }
 
 export type MailContents =
@@ -212,6 +265,9 @@ export interface Mail {
 // ---------------------------------------------------------------------------
 // The whole game
 
+/** How the game ended, if it has. The capital falling is the one ending 1b knows; the rest are 1c. */
+export type Ending = { kind: 'capital_fallen'; by: FactionId; week: Week }
+
 export interface GameState {
   /** The seed the game was generated from; with `rng` it reproduces everything. */
   seed: number
@@ -222,13 +278,14 @@ export interface GameState {
   capital: WorldId
   /** The character the player governs as. Their belief state is the source of the PlayerView. */
   player: CharacterId
+  ending: Ending | null
   worlds: Record<WorldId, World>
   lanes: Record<LaneId, Lane>
   ships: Record<ShipId, Ship>
   characters: Record<CharacterId, Character>
   factions: Record<FactionId, Faction>
   mail: Record<MailId, Mail>
-  /** What has happened, by week and world: the unit of news. Forgotten after EVENT_MEMORY weeks (see ./events.ts). */
+  /** What has happened, by week and world: the unit of news, and every world's traffic log. Forgotten after EVENT_MEMORY weeks (see ./events.ts). */
   events: Record<EventId, Event>
   /** Talk in transit along the lanes (see ./rumours.ts). */
   rumours: Rumour[]

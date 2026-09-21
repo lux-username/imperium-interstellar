@@ -79,7 +79,7 @@ describe('dispatches', () => {
     const X = 'w-x' as WorldId
     const mail = requestReport(s, X, 'c-x' as CharacterId)
     // The governor the player wrote to is gone before the letter lands.
-    s.characters['c-x' as CharacterId].post = { kind: 'unassigned' }
+    s.characters['c-x' as CharacterId].post = { kind: 'unassigned', at: X }
     s.characters['c-x2' as CharacterId] = { id: 'c-x2' as CharacterId, name: 'New', faction: 'f-admin' as FactionId, post: { kind: 'governor', world: X }, traits: playerTraits() }
     s.worlds[X].governor = 'c-x2' as CharacterId
     s.worlds[X].actingGovernor = 'c-x2' as CharacterId
@@ -114,18 +114,25 @@ describe('a generated game', () => {
     expect(() => deserialize('{"format":"other"}')).toThrow()
   })
 
-  it('delivers every routine report exactly when its envelope said it would', () => {
+  it('delivers most routine reports when their envelopes said; a hull passing may bring one early, a raider may make one late', () => {
     const s = newGame(12)
     for (let i = 0; i < 40; i++) advanceWeek(s)
     let checked = 0
+    let onTime = 0
     for (const m of Object.values(s.mail)) {
       if (m.contents.kind !== 'report' || m.status.kind !== 'delivered') continue
       const r = m.contents.report
-      if (isRumour(r.channel)) continue // talk keeps no timetable
-      expect(r.delivered, r.id).toBe(r.envelope.eta)
+      if (isRumour(r.channel) || r.envelope.eta === null) continue // talk keeps no timetable
+      // Governors' letters to the desk ride the packets; a commander's letter may come home faster aboard his own hull,
+      // and a packet chased off her lane by a raider may land a letter early by another route (the envelope shows the re-routing).
+      if (r.envelope.destination.kind !== 'world' || r.envelope.destination.world !== s.capital || s.characters[r.observer]?.post.kind !== 'governor') continue
+      if (r.envelope.route[0] !== r.envelope.origin) continue
+      if (r.delivered === r.envelope.eta) onTime++
       checked++
     }
     expect(checked).toBeGreaterThan(20)
+    // The timetable is exact until something disturbs it; with raiders about, most letters still keep it.
+    expect(onTime / checked).toBeGreaterThan(0.6)
   })
 
   it('learns where hulls are from world reports, one report per governor letter', () => {
@@ -154,12 +161,16 @@ describe('a generated game', () => {
 
   it('never gets mail out of an off-lane world', () => {
     const s = newGame(12)
-    const offLane = Object.values(s.worlds).filter((w) => w.id !== s.capital && route(s.lanes, w.id, s.capital) === null)
+    // The desk's own worlds off the lanes; the Warlord's write to his seat, not ours.
+    const offLane = Object.values(s.worlds).filter((w) => w.id !== s.capital && w.faction === s.characters[s.player].faction && route(s.lanes, w.id, s.capital) === null)
     expect(offLane.length).toBeGreaterThan(0)
     for (let i = 0; i < 30; i++) advanceWeek(s)
     for (const w of offLane) {
       for (const m of Object.values(s.mail)) {
-        if (m.contents.kind === 'report' && m.contents.report.observedAt === w.id) expect(m.status).toEqual({ kind: 'awaiting_carrier', at: w.id })
+        if (m.contents.kind !== 'report' || m.contents.report.observedAt !== w.id) continue
+        const dest = m.contents.report.envelope.destination
+        if (dest.kind !== 'world' || dest.world !== s.capital) continue // the Warlord's people write to his seat
+        expect(m.status).toEqual({ kind: 'awaiting_carrier', at: w.id })
       }
       // The desk still shows only the opening survey for it.
       expect(s.beliefs[s.player].worlds[w.id].observed).toBeLessThan(0)
@@ -181,10 +192,24 @@ describe('a generated game', () => {
     const s = newGame(4)
     advanceWeek(s)
     const view = buildPlayerView(s)
-    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'inbox', 'known', 'lanes', 'outgoing', 'roster', 'rumours', 'week'])
+    expect(Object.keys(view).sort()).toEqual(['capital', 'chart', 'ending', 'faction', 'factions', 'inbox', 'known', 'lanes', 'outgoing', 'pool', 'reserve', 'roster', 'rumours', 'week'])
     // The view is independent of the state it came from: mutating truth doesn't move it.
     const copy = clone(s)
     for (const w of Object.values(copy.worlds)) w.unrest = 10
     expect(buildPlayerView(copy).known).toEqual(view.known)
+  })
+})
+
+describe('the desk reads only its own mail', () => {
+  it('never shows a letter addressed to the Warlord’s seat, nor talk heard there', () => {
+    const s = newGame(7)
+    for (let i = 0; i < 30; i++) advanceWeek(s)
+    const view = buildPlayerView(s)
+    for (const r of [...view.inbox, ...view.rumours]) {
+      expect(r.envelope.destination).toEqual({ kind: 'world', world: s.capital })
+    }
+    // And his seat did get letters of its own.
+    const his = Object.values(s.mail).filter((m) => m.contents.kind === 'report' && m.status.kind === 'delivered' && m.contents.report.envelope.destination.kind === 'world' && m.contents.report.envelope.destination.world !== s.capital)
+    expect(his.length).toBeGreaterThan(0)
   })
 })

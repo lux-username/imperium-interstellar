@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { PlayerView, Report, ReportId, WorldId } from '../sim/view'
-import { ago, eventLabel, eventText, subjectWorld, unrestWord, weekLabel, worldName } from './format'
+import { ago, eventLabel, eventText, holderText, subjectWorld, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
@@ -86,14 +86,14 @@ export function Inbox({ view, pile, onSelect, focus }: Props) {
               onClick={() => toggle(r)}
             >
               <div className="line1">
-                <span className="kind">{r.snapshot.kind === 'world' ? '◉' : r.snapshot.kind === 'ship' ? '▲' : '~'}</span>
+                <span className="kind">{r.channel === 'agent' ? '◎' : r.snapshot.kind === 'world' ? '◉' : r.snapshot.kind === 'ship' ? '▲' : '~'}</span>
                 <span className="subject">{subject(view, r)}</span>
                 <span className="arrived">
                   {pile === 'rumours' ? <>about {weekLabel(r.observed)} · heard {weekLabel(r.delivered ?? 0)}</> : <>sent {weekLabel(r.envelope.sent)} · arr. {weekLabel(r.delivered ?? 0)}</>}
                 </span>
               </div>
               <div className="from">
-                {r.channel === 'docks' ? 'Word on the docks' : r.channel === 'merchant' ? `A merchant, ${r.observerName}` : r.observerName}
+                {r.channel === 'docks' ? 'Word on the docks' : r.channel === 'merchant' ? `A merchant, ${r.observerName}` : r.channel === 'agent' ? `Watch report, ${r.observerName}` : r.observerName}
                 {r.channel === 'docks' || r.channel === 'merchant' ? `, of ${worldName(view, r.observedAt)}` : `, ${worldName(view, r.observedAt)}`}
               </div>
               {isOpen && (
@@ -103,7 +103,7 @@ export function Inbox({ view, pile, onSelect, focus }: Props) {
                     {r.delivered !== null && r.delivered - r.observed > 0 && <> · {r.delivered - r.observed} wk in transit</>}
                     {r.envelope.route.length > 2 && <> · via {r.envelope.route.slice(1, -1).map((id) => worldName(view, id)).join(', ')}</>}
                   </div>
-                  <div className="line3">{body(r)}</div>
+                  <div className="line3">{body(view, r)}</div>
                   {r.events.length > 0 && (
                     <ul className="events">
                       {r.events.map((e) => (
@@ -125,20 +125,26 @@ export function Inbox({ view, pile, onSelect, focus }: Props) {
 function subject(view: PlayerView, r: Report): string {
   if (r.snapshot.kind === 'world') {
     const w = r.snapshot.world
-    if (r.events.length > 0) return `${w.name}: ${eventLabel(r.events[0])}${r.events.length > 1 ? ` (+${r.events.length - 1})` : ''}`
+    if (r.channel === 'agent') return `${w.name}: watch report, ${r.events.length} thing${r.events.length === 1 ? '' : 's'} seen`
+    // A letter leads with the worst of its news.
+    const lead = [...r.events].sort((a, b) => b.severity - a.severity)[0]
+    if (lead) return `${w.name}: ${eventLabel(lead)}${r.events.length > 1 ? ` (+${r.events.length - 1})` : ''}`
     const hulls = w.ships.length > 0 ? `, ${w.ships.length} hull${w.ships.length === 1 ? '' : 's'} in port` : ''
-    return `${w.name}: ${unrestWord(w.unrest)}, garrison ${w.garrison}${hulls}`
+    return `${w.name}: ${holderText(view, w)}, garrison ${w.garrison + w.marines}${hulls}`
   }
-  if (r.snapshot.kind === 'ship') return `${r.snapshot.ship.name} sighted`
+  if (r.snapshot.kind === 'ship') return r.events.length > 0 ? `${r.snapshot.ship.name}: ${eventLabel(r.events[0])}` : `${r.snapshot.ship.name} sighted`
   return `${worldName(view, r.snapshot.event.at)}: ${eventLabel(r.snapshot.event)}`
 }
 
-function body(r: Report): string {
+function body(view: PlayerView, r: Report): string {
   if (r.snapshot.kind === 'world') {
     const w = r.snapshot.world
     const gov = w.governorName ? `Governor ${w.governorName}` : 'no governor'
-    const hulls = w.ships.length > 0 ? ` In port: ${w.ships.map((s) => `${s.name} (${s.role})`).join(', ')}.` : ' No hulls in port.'
-    return `${gov}. The world is ${unrestWord(w.unrest)} (unrest ${w.unrest}); garrison strength ${w.garrison}.${hulls}`
+    const hull = (s: Report['snapshot'] extends infer S ? (S extends { kind: 'world'; world: { ships: (infer H)[] } } ? H : never) : never) =>
+      `${s.name} (${s.faction === view.faction ? s.role : `${view.factions[s.faction]?.name ?? 'unknown'} ${s.role}`}${s.damaged ? ', damaged' : ''})`
+    const hulls = w.ships.length > 0 ? ` In port: ${w.ships.map(hull).join(', ')}.` : ' No hulls in port.'
+    const marines = w.marines > 0 ? ` and ${w.marines} marine` : ''
+    return `${gov}. The world is ${holderText(view, w)} (unrest ${w.unrest}); garrison ${w.garrison} army${marines} detachment${w.garrison + w.marines === 1 ? '' : 's'}.${hulls}`
   }
   if (r.snapshot.kind === 'ship') return `${r.snapshot.ship.name}, a ${r.snapshot.ship.role}, was seen in port.`
   return eventText(r.snapshot.event)

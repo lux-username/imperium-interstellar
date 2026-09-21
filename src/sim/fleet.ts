@@ -9,19 +9,42 @@ import { word } from './names'
 import { nextInt, type Rng } from './rng'
 import type { Character, CharacterId, FactionId, Ship, ShipId, ShipRole, WorldId } from './types'
 
-interface HullClass {
+export interface HullClass {
   role: ShipRole
   jump: number
   strength: number
+  /** Jumps in the tanks when full. */
+  fuel: number
+  /** Detachments she can carry. */
+  troops: number
 }
 
-/** What each kind of hull is: patrol craft fight, escorts shepherd, transports carry, couriers and scouts run. */
+/**
+ * What each kind of hull is: patrol craft fight, escorts shepherd,
+ * transports carry troops in numbers, scouts run and watch. A warship
+ * takes a detachment in her spare berths; a scout has none.
+ */
 export const HULLS: Record<Exclude<ShipRole, 'packet' | 'merchant'>, HullClass> = {
-  patrol: { role: 'patrol', jump: 2, strength: 3 },
-  escort: { role: 'escort', jump: 2, strength: 2 },
-  transport: { role: 'transport', jump: 2, strength: 1 },
-  courier: { role: 'courier', jump: 2, strength: 0 },
-  scout: { role: 'scout', jump: 2, strength: 0 },
+  patrol: { role: 'patrol', jump: 2, strength: 3, fuel: 4, troops: 1 },
+  escort: { role: 'escort', jump: 2, strength: 2, fuel: 4, troops: 1 },
+  transport: { role: 'transport', jump: 2, strength: 1, fuel: 4, troops: 3 },
+  scout: { role: 'scout', jump: 2, strength: 0, fuel: 6, troops: 0 },
+  raider: { role: 'raider', jump: 2, strength: 2, fuel: 4, troops: 1 },
+}
+
+/** How many detachments a hull can carry. */
+export function troopCapacity(role: ShipRole): number {
+  return role === 'packet' || role === 'merchant' ? 0 : HULLS[role].troops
+}
+
+/** How many jumps a full tank gives a hull of this class. Packets carry none on the books: the lanes they serve keep them fuelled. */
+export function fuelCapacity(role: ShipRole): number {
+  return role === 'packet' || role === 'merchant' ? 0 : HULLS[role].fuel
+}
+
+/** Whether a hull of this class burns fuel at all. */
+export function burnsFuel(role: ShipRole): boolean {
+  return role !== 'packet' && role !== 'merchant'
 }
 
 /** Hulls in port at the capital on week 0. */
@@ -29,13 +52,12 @@ export const STARTING_FLEET: { role: keyof typeof HULLS; count: number }[] = [
   { role: 'patrol', count: 4 },
   { role: 'escort', count: 2 },
   { role: 'transport', count: 2 },
-  { role: 'courier', count: 4 },
-  { role: 'scout', count: 2 },
+  { role: 'scout', count: 6 },
 ]
 
 const PREFIXES = ['Vigilant', 'Steadfast', 'Resolute', 'Wayfarer', 'Sentinel', 'Harbinger', 'Lantern', 'Kestrel']
 
-function shipName(rng: Rng, taken: Set<string>): string {
+export function shipName(rng: Rng, taken: Set<string>): string {
   for (;;) {
     const name = nextInt(rng, 1, 3) === 1 ? PREFIXES[nextInt(rng, 0, PREFIXES.length - 1)] : word(rng)
     if (!taken.has(name)) {
@@ -46,7 +68,7 @@ function shipName(rng: Rng, taken: Set<string>): string {
 }
 
 /** One hull of a class, with a freshly rolled commander, in port at `at`. */
-export function newShip(id: ShipId, name: string, cls: HullClass, faction: FactionId, at: WorldId, commander: Character): Ship {
+export function newShip(id: ShipId, name: string, cls: HullClass, faction: FactionId, at: WorldId, commander: Character | null): Ship {
   return {
     id,
     name,
@@ -54,8 +76,13 @@ export function newShip(id: ShipId, name: string, cls: HullClass, faction: Facti
     faction,
     jump: cls.jump,
     strength: cls.strength,
+    damage: 0,
+    fuel: cls.fuel,
     location: { kind: 'world', world: at },
-    commander: commander.id,
+    commander: commander?.id ?? null,
+    troops: { army: 0, marines: 0 },
+    passengers: [],
+    havens: null,
     order: null,
     standing: { rally: at, onContact: 'favourable' },
     mailbag: [],

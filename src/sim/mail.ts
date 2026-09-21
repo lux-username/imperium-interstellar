@@ -12,6 +12,7 @@ import type { Order } from './orders'
 import type { Channel, Dispatch, DispatchPayload, Envelope, Event, Recipient, Report, ShipSnapshot, Snapshot } from './view'
 import { expectedArrival, route } from './chart'
 import { dispatchReceivedEvent } from './events'
+import { capitalOf, hostile } from './factions'
 
 // ---------------------------------------------------------------------------
 // Minting
@@ -41,17 +42,19 @@ function envelope(state: GameState, origin: WorldId, destination: WorldId, sent:
 // ---------------------------------------------------------------------------
 // Snapshots: what an observer at a world can see there.
 
-export function snapshotShip(ship: Ship, at: WorldId): ShipSnapshot {
+export function snapshotShip(ship: Ship, at: WorldId, holder?: Ship['faction']): ShipSnapshot {
   const { id, name, role, faction, commander } = ship
-  return { id, name, role, faction, at, commander }
+  const fuel = holder === faction && role !== 'packet' && role !== 'merchant' ? ship.fuel : null
+  return { id, name, role, faction, at, commander, damaged: ship.damage > 0, fuel }
 }
 
 /** A world as seen from its own port this week: its state and every hull lying there. */
 export function snapshotWorld(state: GameState, world: World): Snapshot {
-  const { id, name, hex, profile, faction, governor, unrest, garrison } = world
+  const { id, name, hex, profile, faction, governor, unrest, garrison, marines } = world
   const governorName = governor ? (state.characters[governor]?.name ?? null) : null
-  const ships = shipsAt(state, id).map((s) => snapshotShip(s, id))
-  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, faction, governor, governorName, unrest, garrison, ships } }
+  const ships = shipsAt(state, id).map((s) => snapshotShip(s, id, faction))
+  const contest = world.contest ? { attacker: world.contest.attacker, strength: world.contest.attackers.army + world.contest.attackers.marines } : null
+  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, faction, governor, governorName, unrest, garrison, marines, contest, ships } }
 }
 
 /** Ships in port at a world right now. */
@@ -72,11 +75,14 @@ export interface Writing {
 }
 
 /**
- * An observer at `at` writes a report of `snapshot` addressed to the
- * capital and hands it to the port. Returns the mail. If `at` is the capital
- * itself the report is delivered on the spot.
+ * An observer at `at` writes a report of `snapshot` addressed to their
+ * faction's seat — the desk, for the player's people — and hands it to the
+ * port. Returns the mail. If `at` is the seat itself the report is
+ * delivered on the spot.
  */
 export function writeReport(state: GameState, observer: CharacterId, at: WorldId, snapshot: Snapshot, writing: Writing = {}): Mail {
+  const faction = state.characters[observer]?.faction
+  const home = (faction && capitalOf(state, faction)) ?? state.capital
   const report: Report = {
     id: mint<ReportId>(state, 'r'),
     channel: writing.channel ?? 'official',
@@ -86,12 +92,12 @@ export function writeReport(state: GameState, observer: CharacterId, at: WorldId
     observed: state.week,
     snapshot,
     events: writing.events ?? [],
-    envelope: envelope(state, at, state.capital, state.week),
+    envelope: envelope(state, at, home, state.week),
     delivered: null,
   }
   const mail: Mail = { id: mint<MailId>(state, 'm'), contents: { kind: 'report', report }, status: { kind: 'awaiting_carrier', at } }
   state.mail[mail.id] = mail
-  if (at === state.capital) deliver(state, mail, at)
+  if (at === home) deliver(state, mail, at)
   return mail
 }
 
@@ -163,12 +169,16 @@ function pathReaches(state: GameState, path: WorldId[], dest: WorldId): boolean 
  * way leaves the letters where they are.
  */
 export function loadMail(state: GameState, ship: Ship, from: WorldId, to: WorldId, path: WorldId[] = [from, to]): void {
+  // The port hands its bags only to hulls of its own side.
+  if (state.worlds[from]?.faction !== ship.faction) return
   const ids = Object.keys(state.mail).sort() as MailId[]
   const carrying = ship.role === 'packet' ? null : reportsAboard(state, ship)
   for (const id of ids) {
     const mail = state.mail[id]
     if (mail.status.kind !== 'awaiting_carrier' || mail.status.at !== from) continue
     const dest = destinationWorld(mail)
+    // Nobody carries the enemy's dispatches: mail for a seat at war with this hull's side stays where it is.
+    if (dest !== null && hostile(state.worlds[dest]?.faction ?? ship.faction, ship.faction)) continue
     const hop = nextHop(mail, from)
     if (hop === to) {
       mail.status = { kind: 'aboard', ship: ship.id }
@@ -219,6 +229,11 @@ export function unloadMail(state: GameState, ship: Ship, at: WorldId): void {
       continue
     }
     const env = envelopeOf(mail)
+    // A letter for a seat this port is at war with is not handed to the port: it stays aboard until a friendlier one.
+    if (dest !== null && hostile(state.worlds[at]?.faction ?? ship.faction, state.worlds[dest]?.faction ?? ship.faction)) {
+      ship.mailbag.push(id)
+      continue
+    }
     if (!env.route.includes(at) && dest !== null) {
       const path = route(state.lanes, at, dest)
       if (!path) {
@@ -254,11 +269,9 @@ export function characterLocation(state: GameState, character: CharacterId): Wor
   const c = state.characters[character]
   if (!c) return null
   if (c.post.kind === 'governor') return c.post.world
-  if (c.post.kind === 'commander') {
-    const loc = state.ships[c.post.ship]?.location
-    return loc?.kind === 'world' ? loc.world : null
-  }
-  return null
+  if (c.post.kind === 'unassigned') return c.post.at
+  const loc = state.ships[c.post.ship]?.location
+  return loc?.kind === 'world' ? loc.world : null
 }
 
 /**

@@ -8,8 +8,9 @@
  * The record is deliberately snapshot-safe (names and ids, no references),
  * so a report can carry a copy of it unchanged; see Event in ./view.ts.
  */
-import type { EventId, GameState, Ship, WorldId } from './types'
+import type { EventId, FactionId, GameState, Ship, WorldId } from './types'
 import type { Event, EventKind, Valence } from './view'
+import { hostile } from './factions'
 import { snapshotShip } from './mail'
 
 /** Events older than this are forgotten by the sim. Long enough for the slowest routine letter and any rumour still travelling. */
@@ -17,11 +18,29 @@ export const EVENT_MEMORY = 26
 
 interface Draft {
   kind: EventKind
+  /** The bystander's reading. */
   valence: Valence
+  against?: FactionId | null
+  favours?: FactionId | null
   severity: number
   ship?: Ship
   person?: string | null
   level?: number | null
+}
+
+/**
+ * How an event reads to someone of `faction`: bad if it went against them
+ * or favoured an enemy, good if it favoured them or went against an
+ * enemy, and otherwise as it reads to anyone. This is what a governor
+ * weighs before writing home, and what the docks pass on — so the
+ * Warlord's people see his losses as losses and yours as good news.
+ */
+export function valenceFor(event: Pick<Event, 'valence' | 'against' | 'favours'>, faction: FactionId): Valence {
+  if (event.against === faction) return 'bad'
+  if (event.favours === faction) return 'good'
+  if (event.against && hostile(event.against, faction)) return 'good'
+  if (event.favours && hostile(event.favours, faction)) return 'bad'
+  return event.valence
 }
 
 /** Record that something happened at `at` this week. Returns the event. */
@@ -34,6 +53,8 @@ export function recordEvent(state: GameState, at: WorldId, draft: Draft): Event 
     week: state.week,
     kind: draft.kind,
     valence: draft.valence,
+    against: draft.against ?? null,
+    favours: draft.favours ?? null,
     severity: draft.severity,
     ship: draft.ship ? snapshotShip(draft.ship, at) : null,
     person: draft.person ?? null,
@@ -93,10 +114,11 @@ export function unrestIsNews(state: GameState, at: WorldId, before: number, afte
   return last?.level !== after
 }
 
-/** Unrest crossed a threshold. Rising is bad news that gets worse as it climbs; falling is good. */
+/** Unrest crossed a threshold. Rising is bad news for whoever holds the world, and gets worse as it climbs; falling is good for them. */
 export function unrestEvent(state: GameState, at: WorldId, level: number, rose: boolean): Event {
   const severity = rose ? (level >= 10 ? 3 : unrestBand(level) === 'hostile' ? 2 : 1) : 1
-  return recordEvent(state, at, { kind: rose ? 'unrest_rose' : 'unrest_fell', valence: rose ? 'bad' : 'good', severity, level })
+  const holder = state.worlds[at]?.faction ?? null
+  return recordEvent(state, at, { kind: rose ? 'unrest_rose' : 'unrest_fell', valence: 'neutral', against: rose ? holder : null, favours: rose ? null : holder, severity, level })
 }
 
 /** A new governor holds the seal. Neutral, but a new governor always introduces themselves. */
@@ -104,10 +126,11 @@ export function governorChangedEvent(state: GameState, at: WorldId, name: string
   return recordEvent(state, at, { kind: 'governor_changed', valence: 'neutral', severity: 1, person: name })
 }
 
-/** A hull made port. Routine traffic is neutral; a hull of another faction is worth a letter. */
+/** A hull made port. Routine traffic is neutral; a hull of another faction is unwelcome news for whoever holds the port. */
 export function hullArrivedEvent(state: GameState, at: WorldId, ship: Ship): Event {
-  const foreign = ship.faction !== state.worlds[at]?.faction
-  return recordEvent(state, at, { kind: 'hull_arrived', valence: foreign ? 'bad' : 'neutral', severity: foreign ? 2 : 0, ship })
+  const holder = state.worlds[at]?.faction ?? null
+  const foreign = holder !== null && ship.faction !== holder
+  return recordEvent(state, at, { kind: 'hull_arrived', valence: 'neutral', against: foreign ? holder : null, severity: foreign ? 2 : 0, ship })
 }
 
 export function hullDepartedEvent(state: GameState, at: WorldId, ship: Ship): Event {
