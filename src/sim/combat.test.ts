@@ -40,6 +40,7 @@ describe('a raider off a port', () => {
     const mail = requestReport(s, X, 'c-x' as CharacterId)
     mail.status = { kind: 'aboard', ship: packet.id }
     packet.mailbag.push(mail.id)
+    s.worlds[X].profile.starport = 'A' // the packet already at the quay is safe under an A port; the one arriving is in the open
     raider(s, X)
     advanceWeek(s)
     const robbed = Object.values(s.events).find((e) => e.kind === 'ship_robbed')
@@ -51,8 +52,9 @@ describe('a raider off a port', () => {
     expect(packet.location.kind).toBe('transit')
   })
 
-  it('leaves a packet docked at her own port alone: she cannot be forced out from under the guns', () => {
+  it('leaves a packet docked at her own A port alone: she cannot be forced out from under the guns', () => {
     const s = line()
+    s.worlds[X].profile.starport = 'A'
     // P2 sits in port at X (her own faction's port) until week 1.
     const packet = s.ships['s-xy' as ShipId]
     expect(packet.location).toEqual({ kind: 'world', world: X })
@@ -226,19 +228,22 @@ describe('havens', () => {
 })
 
 describe("the port's guns", () => {
-  it('a lone raider leaves a packet docked at a B port alone: the port’s two guns make the odds even, not favourable', () => {
+  it('a lone raider leaves a packet docked at an A port alone: the port’s two guns make the odds even, not favourable', () => {
     const s = line()
-    raider(s, X) // Exe is a B port
+    s.worlds[X].profile.starport = 'A'
+    raider(s, X)
     fightAtWorlds(s)
     expect(Object.values(s.events).some((e) => e.kind === 'ship_robbed' || e.kind === 'battle')).toBe(false)
   })
 
-  it('the same raider robs a packet docked at a D port, where there are no guns to speak of', () => {
-    const s = line()
-    s.worlds[X].profile.starport = 'D'
-    raider(s, X)
-    fightAtWorlds(s)
-    expect(Object.values(s.events).some((e) => e.kind === 'ship_robbed' && e.ship?.id === 's-xy')).toBe(true)
+  it('the same raider robs a packet docked at a B port, whose single gun does not make the odds even, and at a D port with none', () => {
+    for (const port of ['B', 'D'] as const) {
+      const s = line()
+      s.worlds[X].profile.starport = port
+      raider(s, X)
+      fightAtWorlds(s)
+      expect(Object.values(s.events).some((e) => e.kind === 'ship_robbed' && e.ship?.id === 's-xy'), port).toBe(true)
+    }
   })
 
   it('two raiders together will go for the packet under a B port’s guns, and the port shoots back', () => {

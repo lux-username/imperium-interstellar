@@ -5,7 +5,7 @@
  * learns of it from the commanders' own after-action letters (see
  * ./ships.ts), which a self-serving commander shades.
  *
- * A port has guns of its own — more the better the port — and they count
+ * A port has guns of its own — A ports more, B ports some, nothing below — and they count
  * for any side docked there, both in weighing the odds and in the
  * exchange. Docked hulls stand and fight from under them rather than
  * running; a hull that only came out of jump this week is still in the
@@ -50,9 +50,9 @@ function hullStrength(ships: Ship[]): number {
   return ships.reduce((sum, s) => sum + effectiveStrength(s), 0)
 }
 
-/** What a port's own batteries are worth to a side docked there. Placeholders for the playtest. */
+/** What a port's own batteries are worth to a side docked there: enough to make a lone raider think twice at an A port, not enough to stop two anywhere. Placeholders for the playtest. */
 export function portGuns(starport: string): number {
-  return starport === 'A' ? 3 : starport === 'B' ? 2 : starport === 'C' ? 1 : 0
+  return starport === 'A' ? 2 : starport === 'B' ? 1 : 0
 }
 
 /** Where an encounter is and who is only just arriving; the port's guns count for whoever is docked. */
