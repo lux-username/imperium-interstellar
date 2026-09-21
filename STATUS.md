@@ -1,34 +1,34 @@
-> Generated 2026-09-21 by /end-session at commit 98e8f9d.
+> Generated 2026-09-21 by /end-session at commit 27ea057.
 
 # STATUS
 
 ## Where things stand
 
-**The 1b playtest (`#34`) has begun, and its first finding is answered on branch `worktree-letters-subjects` as draft PR #58.** PR #56 (names wired into worlds, people and ships) was merged into `main` this session at `c91f682`, the prototype relaunched from `main`, and the user played. The verdict: the game functions, but what the inbox holds is under-communicated — not too little information (expected), but information poorly conveyed. Three fixes asked for, all built: every report now carries a standardised **subject** and **lede** (one sentence with the most important news), composed in the sim by `src/sim/letters.ts` from the writer's side and the occasion — *Cévennes governor's report: Pirates sighted!* / *2 pirate hulls were sighted in the system.*; writers **sign with their office** (*Governor Nora Maguire*, *Captain Cao Jinrong — Champion*); and **captains write on occasion** — a quick update after this week's events (a fight of their own always, carried aboard if it must be; sightings and other trouble only from a port on the lanes and only if the captain is the writing kind, 2d6 vs 7 with cautious +3 / bold −3), and a **general report** on making the rendezvous covering everything logged since their last orders (`Ship.lastOrders`, `Ship.log`; save format 6). The event wording moved from the UI into the sim so the inbox says only what a letter said. Phrasing is standard for now; personality variants are `#59` (`journal/2026-09-21-6.md`).
+**The 1b playtest (`#34`) is in its second and third rounds, and everything from them is on branch `worktree-playtest-2` as PR #60, ready for review but not merged.** The user played on `main` after #58, came back with a page of notes, and then kept playing on the branch as it grew, ruling on each question as it came up. Sixteen commits. The big pieces: **belief is now a fold over reports** (`src/sim/belief.ts`) — an event in a letter is a sighting of that hull *on the week it happened*, the same fold serves the sim's `learn()` and the UI, and Government House's own observations are kept as mail so the **map can be turned back to any week** and show what is now known of it. **Pirates** were reworked around havens: they keep the peace at a haven they know, a corrupt governor never mentions them, a pirate docking unseized (or found lying there) is a `pirates_harboured` event that captains always write home about and that marks the world a known haven until the governor changes; pirates pool their haven lists when they meet and listen to the docks for new ones; a bold corrupt governor touts the port; pirates raid any world on the lanes. **Ports**: C fuels, B+ rebuilds a knocked-out hull (a hulk), guns halved to A 2 / B 1. **Packets** never fight — the port's batteries do, and the record and the letters say so. **Scouts** have unnamed crews, never fight, are ignored by pirates, and are the only hulls that can lie off and watch (patrol greyed out for them). **Rumours** obey the speed limit, have no good/bad preference, and travel by how good the story is. Governors no longer shade unrest. **Worldgen**: ~22 worlds, rolled until the layout has a chokepoint, a far corner and a reachable chart. **The player's seat is Government House** (was "the desk"). **UI**: hulls drawn per ship in faction colours and clickable, a hull dossier with orders drawn on the map, a week scrubber, Officers and Enemy-hulls tabs.
 
-Current thinking: **merge #58, then carry on the 1b playtest (`#34`)** with the new inbox — the playtest question is still open; this was its first round of feedback, not its answer. Then 1c. `#59` (phrasing by personality) follows once the standard phrasing has been read for a while. `#57`, `#50`, `#51` are name polish for spare sessions; `#55` a later pass; `#11` keeps survey and governor orders.
+Current thinking: **merge #60, then keep playtesting on `main`** — the user is continuing in another session. Open design threads from this session are filed: the misjump price of unrefined fuel (`#61`), A-port shipyards (`#62`), too many havens (`#63`), legacy id prefixes (`#64`), wordier letters after the rename (`#65`). `#59` (phrasing by personality) is still the next inbox pass once the standard phrasing has been read a while. Then 1c.
 
 ## Derived facts
 
 | Fact | Value |
 |---|---|
-| Test status | 339 passed (339) |
+| Test status | 364 passed (364) |
 | Typecheck | ok |
 | Version | 0.0.1 |
-| Sim modules | `characters.ts`, `chart.ts`, `combat.ts`, `events.ts`, `factions.ts`, `fleet.ts`, `game.ts`, `generate.ts`, `governors.ts`, `ground.ts`, `hex.ts`, `lanes.ts`, `letters.ts`, `mail.ts`, `names.ts`, `orders.ts`, `pirates.ts`, `player.ts`, `rng.ts`, `rumours.ts`, `save.ts`, `scouts.ts`, `ships.ts`, `troops.ts`, `types.ts`, `view.ts`, `warlord.ts`, `world.ts` |
+| Sim modules | `belief.ts`, `characters.ts`, `chart.ts`, `combat.ts`, `events.ts`, `factions.ts`, `fleet.ts`, `game.ts`, `generate.ts`, `governors.ts`, `ground.ts`, `hex.ts`, `lanes.ts`, `letters.ts`, `mail.ts`, `names.ts`, `orders.ts`, `pirates.ts`, `player.ts`, `rng.ts`, `rumours.ts`, `save.ts`, `scouts.ts`, `ships.ts`, `troops.ts`, `types.ts`, `view.ts`, `warlord.ts`, `world.ts` |
 | Order types implemented | `courier`, `hold`, `move`, `patrol`, `scout`, `transport` |
 | Culture files | 31 in `src/sim/data/names/` |
 | Ship name pools | patrol 130, escort 150, transport 130, scout 130, raider 130, packet 120 |
-| Open issues | 16 (`#11`, `#34`–`#40`, `#44`–`#46`, `#50`, `#51`, `#55`, `#57`, `#59`) |
-| HEAD | 98e8f9d — Letters carry a subject and a lede; captains sign with their ship and report on occasion (`worktree-letters-subjects`, pushed; draft PR #58 against `main` at `c91f682`) |
+| Open issues | 21 (`#11`, `#34`–`#40`, `#44`–`#46`, `#50`, `#51`, `#55`, `#57`, `#59`, `#61`–`#65`) |
+| HEAD | 27ea057 — Orders: patrol is greyed out for a scout; a scout's default task is the watch (`worktree-playtest-2`, pushed; PR #60 against `main` at `d208b06`, ready for review) |
 
 ## Active milestone
 
-[Phase 1b — Trouble](https://github.com/lux-username/imperium-interstellar/milestone/3) — 4 open / 10 closed. The remaining four are the playtest (`#34`), the economy (`#35`) and the later packet-line issues (`#44`–`#46`). The letters work belongs to the playtest and is unmilestoned; `#59` likewise.
+[Phase 1b — Trouble](https://github.com/lux-username/imperium-interstellar/milestone/3) — 4 open / 10 closed. The playtest (`#34`), the economy (`#35`) and the packet-line issues (`#44`–`#46`). This session's work is unmilestoned playtest response, as #58's was.
 
 ## Blockers / open questions
 
-- One open PR, #58, on its own worktree branch; `main` is untouched. Merge it (or say what to change) before the next playtest round, so the inbox reads as asked.
-- Two judgment calls in #58 worth a ruling: routine "Arrived at X" letters at every friendly port are kept (the general report is added, not substituted); and a fight off the courier network is still written and carried aboard (the "only on the network" rule applies to sightings and other trouble). Both are noted on `#59`.
-- The `names-wiring` worktree and its remote branch still exist though #56 is merged; the other session held the worktree lock. Remove both once that session is closed.
-- The sex of rolled people is an even split — a guess, since nothing in `spec.md` says.
+- PR #60 is sixteen commits on its own worktree branch; `main` is untouched since #58. Merge it before the next round of notes, or they land on a branch that keeps diverging.
+- Save format is 7. Autosaves from before PR #60 will not load (a fresh game starts); autosaves from mid-branch load, thanks to the legacy id prefixes (`#64`).
+- Two dev servers may be running: the user's from `main` and this session's on port 5199 from the worktree. Kill the latter (`lsof -ti:5199 -sTCP:LISTEN | xargs kill`) once #60 is merged.
+- Pirates from the probe still show odd movement now and then — a raider bouncing between two worlds because she is driven off each time (`breakOff` costs no fuel). Not filed; watch for it in play.

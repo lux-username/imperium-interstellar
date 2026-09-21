@@ -225,3 +225,43 @@ Per the user's ruling, clarified mid-session: after a battle, a sighting or anot
 ## 2026-09-21 — Renamed the player's seat from "the desk" to "Government House"
 
 Per the user, who turned against "desk". The name is the player's seat in every sense — the place mail reaches, the office whose hulls and books they are, what the capital is seen from — so it is used everywhere: the spec, every comment, the letter wording and the panes. "Home Office" was tried first and dropped the same session: in a colonial setting *home* is the metropole, so it would name the Council's office rather than the player's, and it is an interior ministry besides. *Government House* is the governor's residence and office in a distant province, names the place, the office and by convention the person, and reads as a proper noun without an article. All of it now says *Government House*; the append-only history (this file, the journal) keeps the old word as written. The report-id prefix for Government House's own observations changed with it (`r-gh-`), and the earlier `r-desk-` and `r-home-` prefixes are still recognised so a save from the same format version reads unchanged.
+
+## 2026-09-21 — Chose belief as a pure fold over reports, with events as sightings on their own week
+
+Per the user's ask to turn the map back to earlier weeks and to have reports "encode what day a ship was seen on". A sighting had been the report's observation week, whatever the letter said; now an event in a letter that names a hull places her at that world on the week the event happened, and the fold (`src/sim/belief.ts`) is one function used both by the sim as letters arrive and by the UI over the whole pile with a cut-off, so the two cannot disagree. Government House's own observations were moved into the mail rather than kept only in belief, because the re-fold needs every report the picture rests on and the capital's weekly snapshot is one of them. Rumours are still folded in nowhere.
+
+## 2026-09-21 — Chose silence over shading as the corrupt governor's lie; harbouring is an event
+
+Per the user: a self-serving governor "should not inform on their own pirates", and, later, the two-point understatement of unrest "doesn't make sense". So colouring is now only what a governor leaves out — pirates in port, their comings and goings, the harbouring itself, bad news that implicates them — and unrest is told straight when it is told at all. Pirates being harboured became an event in the record (recorded when a pirate docks unseized or a crewed hull arrives to find one) rather than an inference, so a captain's letter, a scout's watch and the docks all carry it by the ordinary routes, and the map marks a world a known haven only from a non-rumour report and only while the governor it named still holds the seal.
+
+## 2026-09-21 — Chose that rumour has no preference and travels by how good the story is, never faster than a hull
+
+Per the user, in three steps: halve the chance, remove the good/bad preference, give rumours interestingness. Severity is the interest (the field already said it drove how far a rumour travels): a world lost or a hull sunk is told nearly always, a battle a quarter of the time, a step of unrest now and then; serious news also hops a lane more readily. A rumour born this week makes its first hop next week and is never told as newer than the truth, so nothing is heard of the week it happens. The Council's liar check (spec §171) leaned on "bad news travels best"; it now leans on "only some rumours travel", which is what the check needed anyway.
+
+## 2026-09-21 — Chose C ports that fuel, dockyards at B, and pirates that raid the whole chart
+
+Per the user, after a review of every rule by port class. Fuel from C was the one rule out of step with the port descriptions and was what stranded pirates whose only haven had a C port; the misjump price the spec promises for unrefined fuel is filed (#61) rather than invented. The dockyard threshold — a knocked-out hull rebuilt only at B or better — was chosen over a repair-rate bonus because with three points of damage at most a rate changes little, while a threshold changes *where a hull must go*: a hulk at a C port is stuck, a prize must reach a yard, a pirate nest with only C ports can hide but not rebuild. Pirates lie off any lane world because trade is what they raid and any lane carries it.
+
+## 2026-09-21 — Chose that pirates talk: havens pooled between hulls and heard from the docks; bold corrupt governors tout
+
+Per the user. A pirate's haven knowledge had been fixed at spawn; now hulls lying together pool their lists, a hull docked at a haven hears the rumours that have reached that world (harboured or touted → a haven to try; a pirate seized → struck off), and a self-serving governor who is also bold puts it about that the port asks no questions — talk from the start, never an event, so a scout's watch does not list it and the desk's docks hear it only as rumour. Talk is talk: a pirate sails on it and may be seized for it, and rumour marks nothing on the map.
+
+## 2026-09-21 — Chose that packets never fight and the record names the intruder
+
+Per the user: packets are unarmed. They already had no strength; what read as a packet fighting was the port's batteries counted for her side, and a battle event that named whichever side was second — for a raid on a docked packet, the packet. The event now names the intruders (the side that is not the port's own) and records the armed strength the port's side had; a governor with only the batteries says the port fought. The mechanic — the port defends what lies at its quay — was kept over "guns deter but never fire", on the user's choice.
+
+## 2026-09-21 — Chose to halve the port guns
+
+Per the user, "our dear pirates are having a bad time": A 2, B 1, nothing below (was 3/2/1). A lone raider now robs a packet at a B port and is held off only by an A; two try any port. Spec §104 restated.
+
+## 2026-09-21 — Chose fewer worlds and a subsector rolled until it is a campaign
+
+Per the user: fewer worlds, and a layout "a bit tactically interesting". Density 2d6 ≥ 9 per hex (about 28%, some twenty-odd worlds) instead of ≥ 8. Rather than only filtering, the lane rules were loosened for the sparser map first — a C port takes a spur from the nearest charted world within two parsecs and lone C ports count for the J-3 bridging — because at the old rules half the worlds went dark. Then `generateSubsector` rerolls until the layout passes: the capital's chart reaches ≥ 55% of worlds, 1–8 are dark, a chokepoint cuts ≥ 3 worlds off the capital if lost, and a populated A/B port lies ≥ 6 parsecs away for the Warlord. Rerolls draw from the same seed's stream, so a seed still reproduces its map; three in four raw layouts pass.
+
+## 2026-09-21 — Chose unnamed scouts that never fight, and the watch as theirs alone
+
+Per the user, over an earlier proposal to differentiate patrol from watch by making the watcher hide. Scouts get no officer (ours or the Warlord's); `crewed()` — an officer aboard, or a scout — replaces the "has a commander" checks, so a scout acts on orders while a captured warship still waits for one. Her letters are signed by the hull. In combat a scout is never a side: in the open she breaks off as the shooting starts (no officer's skill to help) and is caught if she fails; at the quay of her own port she sits it out — the first cut had her fleeing any action in her system, which emptied the capital of scouts during a raid. Pirates ignore scouts, having nothing to take from them. The watch is a scout's task and no other hull's; patrol is greyed out for a scout, since she has no guns to patrol with.
+
+## 2026-09-21 — Chose "go there" over "hold there" for the plain move
+
+Per the user's question what "hold there" meant. The task built a `move` with the *Afterwards* rendezvous attached, so with the default "proceed to" it did not hold at all. Renamed to what it does, with a hint that *Afterwards* decides whether she stays, rather than forcing the afterwards, because the pass-through run — call at X on the way home — is worth keeping.
