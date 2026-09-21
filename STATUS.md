@@ -1,32 +1,32 @@
-> Generated 2026-09-20 by /end-session at commit 0987c7a.
+> Generated 2026-09-20 by /end-session at commit a43874d.
 
 # STATUS
 
 ## Where things stand
 
-**Phase 1a is built and accepted; Phase 1b is next.** The 1a code lives on branch `worktree-phase1a` as **draft PR #42**, stacked on the docs PR #41; it closes `#18 #19 #20 #22 #23 #24 #25 #26` on merge, and `#27` (the playtest gate) was closed today on the strength of three preview rounds whose feedback all became changes on the branch. What 1a delivers: `Event` records as the unit of news; `Report.channel` and the events a letter mentions; character traits; hull roles scout/patrol/escort/transport with `patrol` and `scout` orders carrying their own progress; charted-first routing with off-lane jumps for hulls the desk sends; commanders' letters from every friendly port; a 14-hull starting fleet; governors who write only on a change of mood (content / neutral / hostile, extremes once per visit) through a 2d6 disclosure roll shaded by loyalty and initiative, 8–12-week "all quiet" letters, and self-serving shading of unrest; rumours that spawn at ports, hop the lanes, degrade a little, arrive as merchant/docks talk in their own pile and never touch the map; one orders dialog (hull · where to send it — last known / destination / rendezvous, or a courier in port to carry it along its own run · destination · task · disposition · afterwards); any hull carrying copies of the letters waiting at a port when its run reaches their destination; every dossier claim linking to its letter. A fresh game brings about one letter a week. Save format v2.
+**Phase 1b is built as a prototype and awaits its playtest.** The code lives on branch `worktree-phase1b` as **draft PR #52** on `main` (1a merged today as PR #42); it closes `#21 #28 #29 #30 #31 #32 #33 #43 #47` on merge. What 1b delivers: worlds that *change hands* — a revolt is a week-by-week garrison contest under one `groundRound()`, ungarrisoned worlds fall at once, the governor flees to a hull in orbit or is killed, the world becomes independent, its port closes and its garrison slowly regrows; space combat by posture (docked hulls cannot be forced out, arrivals are in the open, scouts break off, prizes lie where taken, every surviving commander writes); pirates living off havens each hull knows, lying off busy ports, robbing packets (mail destroyed) and seized where they stop at the wrong port; a `transport` order that loads where it is read, loses one detachment in ten on revival, lands behind a beachhead or pays for it, enforces appointments with marines and sends officers to prizes; the Warlord in the far corner with his own belief state, scouting the frontier monthly, landing on the weakest world he *believes* in and tempting self-serving captains; **scouts are the agents** (a scout order with a stay; a watch ends in the one uncoloured report); and a map where colour is the believed holder and age the badge. The desk now reads only mail addressed to it — necessary the moment a second seat existed.
 
-Design settled today and recorded in `spec.md`/`decisions.md`: *the courier is the mail* (no nested orders; historically grounded), stranded mail loaded only where the hull's run reaches its destination, and captured couriers and packets destroy their mail.
+Design settled today and recorded in `spec.md`/`decisions.md`: the revolt contest and beachheads; **the Empire taxes trade routes, not planets** (client rulers, garrisons hold the port and the palace, off-route worlds are liabilities, extractive taxation is an emergency order — `#35` rewritten to match); scouts as agents; and twelve open questions from the build under *spec.md → Open questions*, filed as `#53`.
 
-Current thinking: **1b starts with `#28` world states** (loyal / unrest / revolt / independent / Warlord-held, unrest dynamics, garrisons), then `#29` pirates and `#30` combat, which `#43` (mail destroyed on capture) and `#47` (pirates disrupt mail and rumour) hang off; `#32` the Warlord and `#33` agents after; `#21` map colour once world states exist; `#11`'s remainder as each piece needs it; `#34` playtest closes the milestone. `#44`–`#46` are later (rendezvous for orders, controlled-port packet lines, player-established lines).
+Current thinking: an 8-seed, 80-week soak with a passive desk runs in about a second per seed, delivers ~1 letter a week, holds pirate numbers roughly level, and has the Warlord grow from 6 to 8–14 worlds — pressure the player is meant to answer. **Next is the 1b playtest (`#34`)** with `#53` beside it, then 1c. `#11` keeps escort/blockade. `#49` (culture name pools) is a parallel session's.
 
 ## Derived facts
 
 | Fact | Value |
 |---|---|
-| Test status | 74 passed (74) |
+| Test status | 116 passed (116) |
 | Typecheck | ok |
 | Version | 0.0.1 |
-| Sim modules | `characters.ts`, `chart.ts`, `events.ts`, `fleet.ts`, `game.ts`, `generate.ts`, `governors.ts`, `hex.ts`, `lanes.ts`, `mail.ts`, `names.ts`, `orders.ts`, `player.ts`, `rng.ts`, `rumours.ts`, `save.ts`, `ships.ts`, `types.ts`, `view.ts` |
-| Order types implemented | `courier`, `hold`, `move`, `patrol`, `scout` |
-| Open issues | 28 (`#11`, `#18`–`#47` less `#13`, `#27`; eight close with PR #42) |
-| HEAD | 0987c7a — Spec and decisions: captured couriers and packets destroy their mail (branch `worktree-phase1a`, on `worktree-phase1-milestones` 2fbc8e5, on `main` aa3a898) |
+| Sim modules | `characters.ts`, `chart.ts`, `combat.ts`, `events.ts`, `factions.ts`, `fleet.ts`, `game.ts`, `generate.ts`, `governors.ts`, `ground.ts`, `hex.ts`, `lanes.ts`, `mail.ts`, `names.ts`, `orders.ts`, `pirates.ts`, `player.ts`, `rng.ts`, `rumours.ts`, `save.ts`, `scouts.ts`, `ships.ts`, `troops.ts`, `types.ts`, `view.ts`, `warlord.ts`, `world.ts` |
+| Order types implemented | `courier`, `hold`, `move`, `patrol`, `scout`, `transport` |
+| Open issues | 22 (`#11`, `#21`, `#28`–`#40`, `#43`–`#47`, `#49`, `#53`; nine close with PR #52) |
+| HEAD | a43874d — 1b soak fixes (branch `worktree-phase1b`, on `main` b7ad774) |
 
 ## Active milestone
 
-[Phase 1b — Trouble](https://github.com/lux-username/imperium-interstellar/milestone/3) — 13 open / 0 closed. (1a: 8 open / 2 closed; the 8 close when PR #42 merges.)
+[Phase 1b — Trouble](https://github.com/lux-username/imperium-interstellar/milestone/3) — 14 open / 0 closed (nine close when PR #52 merges; `#34` and `#53` are the playtest).
 
 ## Blockers / open questions
 
-- **PR #41 (docs) then PR #42 (1a code) need merging**, in that order; the user merges. PR #42 is a draft until #41 is in. After both: `git pull`, remove worktrees `.claude/worktrees/phase0-prototype` and `.claude/worktrees/phase1-milestones`, delete the branches. 1b should branch from `main` after that.
-- No open design questions.
+- **PR #52 needs review and merge**; the user merges. After it: `git pull`, remove worktree `.claude/worktrees/phase1b`, delete the branch. The playtest can run from the branch before that.
+- Twelve design questions in *spec.md → Open questions* (`#53`) — none blocks the playtest; each is decided one way in the code.
