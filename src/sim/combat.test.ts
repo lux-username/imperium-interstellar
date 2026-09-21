@@ -223,3 +223,52 @@ describe('havens', () => {
     expect(action).toBeGreaterThanOrEqual(3)
   })
 })
+
+describe("the port's guns", () => {
+  it('a lone raider leaves a packet docked at a B port alone: the port’s two guns make the odds even, not favourable', () => {
+    const s = line()
+    raider(s, X) // Exe is a B port
+    fightAtWorlds(s)
+    expect(Object.values(s.events).some((e) => e.kind === 'ship_robbed' || e.kind === 'battle')).toBe(false)
+  })
+
+  it('the same raider robs a packet docked at a D port, where there are no guns to speak of', () => {
+    const s = line()
+    s.worlds[X].profile.starport = 'D'
+    raider(s, X)
+    fightAtWorlds(s)
+    expect(Object.values(s.events).some((e) => e.kind === 'ship_robbed' && e.ship?.id === 's-xy')).toBe(true)
+  })
+
+  it('two raiders together will go for the packet under a B port’s guns, and the port shoots back', () => {
+    let attacked = 0
+    let raiderHurt = 0
+    for (let seed = 1; seed <= 20; seed++) {
+      const s = line()
+      s.rng = createRng(seed)
+      raider(s, X, 's-r1' as ShipId)
+      raider(s, X, 's-r2' as ShipId)
+      fightAtWorlds(s)
+      const kinds = Object.values(s.events).map((e) => e.kind)
+      if (kinds.includes('ship_robbed') || kinds.includes('battle')) attacked += 1
+      if (Object.values(s.events).some((e) => (e.kind === 'ship_damaged' || e.kind === 'ship_destroyed' || e.kind === 'ship_captured') && e.ship?.faction === PIRATES)) raiderHurt += 1
+    }
+    expect(attacked).toBe(20) // 4 against 2: favourable every time
+    expect(raiderHurt).toBeGreaterThan(0) // and the port's guns count in the exchange
+  })
+
+  it('a docked warship fights from under the guns rather than running', () => {
+    let fled = 0
+    for (let seed = 1; seed <= 20; seed++) {
+      const s = line()
+      s.rng = createRng(seed)
+      raider(s, X, 's-r1' as ShipId)
+      raider(s, X, 's-r2' as ShipId)
+      raider(s, X, 's-r3' as ShipId)
+      warship(s, X, 'never') // 3 + port 2 = 5 against 6: they come for her
+      fightAtWorlds(s)
+      if (Object.values(s.events).some((e) => e.kind === 'ship_fled' && e.ship?.id === 's-war')) fled += 1
+    }
+    expect(fled).toBe(0)
+  })
+})

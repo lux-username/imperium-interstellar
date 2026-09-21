@@ -5,11 +5,14 @@
  * learns of it from the commanders' own after-action letters (see
  * ./ships.ts), which a self-serving commander shades.
  *
- * A hull docked at its own faction's port cannot be forced to fight: it
- * sorties if its posture says so and sits tight otherwise. Everyone else
- * in the system is in the open. A side that will not fight tries to break
- * off ship by ship — scouts almost always get away — and whatever is caught
- * with no guns is robbed (by pirates) or taken (by anyone else). A hull
+ * A port has guns of its own — more the better the port — and they count
+ * for any side docked there, both in weighing the odds and in the
+ * exchange. Docked hulls stand and fight from under them rather than
+ * running; a hull that only came out of jump this week is still in the
+ * open, which is how raiders make a living. A side in the open that will
+ * not fight tries to break off ship by ship — scouts almost always get
+ * away — and whatever is caught with no guns is robbed (by pirates) or
+ * taken (by anyone else). A hull
  * taken with her guns intact goes to the captor's rendezvous under a prize
  * crew — or, taken by pirates, becomes a pirate on the spot. Mail aboard a
  * hull that is taken or destroyed is lost with her (#43).
@@ -34,8 +37,26 @@ export function effectiveStrength(ship: Ship): number {
   return Math.max(0, ship.strength - ship.damage)
 }
 
-function sideStrength(ships: Ship[]): number {
+function hullStrength(ships: Ship[]): number {
   return ships.reduce((sum, s) => sum + effectiveStrength(s), 0)
+}
+
+/** What a port's own batteries are worth to a side docked there. Placeholders for the playtest. */
+export function portGuns(starport: string): number {
+  return starport === 'A' ? 3 : starport === 'B' ? 2 : starport === 'C' ? 1 : 0
+}
+
+/** Where an encounter is and who is only just arriving; the port's guns count for whoever is docked. */
+interface Scene {
+  at: WorldId
+  arriving: ReadonlySet<ShipId>
+}
+
+/** A side's fighting power: its hulls, plus the port's guns if any of it lies docked there. */
+function sideStrength(state: GameState, ships: Ship[], scene: Scene): number {
+  const hulls = hullStrength(ships)
+  const underGuns = ships.some((s) => docked(state, s, scene.at, scene.arriving))
+  return hulls + (underGuns ? portGuns(state.worlds[scene.at]?.profile.starport ?? 'X') : 0)
 }
 
 /** How news of a loss reads at the desk: bad if the hull was ours, good if she was theirs. */
@@ -55,12 +76,8 @@ function postureOf(state: GameState, ships: Ship[]): Posture {
   return POSTURES[Math.max(0, Math.min(POSTURES.length - 1, i))]
 }
 
-/** Whether a side chooses to fight, given what it can see of the other. */
-function engages(state: GameState, us: Ship[], them: Ship[]): boolean {
-  const own = sideStrength(us)
-  if (own === 0) return false
-  const enemy = sideStrength(them)
-  switch (postureOf(state, us)) {
+function odds(posture: Posture, own: number, enemy: number): boolean {
+  switch (posture) {
     case 'never':
       return false
     case 'overwhelming':
@@ -72,6 +89,26 @@ function engages(state: GameState, us: Ship[], them: Ship[]): boolean {
     case 'always':
       return true
   }
+}
+
+/** Whether a side, taken all together and with its port, would come out and fight. A port's guns never sortie on their own. */
+function wouldSortie(state: GameState, us: Ship[], them: Ship[], scene: Scene): boolean {
+  if (hullStrength(us) === 0) return false
+  return odds(postureOf(state, us), sideStrength(state, us, scene), sideStrength(state, them, scene))
+}
+
+/**
+ * Whether a side chooses to fight, given what it can reach of the other.
+ * The port protects what lies under it, not the approaches: a hunter weighs
+ * the hulls in the open, and counts the docked hulls and the port's guns
+ * only if those would actually come out to meet her.
+ */
+function engages(state: GameState, us: Ship[], them: Ship[], scene: Scene): boolean {
+  if (hullStrength(us) === 0) return false
+  const own = sideStrength(state, us, scene)
+  const open = them.filter((s) => !docked(state, s, scene.at, scene.arriving))
+  const enemy = wouldSortie(state, them, us, scene) ? sideStrength(state, them, scene) : hullStrength(open)
+  return odds(postureOf(state, us), own, enemy)
 }
 
 /** Naval competence of whoever leads the side; zero for a side of packets. */
@@ -194,10 +231,11 @@ function destroy(state: GameState, ship: Ship, at: WorldId): void {
  * A few exchanges. Each round both sides roll to hit; a hit knocks a point
  * off one enemy hull, the biggest first. A hull with nothing left is
  * knocked out: destroyed on a high roll, otherwise taken if the other side
- * still has guns. After each round the side that is worse off may break
- * off ship by ship.
+ * still has guns. After each round the side in the open that is worse off
+ * may break off ship by ship; a docked side fights on under the port.
  */
-function battle(state: GameState, at: WorldId, a: Ship[], b: Ship[]): void {
+function battle(state: GameState, scene: Scene, a: Ship[], b: Ship[]): void {
+  const { at } = scene
   const lead = (side: Ship[]) => [...side].sort((x, y) => effectiveStrength(y) - effectiveStrength(x) || (x.id < y.id ? -1 : 1))[0]
   recordEvent(state, at, { kind: 'battle', valence: 'bad', severity: 2, ship: lead(b) })
   // Sides are who flew which flag when the action began: a hull taken mid-action leaves her side, and does not flee as a prize.
@@ -206,8 +244,8 @@ function battle(state: GameState, at: WorldId, a: Ship[], b: Ship[]): void {
   let sideA = a
   let sideB = b
   for (let round = 0; round < 3; round++) {
-    const sa = sideStrength(sideA)
-    const sb = sideStrength(sideB)
+    const sa = sideStrength(state, sideA, scene)
+    const sb = sideStrength(state, sideB, scene)
     if (sa === 0 || sb === 0) break
     const edge = Math.max(-3, Math.min(3, sa - sb))
     const hitsA = check(state.rng, 8, edge + leadCompetence(state, sideA))
@@ -217,41 +255,58 @@ function battle(state: GameState, at: WorldId, a: Ship[], b: Ship[]): void {
     sideA = sideA.filter((s) => state.ships[s.id] && s.location.kind === 'world' && s.faction === flagA)
     sideB = sideB.filter((s) => state.ships[s.id] && s.location.kind === 'world' && s.faction === flagB)
     if (sideA.length === 0 || sideB.length === 0) break
-    // Whoever no longer likes the odds tries to get clear.
-    if (!engages(state, sideA, sideB)) sideA = sideA.filter((s) => !breakOff(state, s, at))
-    if (!engages(state, sideB, sideA)) sideB = sideB.filter((s) => !breakOff(state, s, at))
+    // Whoever no longer likes the odds and is in the open tries to get clear.
+    if (!engages(state, sideA, sideB, scene)) sideA = sideA.filter((s) => docked(state, s, at, scene.arriving) || !breakOff(state, s, at))
+    if (!engages(state, sideB, sideA, scene)) sideB = sideB.filter((s) => docked(state, s, at, scene.arriving) || !breakOff(state, s, at))
     if (sideA.length === 0 || sideB.length === 0) break
   }
 }
 
-/** A point of damage on `ship`, from `by`. Knocked out at zero. */
+/** A point of damage on `ship`, from `by`. Knocked out at zero: an unarmed hull knocked out by pirates is robbed, not kept. */
 function hit(state: GameState, at: WorldId, ship: Ship, by: Ship[]): void {
   ship.damage += 1
   if (effectiveStrength(ship) > 0) {
     recordEvent(state, at, { kind: 'ship_damaged', valence: lossValence(ship.faction), severity: 1, ship })
     return
   }
-  if (roll(state.rng) >= 9 || sideStrength(by) === 0) destroy(state, ship, at)
+  if (ship.strength === 0 && by[0].faction === PIRATES) {
+    ship.damage = 0
+    overtaken(state, ship, at, by)
+    return
+  }
+  if (roll(state.rng) >= 9 || hullStrength(by) === 0) destroy(state, ship, at)
   else capture(state, ship, at, by)
 }
 
-/** Two hostile groups in one system decide what to do about each other. */
-function encounter(state: GameState, at: WorldId, a: Ship[], b: Ship[], arriving: ReadonlySet<ShipId>): void {
-  const wantsA = engages(state, a, b)
-  const wantsB = engages(state, b, a)
+/**
+ * Two hostile groups in one system decide what to do about each other.
+ * If both will fight, they fight, the docked side under its port's guns.
+ * Otherwise the hunters take what they can catch in the open — hulls that
+ * want no part of it try to break off — and then decide, on the odds
+ * against hulls-plus-guns, whether to go for the port as well. Whatever is
+ * caught is fought or, if it has neither guns nor a port, simply taken.
+ */
+function encounter(state: GameState, scene: Scene, a: Ship[], b: Ship[]): void {
+  const { at, arriving } = scene
+  const wantsA = engages(state, a, b, scene)
+  const wantsB = engages(state, b, a, scene)
   if (!wantsA && !wantsB) return
   if (wantsA && wantsB) {
-    battle(state, at, a, b)
+    battle(state, scene, a, b)
     return
   }
   const [hunters, quarry] = wantsA ? [a, b] : [b, a]
-  const caught = quarry.filter((s) => !docked(state, s, at, arriving)).filter((s) => !breakOff(state, s, at))
-  if (caught.length === 0) return
-  if (sideStrength(caught) === 0) {
-    for (const s of caught) overtaken(state, s, at, hunters)
+  const open = quarry.filter((s) => !docked(state, s, at, arriving))
+  const underGuns = quarry.filter((s) => docked(state, s, at, arriving))
+  const targets = open.filter((s) => !breakOff(state, s, at))
+  // The port is a harder proposition: its guns and everything under them, taken together.
+  if (underGuns.length > 0 && odds(postureOf(state, hunters), sideStrength(state, hunters, scene), sideStrength(state, underGuns, scene))) targets.push(...underGuns)
+  if (targets.length === 0) return
+  if (sideStrength(state, targets, scene) === 0) {
+    for (const s of targets) overtaken(state, s, at, hunters)
     return
   }
-  battle(state, at, hunters, caught)
+  battle(state, scene, hunters, targets)
 }
 
 /**
@@ -271,7 +326,7 @@ export function fightAtWorlds(state: GameState, landed: readonly ShipId[] = []):
         const a = shipsAt(state, at).filter((s) => s.faction === factions[i])
         const b = shipsAt(state, at).filter((s) => s.faction === factions[j])
         if (a.length === 0 || b.length === 0) continue
-        encounter(state, at, a, b, arriving)
+        encounter(state, { at, arriving }, a, b)
       }
     }
   }
