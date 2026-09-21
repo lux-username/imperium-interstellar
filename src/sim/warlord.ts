@@ -16,7 +16,7 @@ import { hexRoute, neighbours, route } from './chart'
 import { newCharacter } from './characters'
 import { portGuns } from './combat'
 import { PIRATES, THE_WARLORD, WARLORD, hostile } from './factions'
-import { HULLS, newShip, shipName, troopCapacity } from './fleet'
+import { HULLS, fuelCapacity, newShip, shipName, troopCapacity } from './fleet'
 import { hexDistance } from './hex'
 import { roll } from './rng'
 import type { CharacterId, GameState, Ship, ShipId, World, WorldId } from './types'
@@ -214,7 +214,57 @@ function picture(state: GameState, seat: WorldId): Picture {
 }
 
 // ---------------------------------------------------------------------------
-// What he has
+// What he can reach
+
+/** A port of his that fills a tank: class B or better, in his hands. */
+function fuelsHis(state: GameState, at: WorldId): boolean {
+  const w = state.worlds[at]
+  return w !== undefined && w.faction === WARLORD && (w.profile.starport === 'A' || w.profile.starport === 'B')
+}
+
+/**
+ * Whether a mission from `from` to `to` fits in a warship's tanks. He
+ * plans it like a navigator: fuel spent a jump at a time along the J-2
+ * path out, filled again at any port of his that can, and on arrival there
+ * must be enough left to reach the nearest port of his that can fill her —
+ * the target itself will not. Ships need not come home to the seat: any
+ * base of his will do to rally at, and the next mission launches from there.
+ */
+export function withinReach(state: GameState, from: WorldId, to: WorldId): boolean {
+  const path = hexRoute(state.worlds, from, to, 2)
+  if (!path) return false
+  const tank = fuelCapacity('patrol')
+  let fuel = tank
+  for (const step of path.slice(1)) {
+    fuel -= 1
+    if (fuel < 0) return false
+    if (step !== to && fuelsHis(state, step)) fuel = tank
+  }
+  if (fuelsHis(state, to)) return true
+  const home = (Object.keys(state.worlds).sort() as WorldId[])
+    .filter((w) => fuelsHis(state, w))
+    .map((w) => hexRoute(state.worlds, to, w, 2))
+    .filter((p): p is WorldId[] => p !== null)
+    .map((p) => p.length - 1)
+    .sort((a, b) => a - b)[0]
+  return home !== undefined && fuel >= home
+}
+
+// ---------------------------------------------------------------------------
+// What he has, and where
+
+/** His bases: every world of his whose port can fill a tank. Hulls idle there between missions; the seat is one of them. */
+function bases(state: GameState): WorldId[] {
+  return (Object.keys(state.worlds).sort() as WorldId[]).filter((w) => fuelsHis(state, w))
+}
+
+/** The base nearest `to` by J-2 jumps: where a mission there rallies afterwards. The seat if nothing is nearer. */
+function rendezvousFor(state: GameState, seat: WorldId, to: WorldId): WorldId {
+  const ranked = bases(state)
+    .map((b) => ({ b, jumps: hexRoute(state.worlds, to, b, 2)?.length ?? Number.POSITIVE_INFINITY }))
+    .sort((a, b) => a.jumps - b.jumps || (a.b === seat ? -1 : b.b === seat ? 1 : a.b < b.b ? -1 : 1))
+  return ranked[0]?.b ?? seat
+}
 
 function idleAt(state: GameState, at: WorldId, role: Ship['role']): Ship[] {
   return Object.values(state.ships)
@@ -226,22 +276,34 @@ function strengthOf(ships: Ship[]): number {
   return ships.reduce((n, s) => n + s.strength - s.damage, 0)
 }
 
-/** Troops he can spare from the seat this month: he keeps a reserve against his own fate. */
-function spare(state: GameState, seat: WorldId): number {
-  return Math.max(0, state.worlds[seat].garrison - 4)
+/** Troops a base can spare this month: the seat keeps four against his own fate, any other base keeps two. */
+function spare(state: GameState, seat: WorldId, base: WorldId): number {
+  return Math.max(0, state.worlds[base].garrison - (base === seat ? 4 : 2))
 }
 
-/** Load `army` detachments onto idle transports at the seat bound for `to`, with the patrols named as escort. Returns what was lifted. */
-function dispatch(state: GameState, seat: WorldId, to: WorldId, army: number, escorts: Ship[]): number {
+/** The bases from which `to` is in reach, nearest first. */
+function launchPoints(state: GameState, to: WorldId): WorldId[] {
+  return bases(state)
+    .filter((b) => withinReach(state, b, to))
+    .sort((a, b) => (hexRoute(state.worlds, a, to, 2)?.length ?? 99) - (hexRoute(state.worlds, b, to, 2)?.length ?? 99) || (a < b ? -1 : 1))
+}
+
+/**
+ * Load `army` detachments onto idle transports at `base` bound for `to`,
+ * with the patrols named as escort; all rally afterwards at the base
+ * nearest the target, ready for the next month. Returns what was lifted.
+ */
+function dispatch(state: GameState, seat: WorldId, base: WorldId, to: WorldId, army: number, escorts: Ship[]): number {
+  const then = { kind: 'world' as const, world: rendezvousFor(state, seat, to) }
   let remaining = army
-  for (const t of idleAt(state, seat, 'transport')) {
+  for (const t of idleAt(state, base, 'transport')) {
     if (remaining <= 0) break
     const load = Math.min(troopCapacity('transport'), remaining)
     remaining -= load
-    t.order = { kind: 'transport', army: load, marines: 0, passenger: null, purpose: 'land', to, then: { kind: 'world', world: seat }, loaded: false }
+    t.order = { kind: 'transport', army: load, marines: 0, passenger: null, purpose: 'land', to, then, loaded: false }
   }
   const lifted = army - remaining
-  if (lifted > 0) for (const p of escorts) p.order = { kind: 'move', to, then: { kind: 'world', world: seat } }
+  if (lifted > 0) for (const p of escorts) p.order = { kind: 'move', to, then }
   return lifted
 }
 
@@ -290,14 +352,14 @@ function crewPrizes(state: GameState, seat: WorldId): void {
  */
 function replaceGovernors(state: GameState, p: Picture): void {
   const officer = pool(state, p.seat)[0]
-  const transport = idleAt(state, p.seat, 'transport')[0]
+  const transport = idleAt(state, p.seat, 'transport')[0] // his officers wait at the seat, so this errand starts there
   const home = state.worlds[p.seat]
   if (!officer || !transport || home.marines < 1) return
   const nest = p.own
-    .filter((o) => o.world.id !== p.seat && p.piratesAt[o.world.id] && hexRoute(state.worlds, p.seat, o.world.id, 2) !== null)
+    .filter((o) => o.world.id !== p.seat && p.piratesAt[o.world.id] && withinReach(state, p.seat, o.world.id))
     .sort((a, b) => (a.world.id < b.world.id ? -1 : 1))[0]
   if (!nest) return
-  transport.order = { kind: 'transport', army: 0, marines: 1, passenger: officer, purpose: 'appoint', to: nest.world.id, then: { kind: 'world', world: p.seat }, loaded: false }
+  transport.order = { kind: 'transport', army: 0, marines: 1, passenger: officer, purpose: 'appoint', to: nest.world.id, then: { kind: 'world', world: rendezvousFor(state, p.seat, nest.world.id) }, loaded: false }
 }
 
 /**
@@ -330,10 +392,14 @@ function defend(state: GameState, p: Picture): void {
     .filter((w) => w.need > 0)
     .sort((a, b) => b.urgency - a.urgency || b.need - a.need || (a.o.world.id < b.o.world.id ? -1 : 1))
   for (const w of worries) {
-    const lift = Math.min(spare(state, p.seat), w.need)
-    if (lift <= 0 || hexRoute(state.worlds, p.seat, w.o.world.id, 2) === null) continue
-    const escorts = w.threat > 0 ? idleAt(state, p.seat, 'patrol').slice(0, 2) : []
-    dispatch(state, p.seat, w.o.world.id, lift, escorts)
+    for (const base of launchPoints(state, w.o.world.id)) {
+      if (base === w.o.world.id) continue
+      const lift = Math.min(spare(state, p.seat, base), w.need, idleAt(state, base, 'transport').length * troopCapacity('transport'))
+      if (lift <= 0) continue
+      const escorts = w.threat > 0 ? idleAt(state, base, 'patrol').slice(0, 2) : []
+      dispatch(state, p.seat, base, w.o.world.id, lift, escorts)
+      break
+    }
   }
 }
 
@@ -357,32 +423,31 @@ function nearestEnemy(p: Picture, world: World): number {
  * within his means — or now and then anyway, for the port.
  */
 function attack(state: GameState, p: Picture): void {
-  const transports = idleAt(state, p.seat, 'transport')
-  const patrols = idleAt(state, p.seat, 'patrol')
-  const lift = Math.min(spare(state, p.seat), transports.length * troopCapacity('transport'))
-  if (lift <= 0) return
-  const escortStrength = strengthOf(patrols)
-  const candidates = p.targets
-    .filter((t) => hexRoute(state.worlds, p.seat, t.world.id, 2) !== null)
-    .map((t) => {
+  // Every target is weighed from every base that can reach it with transports to spare.
+  const candidates = p.targets.flatMap((t) =>
+    launchPoints(state, t.world.id).map((base) => {
+      const transports = idleAt(state, base, 'transport')
+      const patrols = idleAt(state, base, 'patrol')
+      const lift = Math.min(spare(state, p.seat, base), transports.length * troopCapacity('transport'))
       const garrison = t.snap.garrison + t.snap.marines
       const warships = p.enemyAt[t.world.id]?.strength ?? 0
       const guns = warships > 0 ? portGuns(t.snap.profile.starport) : 0
       const independent = state.factions[t.snap.faction]?.kind === 'rebels'
-      const feasible = garrison + 1 < lift && (warships === 0 || escortStrength > warships + guns)
+      const feasible = lift > 0 && garrison + 1 < lift && (warships === 0 || strengthOf(patrols) > warships + guns)
       const value = independent ? portGuns(t.snap.profile.starport) : p.value(t.world)
-      return { t, feasible, independent, value, garrison }
-    })
+      return { t, base, lift, patrols, feasible, independent, value, garrison, warships }
+    }),
+  )
     .filter((c) => c.feasible)
-    .sort((a, b) => b.value - a.value || a.garrison - b.garrison || (a.t.world.id < b.t.world.id ? -1 : 1))
+    .sort((a, b) => b.value - a.value || a.garrison - b.garrison || (a.t.world.id < b.t.world.id ? -1 : 1) || (a.base < b.base ? -1 : 1))
   if (candidates.length === 0) return
   const desks = candidates.filter((c) => !c.independent)
   const independents = candidates.filter((c) => c.independent)
   // The desk's worlds first; an independent one when that is all there is, or one month in four for its port.
   const pick = desks.length === 0 || (independents.length > 0 && roll(state.rng) >= 10) ? (independents[0] ?? desks[0]) : desks[0]
-  const troops = Math.min(lift, pick.garrison + 3)
-  const escorts = (p.enemyAt[pick.t.world.id]?.strength ?? 0) > 0 ? patrols : patrols.slice(0, 2)
-  dispatch(state, p.seat, pick.t.world.id, troops, escorts)
+  const troops = Math.min(pick.lift, pick.garrison + 3)
+  const escorts = pick.warships > 0 ? pick.patrols : pick.patrols.slice(0, 2)
+  dispatch(state, p.seat, pick.base, pick.t.world.id, troops, escorts)
 }
 
 /**
@@ -394,9 +459,6 @@ function attack(state: GameState, p: Picture): void {
  * at their own port have its guns; a pirate at a haven has none.
  */
 function hunt(state: GameState, p: Picture): void {
-  const patrols = idleAt(state, p.seat, 'patrol')
-  if (patrols.length === 0) return
-  const mine = strengthOf(patrols)
   const desks = Object.entries(p.enemyAt).map(([at, seen]) => {
     const known = p.targets.find((t) => t.world.id === at)
     const theirs = seen.strength + (known && known.snap.faction !== WARLORD ? portGuns(known.snap.profile.starport) : 0)
@@ -404,16 +466,20 @@ function hunt(state: GameState, p: Picture): void {
   })
   const pirates = Object.entries(p.piratesAt).map(([at, seen]) => ({ at: at as WorldId, theirs: seen.strength, age: seen.age, own: state.worlds[at as WorldId]?.faction === WARLORD }))
   const prey = [...desks, ...pirates]
-    .filter((x) => state.worlds[x.at] && x.theirs < mine && hexRoute(state.worlds, p.seat, x.at, 2) !== null && (x.own || state.worlds[x.at].faction !== WARLORD))
+    .filter((x) => state.worlds[x.at] && (x.own || state.worlds[x.at].faction !== WARLORD))
     .sort((a, b) => Number(b.own) - Number(a.own) || a.theirs - b.theirs || a.age - b.age || (a.at < b.at ? -1 : 1))
-  const target = prey[0]
-  if (!target) return
-  // Enough to be favourable, not the whole fleet.
-  let sent = 0
-  for (const patrol of patrols) {
-    if (sent > target.theirs) break
-    patrol.order = { kind: 'patrol', world: target.at, weeks: 3, posture: 'favourable', then: { kind: 'world', world: p.seat }, began: null }
-    sent += patrol.strength - patrol.damage
+  for (const target of prey) {
+    // The nearest base with enough idle patrols to be favourable sends them; enough, not the whole fleet.
+    const base = launchPoints(state, target.at).find((b) => strengthOf(idleAt(state, b, 'patrol')) > target.theirs)
+    if (!base) continue
+    const then = { kind: 'world' as const, world: rendezvousFor(state, p.seat, target.at) }
+    let sent = 0
+    for (const patrol of idleAt(state, base, 'patrol')) {
+      if (sent > target.theirs) break
+      patrol.order = { kind: 'patrol', world: target.at, weeks: 3, posture: 'favourable', then, began: null }
+      sent += patrol.strength - patrol.damage
+    }
+    return
   }
 }
 
@@ -423,7 +489,7 @@ function hunt(state: GameState, p: Picture): void {
  * has never heard of or not heard of lately, the valuable ones first.
  */
 function scout(state: GameState, p: Picture): void {
-  const scouts = idleAt(state, p.seat, 'scout')
+  const scouts = bases(state).flatMap((b) => idleAt(state, b, 'scout'))
   if (scouts.length === 0) return
   const errands: { to: WorldId; score: number }[] = []
   for (const o of p.own) {
@@ -442,9 +508,10 @@ function scout(state: GameState, p: Picture): void {
   }
   errands.sort((a, b) => b.score - a.score || (a.to < b.to ? -1 : 1))
   for (const s of scouts) {
-    const errand = errands.find((e) => hexRoute(state.worlds, p.seat, e.to, 2) !== null)
-    if (!errand) break
+    const from = s.location.kind === 'world' ? s.location.world : p.seat
+    const errand = errands.find((e) => withinReach(state, from, e.to))
+    if (!errand) continue
     errands.splice(errands.indexOf(errand), 1)
-    s.order = { kind: 'scout', world: errand.to, weeks: 1, then: { kind: 'world', world: p.seat }, lookedOn: null }
+    s.order = { kind: 'scout', world: errand.to, weeks: 1, then: { kind: 'world', world: rendezvousFor(state, p.seat, errand.to) }, lookedOn: null }
   }
 }

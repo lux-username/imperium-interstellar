@@ -11,7 +11,7 @@ import { createRng } from './rng'
 import type { Order } from './orders'
 import type { CharacterId, GameState, ShipId, WorldId } from './types'
 import type { Report, WorldSnapshot } from './view'
-import { WARLORD_WORLDS, hisOfficer, warlordActs } from './warlord'
+import { WARLORD_WORLDS, hisOfficer, warlordActs, withinReach } from './warlord'
 import { line } from './fixtures.test-helper'
 
 describe('the Warlord at the start', () => {
@@ -285,5 +285,39 @@ describe('interrogation', () => {
     expect(letters).toBeGreaterThan(25) // two havens at 58% each: a letter most of the time
     expect(named / letters).toBeLessThan(2) // and rarely both
     expect(wrong).toBeLessThan(letters / 3)
+  })
+})
+
+describe('how far he can reach', () => {
+  const Y = 'w-y' as WorldId
+  const W = 'w-w' as WorldId
+  const V = 'w-v' as WorldId
+  const Z = 'w-z' as WorldId
+
+  /** Wye as his seat (an A port), then a chain of D-port worlds eastward, two hexes apart: W, V, Z — three jumps out. */
+  function chain(): GameState {
+    const s = line()
+    s.worlds[Y].faction = WARLORD
+    s.worlds[Y].profile.starport = 'A'
+    s.factions[WARLORD].capital = Y
+    for (const [id, col] of [[W, 5], [V, 7], [Z, 9]] as [WorldId, number][]) {
+      s.worlds[id] = { ...s.worlds[Y], id, name: id, hex: { col, row: 5 }, faction: 'f-admin' as never, governor: null, actingGovernor: null, profile: { ...s.worlds[Y].profile, starport: 'D' } }
+    }
+    return s
+  }
+
+  it('three jumps out on a four-jump tank is too far, since the target will not fill her for the way back', () => {
+    const s = chain()
+    expect(withinReach(s, Y, W)).toBe(true) // one out, one back
+    expect(withinReach(s, Y, V)).toBe(true) // two out, two back
+    expect(withinReach(s, Y, Z)).toBe(false) // three out, one left, three home
+  })
+
+  it('a B port of his on the way is a base: she fills there, and rallies there afterwards instead of at the seat', () => {
+    const s = chain()
+    s.worlds[W].faction = WARLORD
+    s.worlds[W].profile.starport = 'B'
+    expect(withinReach(s, Y, Z)).toBe(true) // fill at W, two on to Z, two back to W
+    expect(withinReach(s, W, Z)).toBe(true)
   })
 })
