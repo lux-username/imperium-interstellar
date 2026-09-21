@@ -27,6 +27,8 @@ export function GodView({ state, view, world }: Props) {
       <h4>God view — ground truth (dev only)</h4>
       <div className="mailstats">
         mail: {Object.entries(counts).map(([k, n]) => `${k} ${n}`).join(' · ') || 'none'}
+        <br />
+        hulls: {Object.values(state.factions).map((f) => `${f.name} ${Object.values(state.ships).filter((s) => s.faction === f.id).length}`).join(' · ')}
       </div>
       {truth && (
         <table>
@@ -50,8 +52,25 @@ export function GodView({ state, view, world }: Props) {
             </tr>
             <tr>
               <td>garrison</td>
-              <td>{truth.garrison}</td>
-              <td className={snap && snap.garrison !== truth.garrison ? 'diff' : ''}>{snap?.garrison ?? '—'}</td>
+              <td>
+                {truth.garrison} + {truth.marines}m
+              </td>
+              <td className={snap && (snap.garrison !== truth.garrison || snap.marines !== truth.marines) ? 'diff' : ''}>{snap ? `${snap.garrison} + ${snap.marines}m` : '—'}</td>
+            </tr>
+            <tr>
+              <td>held by</td>
+              <td>{state.factions[truth.faction]?.name ?? truth.faction}</td>
+              <td className={snap && snap.faction !== truth.faction ? 'diff' : ''}>{snap ? (state.factions[snap.faction]?.name ?? snap.faction) : '—'}</td>
+            </tr>
+            <tr>
+              <td>contest</td>
+              <td>{truth.contest ? `${state.factions[truth.contest.attacker]?.name}: ${truth.contest.attackers.army + truth.contest.attackers.marines} since wk ${truth.contest.since}` : '—'}</td>
+              <td className={(snap?.contest === null) !== (truth.contest === null) ? 'diff' : ''}>{snap?.contest ? `${state.factions[snap.contest.attacker]?.name}: ${snap.contest.strength}` : '—'}</td>
+            </tr>
+            <tr>
+              <td>haven</td>
+              <td>{Object.values(state.ships).some((s) => s.havens?.includes(truth.id)) ? 'known to pirates' : '—'}</td>
+              <td />
             </tr>
             <tr>
               <td>mail waiting here</td>

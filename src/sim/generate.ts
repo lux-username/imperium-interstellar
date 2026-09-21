@@ -11,20 +11,10 @@ import { allHexes, hexDistance, hexLabel, SUBSECTOR_COLS, SUBSECTOR_ROWS, type H
 import { newCharacter, playerTraits } from './characters'
 import { worldName } from './names'
 import { createRng, nextInt, roll, type Rng } from './rng'
-import type {
-  Character,
-  CharacterId,
-  Faction,
-  FactionId,
-  StarportClass,
-  World,
-  WorldId,
-  WorldProfile,
-} from './types'
+import { ADMINISTRATION, PLAYER, startingFactions } from './factions'
+import type { Character, CharacterId, Faction, FactionId, StarportClass, World, WorldId, WorldProfile } from './types'
 
-export const EMPIRE = 'f-empire' as FactionId
-export const ADMINISTRATION = 'f-admin' as FactionId
-export const PLAYER = 'c-player' as CharacterId
+export { ADMINISTRATION, EMPIRE, PLAYER } from './factions'
 
 export function worldId(hex: Hex): WorldId {
   return `w-${hexLabel(hex)}` as WorldId
@@ -146,6 +136,8 @@ export function generateWorlds(rng: Rng): Generated {
       actingGovernor: null,
       unrest: 0,
       garrison: 0,
+      marines: 0,
+      contest: null,
       lastLetter: nextInt(rng, -7, 0),
     }
     worlds[id] = world
@@ -169,6 +161,8 @@ export function generateWorlds(rng: Rng): Generated {
       actingGovernor: null,
       unrest: 0,
       garrison: 0,
+      marines: 0,
+      contest: null,
       lastLetter: nextInt(rng, -7, 0),
     }
     worlds[id] = world
@@ -184,10 +178,14 @@ export function generateWorlds(rng: Rng): Generated {
   for (const world of list) {
     // Starting unrest and garrison: mostly quiet, occasionally not.
     world.unrest = world.profile.population === 0 ? 0 : Math.max(0, roll(rng) - 9)
-    world.garrison = world.profile.population === 0 ? 0 : Math.max(0, Math.floor(world.profile.population / 2) + roll(rng) - 7)
+    // A world that rolls no garrison usually has one detachment after all; only a second low roll leaves it truly empty.
+    const rolled = Math.floor(world.profile.population / 2) + roll(rng) - 7
+    world.garrison = world.profile.population === 0 ? 0 : rolled >= 1 ? rolled : roll(rng) <= 3 ? 0 : 1
     if (world === capital) {
+      // The capital's own garrison, plus the desk's reserve: 4 army and 2 marine detachments (spec.md → Starting position).
       world.unrest = 0
-      world.garrison = Math.max(world.garrison, 4)
+      world.garrison = Math.max(world.garrison, 2) + 4
+      world.marines = 2
       continue
     }
     if (world.profile.population === 0) continue
@@ -197,9 +195,12 @@ export function generateWorlds(rng: Rng): Generated {
     world.actingGovernor = id
   }
 
-  const factions: Record<FactionId, Faction> = {
-    [EMPIRE]: { id: EMPIRE, name: 'The Empire', kind: 'empire' },
-    [ADMINISTRATION]: { id: ADMINISTRATION, name: 'The Subsector Administration', kind: 'administration' },
+  const factions: Record<FactionId, Faction> = startingFactions(capital.id)
+
+  // A handful of officers without posts at the capital, for the desk to send out to seats and prizes.
+  for (let i = 1; i <= 4; i++) {
+    const id = `c-officer-${i}` as CharacterId
+    characters[id] = newCharacter(rng, id, ADMINISTRATION, { kind: 'unassigned', at: capital.id })
   }
 
   return { worlds, characters, factions, capital: capital.id }

@@ -5,11 +5,21 @@
  *
  * A charted route is preferred. A hull someone sent on purpose may also
  * jump off-lane to any world within its jump rating — that is what makes
- * scouts and warships worth having. Fuel risk is Phase 1b.
+ * scouts and warships worth having. Every jump costs a tank of fuel, and
+ * only a port of class B or better that is open to her fills them: a hull
+ * down to her last jump makes for fuel — her rendezvous if it will serve —
+ * before anything else, and one with none sits where she is.
  */
 import { hexRoute, laneBetween, nextDeparture, route } from './chart'
-import { hullArrivedEvent, hullDepartedEvent } from './events'
+import { burnsFuel, fuelCapacity } from './fleet'
+import { PIRATES } from './factions'
+import { hexDistance } from './hex'
+import { eventsAt, hullArrivedEvent, hullDepartedEvent, recordEvent } from './events'
+import { capitalOf, hostile } from './factions'
 import { loadMail, snapshotWorld, unloadMail, writeReport } from './mail'
+import { watchReport } from './scouts'
+import { disembarkAtHome, loadCargo, takeOnWaiting, unloadCargo } from './troops'
+import { impound } from './world'
 import type { Address, GameState, Ship, ShipId, WorldId } from './types'
 import type { Order } from './orders'
 
@@ -67,13 +77,24 @@ export function orderTarget(state: GameState, ship: Ship, at: WorldId): WorldId 
         if (state.week < order.began + order.weeks) return null
         ship.order = afterwards(ship, order.then)
         continue
-      case 'scout':
+      case 'scout': {
         if (order.world !== at) return order.world
         if (order.lookedOn === null) {
           order.lookedOn = state.week
           commanderReport(state, ship, at)
         }
-        if (state.week <= order.lookedOn) return null
+        const stay = Math.max(1, order.weeks)
+        if (state.week < order.lookedOn + stay) return null
+        // A watch ends with the one report nobody colours; a look was written on arrival.
+        if (stay > 1) watchReport(state, ship, at, order.lookedOn, friendlyPort(state, ship, at))
+        ship.order = afterwards(ship, order.then)
+        continue
+      }
+      case 'transport':
+        if (!order.loaded) loadCargo(state, ship, at, order)
+        if (order.to !== at) return order.to
+        // Already where the cargo is going: put it down here and now.
+        unloadCargo(state, ship, at, order)
         ship.order = afterwards(ship, order.then)
         continue
     }
@@ -84,7 +105,7 @@ export function orderTarget(state: GameState, ship: Ship, at: WorldId): WorldId 
 /** The world an order is ultimately about, for deciding when a commander writes. */
 function orderDestination(order: Order | null): WorldId | null {
   if (!order) return null
-  if (order.kind === 'move') return order.to
+  if (order.kind === 'move' || order.kind === 'transport') return order.to
   if (order.kind === 'patrol' || order.kind === 'scout') return order.world
   return null
 }
@@ -92,22 +113,110 @@ function orderDestination(order: Order | null): WorldId | null {
 // ---------------------------------------------------------------------------
 // Commanders' reports
 
-/** A port where a hull of this faction can lie safely and hand mail to the packets. Phase 1b adds hostile worlds. */
-export function friendlyPort(state: GameState, ship: Ship, at: WorldId): boolean {
+/** Whether a port will take a hull of this faction at all. A hostile world's port is closed to it: no fuel, no mail, no landing. */
+export function portOpenTo(state: GameState, at: WorldId, faction: Ship['faction']): boolean {
   const world = state.worlds[at]
-  return world !== undefined && world.faction === ship.faction && route(state.lanes, at, state.capital) !== null
+  return world !== undefined && !hostile(world.faction, faction)
 }
 
 /**
- * A commander writes home: what the world looks like from orbit and what is
- * in port. At a friendly port on the lanes the letter goes by the next
- * packet; off the lanes it rides with the ship until it finds a port with
- * a lane home.
+ * Whether the port a packet is leaving *knows* the far port is closed to
+ * her side. Nothing travels faster than a hull: a port knows a world has
+ * fallen only when the talk of it has reached its own docks along the
+ * lanes — or, at a faction's seat, when the seat's own reports say so.
+ * Until then the packet sails as usual, and is impounded on arrival.
+ */
+export function portKnowsClosed(state: GameState, from: WorldId, to: WorldId, faction: Ship['faction']): boolean {
+  const fell = (kind: string) => kind === 'world_fell' || kind === 'world_taken'
+  if (state.rumours.some((r) => r.event.at === to && fell(r.event.kind) && from in r.heard)) return true
+  if (state.factions[faction]?.capital !== from) return false
+  const leader = state.factions[faction]?.leader
+  const known = leader ? state.beliefs[leader]?.worlds[to] : undefined
+  return known?.snapshot.kind === 'world' && hostile(known.snapshot.world.faction, faction)
+}
+
+/**
+ * A packet that docks at a port held against her side is taken at the
+ * quay; scouts and warships stay in orbit and are not. Runs on this week's
+ * arrivals after the encounters.
+ */
+export function impoundAtPorts(state: GameState, landed: readonly ShipId[]): void {
+  for (const id of landed) {
+    const ship = state.ships[id]
+    if (!ship || ship.location.kind !== 'world') continue
+    if (ship.role !== 'packet') continue
+    const world = state.worlds[ship.location.world]
+    if (!hostile(world.faction, ship.faction) || !world.actingGovernor) continue
+    recordEvent(state, world.id, { kind: 'ship_captured', valence: 'neutral', against: ship.faction, favours: world.faction, severity: 2, ship })
+    impound(state, ship, world.faction)
+  }
+}
+
+/**
+ * Whether a hull can fill her tanks here: a port of class B or better that
+ * is open to her side — for a pirate, a haven she knows of that class.
+ */
+export function refuelsAt(state: GameState, ship: Ship, at: WorldId): boolean {
+  const world = state.worlds[at]
+  if (!world || (world.profile.starport !== 'A' && world.profile.starport !== 'B')) return false
+  if (ship.faction === PIRATES) return ship.havens?.includes(at) ?? false
+  return !hostile(world.faction, ship.faction)
+}
+
+/** Fill the tanks if the port will do it. Called on arrival and again before sailing, in case the port changed hands meanwhile. */
+export function refuel(state: GameState, ship: Ship, at: WorldId): void {
+  if (burnsFuel(ship.role) && refuelsAt(state, ship, at)) ship.fuel = fuelCapacity(ship.role)
+}
+
+/**
+ * Where a hull with one jump left should go instead of `to`, if `to` has
+ * no fuel for her: the nearest place within a jump that has, her
+ * rendezvous first if it qualifies. Null if nowhere — she stays.
+ */
+export function fuelStop(state: GameState, ship: Ship, from: WorldId, to: WorldId): WorldId | null {
+  if (refuelsAt(state, ship, to)) return to
+  const here = state.worlds[from]
+  const inRange = (Object.keys(state.worlds).sort() as WorldId[]).filter((w) => w !== from && hexDistance(state.worlds[w].hex, here.hex) <= ship.jump && refuelsAt(state, ship, w))
+  if (inRange.length === 0) return null
+  const rendezvous = ship.order && 'then' in ship.order && ship.order.then?.kind === 'world' ? ship.order.then.world : ship.standing.rally
+  if (rendezvous && inRange.includes(rendezvous)) return rendezvous
+  return inRange.sort((a, b) => hexDistance(state.worlds[a].hex, state.worlds[to].hex) - hexDistance(state.worlds[b].hex, state.worlds[to].hex) || (a < b ? -1 : 1))[0]
+}
+
+/** A port where a hull of this faction can lie safely and hand mail to the packets for home. */
+export function friendlyPort(state: GameState, ship: Ship, at: WorldId): boolean {
+  const world = state.worlds[at]
+  const home = capitalOf(state, ship.faction)
+  return world !== undefined && world.faction === ship.faction && home !== null && route(state.lanes, at, home) !== null
+}
+
+/** Whether this officer has already posted a letter this week, so an action and an arrival do not make two. Notes from questioning prisoners are not the week's letter. */
+function wroteThisWeek(state: GameState, commander: Ship['commander']): boolean {
+  return Object.values(state.mail).some(
+    (m) => m.contents.kind === 'report' && m.contents.report.observer === commander && m.contents.report.observed === state.week && !m.contents.report.events.every((e) => e.kind === 'haven_named'),
+  )
+}
+
+/**
+ * A commander writes home: what the world looks like from orbit, what is
+ * in port, and anything serious that happened here this week. At a
+ * friendly port on the lanes the letter goes by the next packet; off the
+ * lanes or over a hostile world it rides with the ship until it finds a
+ * port with a lane home.
  */
 export function commanderReport(state: GameState, ship: Ship, at: WorldId): void {
-  if (!ship.commander || at === state.capital) return
+  if (!ship.commander || at === capitalOf(state, ship.faction) || capitalOf(state, ship.faction) === null) return
+  if (wroteThisWeek(state, ship.commander)) return
   const world = state.worlds[at]
-  const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world))
+  const commander = state.characters[ship.commander]
+  // A self-serving commander leaves out the moments that reflect on them: their own hull breaking off or getting
+  // knocked about, and the detachments that did not wake from a passage in their hold.
+  const own = (e: { ship: { id: string } | null }) => e.ship?.id === ship.id
+  const seen = eventsAt(state, at, state.week, state.week)
+    .filter((e) => e.severity >= 2 || (own(e) && (e.kind === 'ship_fled' || e.kind === 'troops_landed' || e.kind === 'troops_lost')))
+    .filter((e) => e.kind !== 'hull_arrived' && e.kind !== 'hull_departed')
+    .filter((e) => !(commander?.traits.loyalty === 'self' && own(e) && (e.kind === 'ship_fled' || e.kind === 'ship_damaged' || e.kind === 'troops_lost')))
+  const mail = writeReport(state, ship.commander, at, snapshotWorld(state, world), { events: seen })
   if (!friendlyPort(state, ship, at)) {
     mail.status = { kind: 'aboard', ship: ship.id }
     ship.mailbag.push(mail.id)
@@ -118,19 +227,49 @@ export function commanderReport(state: GameState, ship: Ship, at: WorldId): void
 // The week's movements
 
 /**
- * Ships that have landed this week. Cargo comes off before anything departs,
- * so a packet that turns straight around can carry on what just arrived.
+ * Ships that have landed this week come out of jump. They do not unload
+ * yet: whatever is lying in the system gets its say first (see ./combat.ts).
+ * Returns the hulls that landed.
  */
-export function arriveShips(state: GameState): void {
+export function landShips(state: GameState): ShipId[] {
+  const landed: ShipId[] = []
   const ids = Object.keys(state.ships).sort() as ShipId[]
   for (const id of ids) {
     const ship = state.ships[id]
     if (ship.location.kind !== 'transit' || ship.location.arrives > state.week) continue
     const at = ship.location.to
     ship.location = { kind: 'world', world: at }
+    refuel(state, ship, at)
     hullArrivedEvent(state, at, ship)
+    landed.push(id)
+  }
+  return landed
+}
+
+/**
+ * The week's arrivals unload, if they are still here to do it. Cargo comes
+ * off before anything departs, so a packet that turns straight around can
+ * carry on what just arrived.
+ */
+export function unloadArrivals(state: GameState, landed: ShipId[]): void {
+  for (const id of landed) {
+    const ship = state.ships[id]
+    if (!ship || ship.location.kind !== 'world') continue
+    const at = ship.location.world
     unloadMail(state, ship, at)
     onArrival(state, ship, at)
+  }
+}
+
+/** Every commander in a system where something happened this week writes home about it. */
+export function afterActionReports(state: GameState): void {
+  const ids = Object.keys(state.ships).sort() as ShipId[]
+  for (const id of ids) {
+    const ship = state.ships[id]
+    if (!ship.commander || ship.location.kind !== 'world') continue
+    const at = ship.location.world
+    const action = eventsAt(state, at, state.week, state.week).some((e) => ['battle', 'ship_robbed', 'ship_captured', 'ship_destroyed', 'pirate_seized', 'world_fell', 'world_taken'].includes(e.kind))
+    if (action) commanderReport(state, ship, at)
   }
 }
 
@@ -143,7 +282,12 @@ function onArrival(state: GameState, ship: Ship, at: WorldId): void {
   const order = ship.order
   if (order?.kind === 'patrol' && order.world === at && order.began === null) order.began = state.week
   if (order?.kind === 'scout' && order.world === at && order.lookedOn === null) order.lookedOn = state.week
-  if (!ship.commander || at === state.capital) return
+  if (order?.kind === 'transport' && order.to === at && order.loaded) {
+    unloadCargo(state, ship, at, order)
+    ship.order = afterwards(ship, order.then)
+  }
+  disembarkAtHome(state, ship, at)
+  if (!ship.commander || at === capitalOf(state, ship.faction)) return
   if (friendlyPort(state, ship, at) || orderDestination(order) === at) commanderReport(state, ship, at)
 }
 
@@ -153,6 +297,8 @@ export function departShips(state: GameState): void {
   for (const id of ids) {
     const ship = state.ships[id]
     if (ship.location.kind !== 'world') continue
+    // No officer aboard: a packet runs her lane regardless, a prize sails for the rendezvous under her prize crew, anything else waits.
+    if (ship.commander === null && !(ship.role === 'packet' && ship.order?.kind === 'courier') && ship.order?.kind !== 'move') continue
     const from = ship.location.world
     const wasPatrolling = ship.order?.kind === 'patrol' && ship.order.world === from && ship.order.began !== null
     const target = orderTarget(state, ship, from)
@@ -164,12 +310,26 @@ export function departShips(state: GameState): void {
       ship.order = { kind: 'hold' }
       continue
     }
-    const to = path[1]
+    let to = path[1]
     const lane = laneBetween(state.lanes, from, to)
-    // Packets keep the lane's timetable; anything else sails as soon as it can.
+    // Packets keep the lane's timetable, and are held back only once the port they are leaving knows the far port is
+    // closed to them; anything else sails as soon as it can.
     if (ship.role === 'packet' && lane && nextDeparture(lane, from, state.week) !== state.week) continue
+    if (ship.role === 'packet' && portKnowsClosed(state, from, to, ship.faction)) continue
+    // Fuel: the port may have filled her since she landed; with one jump left she goes only where there is more.
+    if (burnsFuel(ship.role)) {
+      refuel(state, ship, from)
+      if (ship.fuel <= 0) continue
+      if (ship.fuel === 1) {
+        const stop = fuelStop(state, ship, from, to)
+        if (stop === null) continue
+        to = stop
+      }
+    }
     loadMail(state, ship, from, to, path)
+    takeOnWaiting(state, ship, from)
     hullDepartedEvent(state, from, ship)
+    if (burnsFuel(ship.role)) ship.fuel -= 1
     ship.location = { kind: 'transit', from, to, arrives: state.week + 1 }
   }
 }

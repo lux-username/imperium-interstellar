@@ -133,10 +133,15 @@ export function packetShips(rng: Rng, lanes: Record<LaneId, Lane>): Record<ShipI
       faction: ADMINISTRATION,
       jump: Math.max(2, lane.jumpDistance),
       strength: 0,
+      damage: 0,
+      fuel: 0,
       location: { kind: 'world', world: lane.ends[0] },
       commander: null,
+      troops: { army: 0, marines: 0 },
+      passengers: [],
+      havens: null,
       order: { kind: 'courier', route: [lane.ends[0], lane.ends[1]], then: null, repeat: true, leg: 1 },
-      standing: { rally: null, onContact: 'favourable' },
+      standing: { rally: null, onContact: 'never' },
       mailbag: [],
     }
   }

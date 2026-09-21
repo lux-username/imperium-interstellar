@@ -1,11 +1,12 @@
 /**
- * One world, as the desk knows it: the newest report, its age, the hulls
- * last seen there, every report ever received about it, and the one thing
- * the player can do — write to its governor and ask for news.
+ * One world, as the desk knows it: the newest report, its age, who holds
+ * the world in that telling, the hulls last seen there, every report ever
+ * received about it, and the things the player can do — write to its
+ * governor, or send a hull.
  */
 import { hexLabel } from '../sim/hex'
-import { expectedArrival, route, type CharacterId, type PlayerView, type ReportId, type WorldId } from '../sim/view'
-import { ago, eventText, profileString, unrestWord, weekLabel, worldName } from './format'
+import { expectedArrival, nextDeparture, route, type CharacterId, type PlayerView, type ReportId, type WorldId } from '../sim/view'
+import { ago, eventText, holderText, profileString, sailsText, stateOf, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
@@ -32,6 +33,8 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
   const path = route(lanes, view.capital, world)
   const eta = path ? expectedArrival(lanes, path, view.week + 1) : null
   const replyEta = path && eta !== null ? expectedArrival(lanes, [...path].reverse(), eta) : null
+  const state = snap ? stateOf(view, snap) : null
+  const ours = snap?.faction === view.faction
 
   const shipsHere = Object.values(view.known.ships)
     .filter((s) => s.ship.at === world)
@@ -39,12 +42,16 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
   const history = view.inbox.filter((r) => r.snapshot.kind === 'world' && r.snapshot.world.id === world)
   const talk = view.rumours.filter((r) => r.snapshot.kind === 'event' && r.snapshot.event.at === world)
   const pending = view.outgoing.filter((d) => d.envelope.destination.kind === 'world' && d.envelope.destination.world === world)
+  const touching = view.lanes.filter((l) => l.ends.includes(world))
+  // What prisoners have said about this world. Not all of it is true.
+  const named = view.inbox.flatMap((r) => r.events.filter((e) => e.kind === 'haven_named' && e.at === world).map((e) => ({ report: r, event: e })))
 
   return (
     <div className="dossier">
       <h3>
         {entry?.name ?? world} <span className="muted">{entry ? hexLabel(entry.hex) : ''}</span>
         {isCapital && <span className="tag">capital</span>}
+        {state && !isCapital && <span className={`tag ${state}`}>{state === 'warlord' ? 'Warlord' : state}</span>}
       </h3>
 
       {!snap && <p className="empty">No report about this world has ever reached the desk.</p>}
@@ -55,7 +62,8 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
             {!isCapital && isDeskObservation(report.id) && `As of ${weekLabel(report.observed)} — ${ago(view.week, report.observed)}, from ${report.observerName}.`}
             {!isCapital && !isDeskObservation(report.id) && (
               <>
-                As of {weekLabel(report.observed)} — {ago(view.week, report.observed)}, reported by {report.observerName}.{' '}
+                As of {weekLabel(report.observed)} — {ago(view.week, report.observed)}, reported by {report.observerName}
+                {report.channel === 'agent' ? ' (a scout’s watch: nothing shaded)' : ''}.{' '}
                 <button type="button" className="link" onClick={() => onShowReport(report.id)}>
                   show report
                 </button>
@@ -63,18 +71,19 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
             )}
           </p>
           <dl>
+            <dt>Held</dt>
+            <dd className={state === 'revolt' || state === 'contested' || state === 'warlord' || state === 'independent' ? 'warn' : ''}>{holderText(view, snap)}</dd>
             <dt>Profile</dt>
             <dd>
               {profileString(snap.profile)} <span className="muted">(port · size · atmo · hydro · pop · gov · law – tech)</span>
             </dd>
             <dt>Governor</dt>
             <dd>{snap.governorName ?? <span className="muted">none — unpopulated</span>}</dd>
-            <dt>Unrest</dt>
-            <dd className={snap.unrest >= 6 ? 'warn' : ''}>
-              {snap.unrest} — {unrestWord(snap.unrest)}
-            </dd>
             <dt>Garrison</dt>
-            <dd>{snap.garrison}</dd>
+            <dd>
+              {snap.garrison} army{snap.marines > 0 ? `, ${snap.marines} marine` : ''} <span className="muted">detachments</span>
+              {isCapital && <span className="muted"> — the desk’s reserve; transports draw on it</span>}
+            </dd>
             <dt>Route</dt>
             <dd>
               {isCapital && 'This is the desk.'}
@@ -82,21 +91,37 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
               {!isCapital && path && (
                 <>
                   {path.length - 1} jump{path.length - 1 === 1 ? '' : 's'} via {path.slice(1, -1).map((id) => worldName(view, id)).join(', ') || 'direct lane'}.
-                  {eta !== null && (
+                  {eta !== null && ours && (
                     <>
                       {' '}
                       A letter posted now should land {weekLabel(eta)}
                       {replyEta !== null && <>; the reply by {weekLabel(replyEta)}</>}.
                     </>
                   )}
+                  {!ours && <span className="warn"> The port is closed to our packets while it is held against us.</span>}
                 </>
               )}
             </dd>
+            {touching.length > 0 && (
+              <>
+                <dt>Packets</dt>
+                <dd>
+                  {touching.map((l) => {
+                    const other = l.ends[0] === world ? l.ends[1] : l.ends[0]
+                    return (
+                      <div key={l.id}>
+                        to {worldName(view, other)} every {l.schedule.interval} wk; {sailsText(view.week, nextDeparture(l, world, view.week))}
+                      </div>
+                    )
+                  })}
+                </dd>
+              </>
+            )}
           </dl>
         </>
       )}
 
-      {!isCapital && snap?.governor && path && (
+      {!isCapital && snap?.governor && path && ours && (
         <div className="actions">
           <button type="button" onClick={() => onRequest(world, snap.governor as CharacterId)}>
             Write to Governor {snap.governorName} for a report
@@ -105,7 +130,7 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
             <ul className="pending">
               {pending.map((d) => (
                 <li key={d.id}>
-                  Letter sent {weekLabel(d.envelope.sent)}, expected to land {d.envelope.eta !== null ? weekLabel(d.envelope.eta) : 'never'}.
+                  {d.payload.kind === 'letter' ? 'Letter' : 'Orders'} sent {weekLabel(d.envelope.sent)}, expected to land {d.envelope.eta !== null ? weekLabel(d.envelope.eta) : 'never'}.
                 </li>
               ))}
             </ul>
@@ -127,7 +152,11 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
           <ul className="ships">
             {shipsHere.map((s) => (
               <li key={s.ship.id}>
-                {s.ship.name} <span className="muted">({s.ship.role}) — {ago(view.week, s.observed)}</span>{' '}
+                {s.ship.name}{' '}
+                <span className="muted">
+                  ({s.ship.faction === view.faction ? s.ship.role : `${view.factions[s.ship.faction]?.name ?? 'unknown'} ${s.ship.role}`}
+                  {s.ship.damaged ? ', damaged' : ''}) — {ago(view.week, s.observed)}
+                </span>{' '}
                 {isDeskObservation(s.report) ? (
                   <span className="muted">(seen from the desk)</span>
                 ) : (
@@ -148,7 +177,22 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
             {history.map((r) => r.snapshot.kind === 'world' && (
               <li key={r.id}>
                 <span className="muted">obs. {weekLabel(r.observed)}, arrived {weekLabel(r.delivered ?? 0)}, {r.observerName}:</span>{' '}
-                {r.events.length > 0 ? r.events.map(eventText).join(' ') : `unrest ${r.snapshot.world.unrest}, garrison ${r.snapshot.world.garrison}, Governor ${r.snapshot.world.governorName ?? '—'}`}{' '}
+                {r.events.length > 0 ? r.events.map(eventText).join(' ') : `${holderText(view, r.snapshot.world)}, garrison ${r.snapshot.world.garrison + r.snapshot.world.marines}, Governor ${r.snapshot.world.governorName ?? '—'}`}{' '}
+                <button type="button" className="link" onClick={() => onShowReport(r.id)}>
+                  show
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {named.length > 0 && (
+        <>
+          <h4>Named as a haven</h4>
+          <ul className="history">
+            {named.map(({ report: r, event: e }) => (
+              <li key={`${r.id}-${e.id}`}>
+                <span className="muted">{weekLabel(e.week)}, {r.observerName}:</span> {e.person ?? 'prisoners'} named this world as a haven under questioning.{' '}
                 <button type="button" className="link" onClick={() => onShowReport(r.id)}>
                   show
                 </button>

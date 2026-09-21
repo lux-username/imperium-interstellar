@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EVENT_MEMORY, eventsAt, forgetOldEvents, recordEvent, unrestBand, unrestCrossed, unrestIsNews } from './events'
+import { EVENT_MEMORY, eventsAt, forgetOldEvents, recordEvent, unrestBand, unrestCrossed, unrestIsNews, valenceFor } from './events'
 import { advanceWeek, newGame } from './game'
 import { buildPlayerView } from './player'
 import type { WorldId } from './types'
@@ -22,8 +22,9 @@ describe('events', () => {
       expect(s.worlds[e.at], e.id).toBeDefined()
       expect(e.week).toBeGreaterThanOrEqual(1)
       expect(e.week).toBeLessThanOrEqual(s.week)
-      if (e.kind === 'unrest_rose') expect(e.valence).toBe('bad')
-      if (e.kind === 'unrest_fell') expect(e.valence).toBe('good')
+      // Unrest is the holder's news: bad for them rising, good for them falling, and the other way round for an enemy.
+      if (e.kind === 'unrest_rose') expect(valenceFor(e, s.worlds[e.at].faction)).toBe('bad')
+      if (e.kind === 'unrest_fell') expect(valenceFor(e, s.worlds[e.at].faction)).toBe('good')
       if (e.kind === 'hull_arrived' || e.kind === 'hull_departed') expect(e.ship).not.toBeNull()
     }
   })
@@ -56,11 +57,11 @@ describe('events', () => {
     const w = Object.keys(s.worlds).sort()[0] as WorldId
     s.week = 1
     expect(unrestIsNews(s, w, 1, 0)).toBe(true)
-    recordEvent(s, w, { kind: 'unrest_fell', valence: 'good', severity: 1, level: 0 })
+    recordEvent(s, w, { kind: 'unrest_fell', valence: 'good', against: null, favours: null, severity: 1, level: 0 })
     s.week = 3
     expect(unrestIsNews(s, w, 1, 0)).toBe(false) // already told them
     expect(unrestIsNews(s, w, 1, 2)).toBe(true) // a change of mood is always news
-    recordEvent(s, w, { kind: 'unrest_rose', valence: 'bad', severity: 1, level: 2 })
+    recordEvent(s, w, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 1, level: 2 })
     s.week = 9
     expect(unrestIsNews(s, w, 1, 0)).toBe(true) // it had been unsettled since
   })
@@ -82,9 +83,9 @@ describe('events', () => {
     const s = newGame(7)
     const w = Object.keys(s.worlds).sort()[0] as WorldId
     s.week = 3
-    recordEvent(s, w, { kind: 'unrest_rose', valence: 'bad', severity: 1, level: 2 })
+    recordEvent(s, w, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 1, level: 2 })
     s.week = 5
-    recordEvent(s, w, { kind: 'unrest_fell', valence: 'good', severity: 1, level: 1 })
+    recordEvent(s, w, { kind: 'unrest_fell', valence: 'good', against: null, favours: null, severity: 1, level: 1 })
     expect(eventsAt(s, w, 0, 10).map((e) => e.kind)).toEqual(['unrest_rose', 'unrest_fell'])
     expect(eventsAt(s, w, 4, 10).map((e) => e.kind)).toEqual(['unrest_fell'])
   })
@@ -93,9 +94,9 @@ describe('events', () => {
     const s = newGame(7)
     const w = Object.keys(s.worlds).sort()[0] as WorldId
     s.week = 1
-    const old = recordEvent(s, w, { kind: 'unrest_rose', valence: 'bad', severity: 1, level: 2 })
+    const old = recordEvent(s, w, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 1, level: 2 })
     s.week = 2 + EVENT_MEMORY
-    const recent = recordEvent(s, w, { kind: 'unrest_rose', valence: 'bad', severity: 1, level: 3 })
+    const recent = recordEvent(s, w, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 1, level: 3 })
     forgetOldEvents(s)
     expect(s.events[old.id]).toBeUndefined()
     expect(s.events[recent.id]).toBeDefined()

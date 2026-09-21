@@ -1,11 +1,13 @@
 /**
  * The last-known map. Every marker is drawn from the newest delivered
- * report about that world, and carries the age of that report. The lane
- * chart and world positions are public; everything else is belief.
+ * report about that world, and carries the age of that report. Colour is
+ * who the desk believes holds the world; age is the badge above it and a
+ * dashed outline once the word is old. The lane chart and world positions
+ * are public; everything else is belief.
  */
 import { SUBSECTOR_COLS, SUBSECTOR_ROWS, hexLabel, type Hex } from '../sim/hex'
 import type { PlayerView, WorldId } from '../sim/view'
-import { ago, freshness } from './format'
+import { ago, freshness, stateOf } from './format'
 import { H, HEIGHT, SIZE, WIDTH, hexCenter, hexPoints, type Overlay } from './geometry'
 
 interface Props {
@@ -46,7 +48,13 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
           if (!a || !b) return null
           const p = hexCenter(a.hex)
           const q = hexCenter(b.hex)
-          return <line key={l.id} x1={p.x} y1={p.y} x2={q.x} y2={q.y} className={l.schedule.interval <= 2 ? 'fast' : 'slow'} />
+          return (
+            <line key={l.id} x1={p.x} y1={p.y} x2={q.x} y2={q.y} className={l.schedule.interval <= 2 ? 'fast' : 'slow'}>
+              <title>
+                {a.name} – {b.name}: packet every {l.schedule.interval} wk
+              </title>
+            </line>
+          )
         })}
       </g>
 
@@ -60,7 +68,8 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
           const port = snap?.profile.starport ?? '?'
           const radius = port === 'A' ? 9 : port === 'B' ? 8 : port === 'C' ? 7 : 6
           const ships = shipsSeen[entry.id] ?? 0
-          const cls = ['world', fresh, isCapital ? 'capital' : '', selected === entry.id ? 'selected' : '', snap && snap.unrest >= 6 ? 'trouble' : ''].join(' ')
+          const state = snap ? stateOf(view, snap) : 'unknown'
+          const cls = ['world', fresh, state, isCapital ? 'capital' : '', selected === entry.id ? 'selected' : ''].join(' ')
           return (
             <g key={entry.id} className={cls} onClick={() => onSelect(entry.id)} style={{ cursor: 'pointer' }}>
               {selected === entry.id && <polygon points={hexPoints(x, y, SIZE - 2)} className="halo" />}
@@ -108,8 +117,10 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
           {overlay.ships.map((s, i) => {
             const { x, y } = hexCenter(s.hex)
             return (
-              <g key={i} className={s.inTransit ? 'transit' : 'inport'}>
-                <polygon points={`${x - 12 - (i % 3) * 5},${y + 9} ${x - 8 - (i % 3) * 5},${y + 12} ${x - 12 - (i % 3) * 5},${y + 15}`} />
+              <g key={i} className={`${s.inTransit ? 'transit' : 'inport'} ${s.faction.replace('f-', '')}`}>
+                <polygon points={`${x - 12 - (i % 3) * 5},${y + 9} ${x - 8 - (i % 3) * 5},${y + 12} ${x - 12 - (i % 3) * 5},${y + 15}`}>
+                  <title>{s.label}</title>
+                </polygon>
               </g>
             )
           })}
