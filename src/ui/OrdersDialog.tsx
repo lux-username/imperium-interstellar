@@ -2,7 +2,7 @@
  * The one place orders are written. Opened from a world ("send a hull
  * here") or from a ship ("give orders"), it asks the same things either
  * way: which hull, where to send the order, where the hull should go, what
- * to do there — hold, patrol, look, watch, or carry troops and people —
+ * to do there — just go, patrol, look, watch, or carry troops and people —
  * its disposition if it meets trouble, and where to go afterwards. The
  * order leaves as a dispatch to the address chosen — by default wherever
  * Government House last saw the ship.
@@ -218,7 +218,8 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
         <fieldset className="field">
           <legend>On arrival</legend>
           <label>
-            <input type="radio" name="task" checked={task === 'hold'} onChange={() => setTask('hold')} /> hold there
+            <input type="radio" name="task" checked={task === 'hold'} onChange={() => setTask('hold')} /> go there
+            {task === 'hold' && <small className="muted"> (no stay: with “proceed to” below she calls there and carries on; choose “hold at the destination” to keep her there)</small>}
           </label>
           <label>
             <input type="radio" name="task" checked={task === 'patrol'} onChange={() => setTask('patrol')} /> patrol for{' '}
