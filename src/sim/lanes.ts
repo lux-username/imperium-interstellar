@@ -12,6 +12,7 @@ import { hexDistance } from './hex'
 import { nextInt, roll, type Rng } from './rng'
 import type { Lane, LaneId, PacketSchedule, Ship, ShipId, World, WorldId } from './types'
 import { laneId } from './chart'
+import { shipName } from './fleet'
 import { ADMINISTRATION } from './generate'
 
 // ---------------------------------------------------------------------------
@@ -122,13 +123,12 @@ function components(ids: WorldId[], lanes: Lane[]): Map<WorldId, number> {
 /** One packet per lane, starting in port at the lane's first end and waiting for its first scheduled departure. */
 export function packetShips(rng: Rng, lanes: Record<LaneId, Lane>): Record<ShipId, Ship> {
   const ships: Record<ShipId, Ship> = {}
-  const prefixes = ['Packet', 'Mail Boat', 'Courier', 'Tender']
+  const taken = new Set<string>()
   for (const lane of Object.values(lanes)) {
     const id = `s-packet-${lane.id.slice(2)}` as ShipId
-    const number = nextInt(rng, 2, 99)
     ships[id] = {
       id,
-      name: `${prefixes[nextInt(rng, 0, prefixes.length - 1)]} ${number}`,
+      name: shipName(rng, 'packet', taken),
       role: 'packet',
       faction: ADMINISTRATION,
       jump: Math.max(2, lane.jumpDistance),

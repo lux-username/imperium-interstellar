@@ -32,6 +32,8 @@ Every fact below is obtained by **running the command, never by recall**. If you
 | Version | `node -p "require('./package.json').version"` |
 | Sim modules | `ls src/sim/*.ts \| grep -v test` |
 | Order types implemented | `grep -ho "kind: '[a-z_]*'" src/sim/orders.ts 2>/dev/null \| sort -u` |
+| Culture files | `ls src/sim/data/names/*.ts \| grep -vE "culture\|index\|test" \| wc -l` |
+| Ship name pools | `node -e "const t=require('fs').readFileSync('src/sim/data/ships.ts','utf8');for(const m of t.matchAll(/^  (\w+): \[([\s\S]*?)^  \],/gm))console.log(m[1],(m[2].match(/(['\"])(?:(?!\1).)*\1/g)\|\|[]).length)"` |
 
 ## Rules
 

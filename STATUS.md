@@ -1,33 +1,33 @@
-> Generated 2026-09-21 by /end-session at commit d5c7721.
+> Generated 2026-09-21 by /end-session at commit 1089a36.
 
 # STATUS
 
 ## Where things stand
 
-**Phase 1b and the culture name pools are both on `main`; git is squared to a single clean checkout; the 1b playtest (`#34`) is next.** PR #48 (culture name pools, 18 commits, 41 files) was marked ready and merged this session, its branch deleted locally and on the remote, and the stale `flavor-research` worktree — locked by an exhausted session process — unlocked and removed. `main` at `d5c7721` is level with `origin/main`; there are no other branches, worktrees, stashes or open PRs. Typecheck and all 266 tests pass on the merged tree.
+**Names are done end to end — worlds, people and now ships — on branch `worktree-names-wiring` as draft PR #56; the 1b playtest (`#34`) is still next.** The first half of the session wired the culture pools (`#49`, with `#54`'s community split): every world rolls 1d3 cultures and takes its name from their toponyms; every rolled person — the desk's, the Warlord's, a pirate captain, one pool for all — comes from one culture (core 60%, world 40%) and a sex at even odds and is named by that culture's pattern; merchants bringing rumours are named from their port. The second half gave ships their own pools: `src/sim/data/ships.ts` holds six pools of 120–150 names by hull class in the naval tradition for that kind of ship and its continuation in space (patrol craft for qualities and the sky, escorts for weapons and beasts, transports for rivers and "Empire X", scouts for birds and instruments, raiders for pirate bravado and jokes about money, packets for the Latin regions of the mail steamers); `shipName(rng, hull, taken)` never repeats a name in a game and numbers the reuse once a pool is spent; packets are named hulls now. The syllable generator is gone (`journal/2026-09-21-4.md`, `2026-09-21-5.md`).
 
-What `main` now holds: 1b's contested worlds, posture combat, pirates with havens and questioning, the `transport` order with fuel by jumps, scouts as agents and couriers, the Warlord with his own belief state and forward bases, and events that know their sides (`journal/2026-09-20-9.md`, `2026-09-21-1.md`); plus `design/culture-tables.md` and 31 culture files under `src/sim/data/names/` with `culture.ts` as schema, `index.ts` holding `CORE` and `WORLD`, and `names.test.ts` enforcing sizes, uniqueness and patterns (`journal/2026-09-20-10.md`, `2026-09-20-11.md`, `2026-09-21-2.md`). Nothing draws from the pools yet (`#49`).
-
-Current thinking: **the 1b playtest (`#34`)**, then 1c. `#49` (wire the pools into `names.ts`, worlds and officers) follows the playtest, with `#54` (South Asian pools mix communities at draw time) landing before or with it so the wiring draws through communities. `#50` (real sources for the thin women's pools — the user offered to help) and `#51` (famous-individual pass over the 57 unchecked pools) are polish for any spare session. `#55` (economy/money, recruiting troops) is a later pass. `#11` keeps survey and governor orders.
+Current thinking: **merge #56, then the 1b playtest (`#34`)**, then 1c. `#57` keeps the two name-polish items still open (Russian patronymics, the unused Central Asian second names); `#50` (real sources for the thin women's pools) and `#51` (famous-individual pass) are polish for any spare session. `#55` (economy/money, recruiting troops) is a later pass. `#11` keeps survey and governor orders.
 
 ## Derived facts
 
 | Fact | Value |
 |---|---|
-| Test status | 266 passed (266) |
+| Test status | 327 passed (327) |
 | Typecheck | ok |
 | Version | 0.0.1 |
 | Sim modules | `characters.ts`, `chart.ts`, `combat.ts`, `events.ts`, `factions.ts`, `fleet.ts`, `game.ts`, `generate.ts`, `governors.ts`, `ground.ts`, `hex.ts`, `lanes.ts`, `mail.ts`, `names.ts`, `orders.ts`, `pirates.ts`, `player.ts`, `rng.ts`, `rumours.ts`, `save.ts`, `scouts.ts`, `ships.ts`, `troops.ts`, `types.ts`, `view.ts`, `warlord.ts`, `world.ts` |
 | Order types implemented | `courier`, `hold`, `move`, `patrol`, `scout`, `transport` |
 | Culture files | 31 in `src/sim/data/names/` |
-| Open issues | 16 (`#11`, `#34`–`#40`, `#44`–`#46`, `#49`–`#51`, `#54`, `#55`) |
-| HEAD | d5c7721 — Merge pull request #48 (`main`, level with `origin/main`) |
+| Ship name pools | patrol 130, escort 150, transport 130, scout 130, raider 130, packet 120 |
+| Open issues | 17 (`#11`, `#34`–`#40`, `#44`–`#46`, `#49`–`#51`, `#54`, `#55`, `#57`); `#49` and `#54` close when #56 merges |
+| HEAD | 1089a36 — Ships take their names by class from pools in the naval tradition (`worktree-names-wiring`, pushed; draft PR #56 against `main`) |
 
 ## Active milestone
 
-[Phase 1b — Trouble](https://github.com/lux-username/imperium-interstellar/milestone/3) — 4 open / 10 closed. The remaining four are the playtest (`#34`), the economy (`#35`) and the later packet-line issues (`#44`–`#46`). The name pools are unmilestoned flavour work.
+[Phase 1b — Trouble](https://github.com/lux-username/imperium-interstellar/milestone/3) — 4 open / 10 closed. The remaining four are the playtest (`#34`), the economy (`#35`) and the later packet-line issues (`#44`–`#46`). The name work is unmilestoned flavour.
 
 ## Blockers / open questions
 
-- None in git: one checkout on `main`, nothing unmerged, nothing stashed, no open PRs. A fresh session can `EnterWorktree` from here without cleanup.
-- No open design questions. The thin-pool flags are `#50`; the community-mixing defect is `#54`.
+- One open PR, #56, on its own worktree branch; `main` is untouched. Merge it (or say what to change) before the next session opens a worktree, so the playtest runs with named worlds and hulls.
+- The sex of rolled people is an even split — a guess, since nothing in `spec.md` says. Say so if the Empire's officer corps should lean one way.
+- No other open design questions.

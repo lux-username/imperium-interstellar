@@ -20,6 +20,13 @@ export interface Culture {
   pattern: { m: string; f: string }
   /** Where the pools are thin, contested or reconstructed, say so here. */
   notes?: string
+  /**
+   * Communities whose names do not mix — a Hindu given name never carried a
+   * Muslim surname. When present, a draw picks a community by weight and
+   * takes given and family from it; `given` and `family` below are then the
+   * union, kept so the pool-size rules apply to the whole file.
+   */
+  communities?: Community[]
   given: { m: string[]; f: string[] }
   /** Family names, patronymic stems, epithets or titles — whatever the culture used second. */
   family: string[]
@@ -27,6 +34,16 @@ export interface Culture {
   familyF?: string[]
   /** Toponyms: towns, rivers, provinces, mountains. Used bare or as seeds ("New X", "Port X"). */
   places: string[]
+}
+
+/** One community within a culture: its own given and family pools, drawn together. */
+export interface Community {
+  name: string
+  /** Relative share of the culture; any positive number. */
+  weight: number
+  given: { m: string[]; f: string[] }
+  family: string[]
+  familyF?: string[]
 }
 
 /** Minimum pool sizes every culture file must meet. Enforced by the test. */

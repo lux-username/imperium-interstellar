@@ -13,7 +13,9 @@ sessions/
 .DS_Store
 
 # dependencies / caches
+# a worktree may symlink node_modules; the slash form matches only directories
 node_modules/
+node_modules
 __pycache__/
 *.pyc
 .venv/

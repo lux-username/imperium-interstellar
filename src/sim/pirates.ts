@@ -56,7 +56,7 @@ export function spawnPirate(state: GameState, home: World): Ship {
   state.nextId += 1
   const id = `s-pirate-${n}` as ShipId
   const taken = new Set(Object.values(state.ships).map((s) => s.name))
-  const ship = newShip(id, shipName(state.rng, taken), HULLS.raider, PIRATES, home.id, null)
+  const ship = newShip(id, shipName(state.rng, 'raider', taken), HULLS.raider, PIRATES, home.id, null)
   ship.commander = pirateCaptain(state, id)
   ship.standing = { rally: null, onContact: 'favourable' }
   ship.havens = [home.id, ...havens(state).filter((w) => w.id !== home.id && check(state.rng, 9)).map((w) => w.id)]

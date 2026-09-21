@@ -23,8 +23,9 @@ describe('events', () => {
       expect(e.week).toBeGreaterThanOrEqual(1)
       expect(e.week).toBeLessThanOrEqual(s.week)
       // Unrest is the holder's news: bad for them rising, good for them falling, and the other way round for an enemy.
-      if (e.kind === 'unrest_rose') expect(valenceFor(e, s.worlds[e.at].faction)).toBe('bad')
-      if (e.kind === 'unrest_fell') expect(valenceFor(e, s.worlds[e.at].faction)).toBe('good')
+      // The holder is whoever held the world that week; it may have changed hands since.
+      if (e.kind === 'unrest_rose') expect(valenceFor(e, e.against ?? s.worlds[e.at].faction)).toBe('bad')
+      if (e.kind === 'unrest_fell') expect(valenceFor(e, e.favours ?? s.worlds[e.at].faction)).toBe('good')
       if (e.kind === 'hull_arrived' || e.kind === 'hull_departed') expect(e.ship).not.toBeNull()
     }
   })

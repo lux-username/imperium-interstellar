@@ -8,6 +8,7 @@
  * JSON unchanged.
  */
 import type { Hex } from './hex'
+import type { Sex } from './names'
 import type { Order, Posture } from './orders'
 import type { Rng } from './rng'
 import type { Rumour } from './rumours'
@@ -95,6 +96,8 @@ export interface World {
   id: WorldId
   name: string
   hex: Hex
+  /** One to three cultures from the world table, by name, that settled here; the world's own name comes from their places. */
+  cultures: string[]
   profile: WorldProfile
   /** Who holds the port and the palace. Loyal worlds belong to the administration; the rest are lost until retaken. */
   faction: FactionId
@@ -210,6 +213,9 @@ export interface Traits {
 export interface Character {
   id: CharacterId
   name: string
+  /** The culture the name was drawn from, and the sex it was drawn for. Absent on seats that are not rolled people: the player's desk, the Warlord. */
+  culture?: string
+  sex?: Sex
   faction: FactionId
   post: Post
   traits: Traits

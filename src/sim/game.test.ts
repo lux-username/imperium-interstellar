@@ -139,8 +139,8 @@ describe('a generated game', () => {
     const s = newGame(12)
     for (let i = 0; i < 20; i++) advanceWeek(s)
     const view = buildPlayerView(s)
-    // No report is about a ship on its own; every sighting cites a world report that listed the hull in port.
-    expect(view.inbox.every((r) => r.snapshot.kind === 'world')).toBe(true)
+    // Every sighting cites the letter it came from: a world report that listed the hull in port, or a questioned prize's own.
+    expect(view.inbox.every((r) => r.snapshot.kind === 'world' || r.snapshot.kind === 'ship')).toBe(true)
     const sightings = Object.values(view.known.ships)
     expect(sightings.length).toBeGreaterThan(3)
     let fromMail = 0
@@ -153,7 +153,8 @@ describe('a generated game', () => {
         continue
       }
       fromMail++
-      expect(source.snapshot.kind === 'world' && source.snapshot.world.ships.some((sh) => sh.id === sighting.ship.id)).toBe(true)
+      const cited = source.snapshot.kind === 'world' ? source.snapshot.world.ships.some((sh) => sh.id === sighting.ship.id) : source.snapshot.kind === 'ship' && source.snapshot.ship.id === sighting.ship.id
+      expect(cited).toBe(true)
       expect(sighting.observed).toBe(source.observed)
     }
     expect(fromMail).toBeGreaterThan(0)

@@ -11,9 +11,10 @@ Demographic generation tables approximating the Victorian-era world, used for fl
 
 ## Use
 
-1. **Worlds:** each world rolls 1d3 cultures from `WORLD`. Its name, settlements and features draw from those cultures' place pools.
-2. **Officers:** each officer's name comes from one culture — 60% `CORE`, 40% `WORLD` — assembled by that culture's `pattern` (which handles family-first order, patronymics, and the Vietnamese Văn/Thị element).
-3. Rolling goes through `src/sim/rng.ts` like everything else. Wiring these pools into `src/sim/names.ts` in place of the syllable generator is a separate code task.
+1. **Worlds:** each world rolls 1d3 cultures from `WORLD` (distinct; a repeat is rerolled) and stores them. Its name draws from those cultures' place pools; a toponym already on the chart is reused as "New X" or "Port X". Settlements and features will draw from the same pools when the game has them.
+2. **People:** each person's name comes from one culture — 60% `CORE`, 40% `WORLD` — and a sex, even odds, both stored on the character. The name is assembled by that culture's `pattern` (which handles family-first order, patronymics, and the Vietnamese Văn/Thị element). The same rule serves every side: the desk's governors and officers, the Warlord's, pirate captains. A merchant who brings a rumour to a port is one of that world's own people, drawn from its cultures instead.
+3. **Communities:** where a culture's names do not mix (the three South Asian files, split Hindu/Muslim or Marathi/Southern/Muslim), the file lists `communities` and a draw picks one first, so a given name and a family name always come from the same one.
+4. Rolling goes through `src/sim/rng.ts` like everything else. The draws live in `src/sim/names.ts`. Ships are named by class from their own pools — see `design/ship-names.md`.
 
 ## Period
 
