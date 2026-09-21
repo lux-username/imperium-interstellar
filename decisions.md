@@ -153,3 +153,7 @@ Because a hull leaving the capital taking every stranded letter regardless of di
 ## 2026-09-20 — Chose that captured couriers and packets destroy their mail
 
 Supersedes the same-day note that a captured packet would feed its dispatches to the captor's belief state. Because it is simpler, and because it is what a packet crew would do — the Post Office packets carried their mail in weighted bags to be sunk if taken. So capture is pure loss: nothing is read, nothing arrives, and the desk hears of it only through a report of the capture. Reading captured dispatches can return if the Warlord's belief state ever needs the feed.
+
+## 2026-09-20 — Chose to exclude named individuals, real or fictional, from the name pools
+
+Because a pool entry must read as a generic period name, and a name that is chiefly known as one person's — a famous historical figure, or a named character in a well-known novel — reads instead as that person, which is either a borrowing (the project rule on third-party works) or, for the recently dead in a culture that avoids their names, a discourtesy. Ordinary period names that happen to coincide with someone famous stay; names distinctive to one individual go. Applied to the Aborigine and Han women's pools this session; `#51` applies it to the Aborigine men's pool.

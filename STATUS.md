@@ -1,32 +1,34 @@
-> Generated 2026-09-20 by /end-session at commit 0987c7a.
+> Generated 2026-09-20 by /end-session at commit d9ccaa8.
 
 # STATUS
 
 ## Where things stand
 
-**Phase 1a is built and accepted; Phase 1b is next.** The 1a code lives on branch `worktree-phase1a` as **draft PR #42**, stacked on the docs PR #41; it closes `#18 #19 #20 #22 #23 #24 #25 #26` on merge, and `#27` (the playtest gate) was closed today on the strength of three preview rounds whose feedback all became changes on the branch. What 1a delivers: `Event` records as the unit of news; `Report.channel` and the events a letter mentions; character traits; hull roles scout/patrol/escort/transport with `patrol` and `scout` orders carrying their own progress; charted-first routing with off-lane jumps for hulls the desk sends; commanders' letters from every friendly port; a 14-hull starting fleet; governors who write only on a change of mood (content / neutral / hostile, extremes once per visit) through a 2d6 disclosure roll shaded by loyalty and initiative, 8–12-week "all quiet" letters, and self-serving shading of unrest; rumours that spawn at ports, hop the lanes, degrade a little, arrive as merchant/docks talk in their own pile and never touch the map; one orders dialog (hull · where to send it — last known / destination / rendezvous, or a courier in port to carry it along its own run · destination · task · disposition · afterwards); any hull carrying copies of the letters waiting at a port when its run reaches their destination; every dossier claim linking to its letter. A fresh game brings about one letter a week. Save format v2.
+**Phase 1a is merged; Phase 1b is being built; the culture name pools are done and up for review.** PRs #41 (docs) and #42 (1a code) merged to `main` at b7ad774. 1b is in progress on `worktree-phase1b` in a separate session — its branch already carries combat and pirates (#29 #30 #43 #47), troops (#31), scouts-as-agents (#33), the Warlord (#32) and the 1b UI (#21); it has not been PR'd yet and its STATUS entry will supersede this one when it closes.
 
-Design settled today and recorded in `spec.md`/`decisions.md`: *the courier is the mail* (no nested orders; historically grounded), stranded mail loaded only where the hull's run reaches its destination, and captured couriers and packets destroy their mail.
+This session finished the **culture name pools** (branch `worktree-flavor-research`, **draft PR #48**): `design/culture-tables.md` sets two heritage weighting tables (imperial core = British Isles; world = 27 cultures in nine groups); `src/sim/data/names/` holds 31 culture files (≥80 given names per sex, ≥80 family/second names, ≥60 places, a naming `pattern` per sex, `notes`), a `culture.ts` schema, `index.ts` with `CORE` and `WORLD` as data, and `names.test.ts` enforcing sizes, uniqueness, pattern tokens and index completeness. Period is Victorian-era in each tradition's own terms; cultures without hereditary surnames use nisbas, epithets or patronymics. The spot-check pass replaced twelve women's given names across Aborigine, Han, Javanese and Siamese (named real individuals, named characters from a classical novel, post-period coinages); Korean needed nothing; a borrowings sweep over all 31 files found no trademarks or fiction-distinctive names. Nothing draws from the pools yet — that is `#49`.
 
-Current thinking: **1b starts with `#28` world states** (loyal / unrest / revolt / independent / Warlord-held, unrest dynamics, garrisons), then `#29` pirates and `#30` combat, which `#43` (mail destroyed on capture) and `#47` (pirates disrupt mail and rumour) hang off; `#32` the Warlord and `#33` agents after; `#21` map colour once world states exist; `#11`'s remainder as each piece needs it; `#34` playtest closes the milestone. `#44`–`#46` are later (rendezvous for orders, controlled-port packet lines, player-established lines).
+Current thinking: `#49` (wire the pools into `names.ts`, worlds and officers) should land after 1b, since 1b touches `characters.ts` and world generation. `#50` (thin pools: better sources) and `#51` (Aborigine men's pool) are polish the user can pick up whenever.
 
 ## Derived facts
 
 | Fact | Value |
 |---|---|
-| Test status | 74 passed (74) |
+| Test status | 203 passed (203) |
 | Typecheck | ok |
 | Version | 0.0.1 |
 | Sim modules | `characters.ts`, `chart.ts`, `events.ts`, `fleet.ts`, `game.ts`, `generate.ts`, `governors.ts`, `hex.ts`, `lanes.ts`, `mail.ts`, `names.ts`, `orders.ts`, `player.ts`, `rng.ts`, `rumours.ts`, `save.ts`, `ships.ts`, `types.ts`, `view.ts` |
 | Order types implemented | `courier`, `hold`, `move`, `patrol`, `scout` |
-| Open issues | 28 (`#11`, `#18`–`#47` less `#13`, `#27`; eight close with PR #42) |
-| HEAD | 0987c7a — Spec and decisions: captured couriers and packets destroy their mail (branch `worktree-phase1a`, on `worktree-phase1-milestones` 2fbc8e5, on `main` aa3a898) |
+| Culture files | 31 in `src/sim/data/names/` |
+| Open issues | 24 (`#11`, `#21`, `#28`–`#40`, `#43`–`#47`, `#49`–`#51`) |
+| HEAD | d9ccaa8 — Names: spot-check thin women's pools; remove handoff (branch `worktree-flavor-research`, on `main` b7ad774) |
 
 ## Active milestone
 
-[Phase 1b — Trouble](https://github.com/lux-username/imperium-interstellar/milestone/3) — 13 open / 0 closed. (1a: 8 open / 2 closed; the 8 close when PR #42 merges.)
+[Phase 1b — Trouble](https://github.com/lux-username/imperium-interstellar/milestone/3) — 13 open / 0 closed (the `worktree-phase1b` branch addresses several; they close when it merges). The name pools are unmilestoned flavour work.
 
 ## Blockers / open questions
 
-- **PR #41 (docs) then PR #42 (1a code) need merging**, in that order; the user merges. PR #42 is a draft until #41 is in. After both: `git pull`, remove worktrees `.claude/worktrees/phase0-prototype` and `.claude/worktrees/phase1-milestones`, delete the branches. 1b should branch from `main` after that.
-- No open design questions.
+- **PR #48 (culture name pools) awaits the user's review and merge.** It is independent of 1b and conflicts with nothing on `main`.
+- **Worktree lock:** `.claude/worktrees/flavor-research` is still locked by the exhausted earlier session's process; this session worked in it regardless (tree was clean). Once PR #48 merges, remove the worktree and delete the branch.
+- No open design questions. The thin-pool flags (Aborigine, Korean, Siamese, Han/Javanese women, Central Asian `family` lists) are in PR #48's body and `#50`.
