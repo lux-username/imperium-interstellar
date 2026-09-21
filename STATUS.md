@@ -1,4 +1,4 @@
-> Generated 2026-09-20 by /end-session at commit 459f9dc.
+> Generated 2026-09-20 by /end-session at commit ee5cddc.
 
 # STATUS
 
@@ -14,13 +14,13 @@ Current thinking: an 8-seed, 80-week soak with a passive desk runs in about a se
 
 | Fact | Value |
 |---|---|
-| Test status | 118 passed (118) |
+| Test status | 122 passed (122) |
 | Typecheck | ok |
 | Version | 0.0.1 |
 | Sim modules | `characters.ts`, `chart.ts`, `combat.ts`, `events.ts`, `factions.ts`, `fleet.ts`, `game.ts`, `generate.ts`, `governors.ts`, `ground.ts`, `hex.ts`, `lanes.ts`, `mail.ts`, `names.ts`, `orders.ts`, `pirates.ts`, `player.ts`, `rng.ts`, `rumours.ts`, `save.ts`, `scouts.ts`, `ships.ts`, `troops.ts`, `types.ts`, `view.ts`, `warlord.ts`, `world.ts` |
 | Order types implemented | `courier`, `hold`, `move`, `patrol`, `scout`, `transport` |
 | Open issues | 21 (`#11`, `#21`, `#28`–`#40`, `#43`–`#47`, `#49`; nine close with PR #52) |
-| HEAD | 7b059b5 — no faster-than-light closures (branch `worktree-phase1b`, on `main` b7ad774) |
+| HEAD | ee5cddc — port guns as a bonus, not a wall (branch `worktree-phase1b`, on `main` b7ad774) |
 
 ## Active milestone
 
