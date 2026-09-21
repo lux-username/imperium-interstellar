@@ -60,4 +60,9 @@ describe('weighting tables', () => {
   it('lists each culture once', () => {
     expect(dupes(CULTURES.map((c) => c.name))).toEqual([])
   })
+
+  it('lists every culture file', () => {
+    const listed = new Set(CULTURES.map((c) => c.name))
+    expect(cultures.map((c) => c.name).filter((n) => !listed.has(n))).toEqual([])
+  })
 })

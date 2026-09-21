@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const aborigine: Culture = {
+  name: 'Aborigine',
+  group: 'Pacific / misc.',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "THINNEST FILE. Aboriginal Australians of the colonial century were recorded under two names: their own, which the record keeps for perhaps a few hundred men and far fewer women, and the English name the settlers gave them, which for that generation was the name they answered to. Both are in the given pools at roughly the proportion they survive — the women's pool is mostly English for that reason. `family` holds the station and mission surnames Aboriginal families carried into the next century. Names of the dead are avoided in many communities; treat this file as a first draft to be replaced from better sources.",
+  given: {
+    m: [
+      'Bungaree', 'Colebee', 'Nanbaree', 'Ballooderry', 'Yarramundi', 'Yellomundee', 'Cobbon', 'Boio', 'Bidjigal', 'Warrawee',
+      'Barak', 'Wonga', 'Derrimut', 'Billibellary', 'Bebejan', 'Ningulabul', 'Tullamareena', 'Bungeleen', 'Woureddy', 'Kickerterpoller',
+      'Umarrah', 'Montpelliatta', 'Lacklay', 'Probelattener', 'Pevay', 'Mullawirraburka', 'Kadlitpinna', 'Ityamaiitpinna', 'Tenberry', 'Mokare',
+      'Nakinah', 'Munday', 'Yellagonga', 'Weeip', 'Dalaipi', 'Kerwalli', 'Yilbung', 'Yuranigh', 'Wandin', 'Terrick',
+      'Billy', 'Tommy', 'Jacky', 'Charley', 'Harry', 'Jimmy', 'Johnny', 'Paddy', 'Toby', 'Bobby',
+      'Peter', 'Dick', 'Joe', 'Jack', 'Jerry', 'Sandy', 'Davy', 'Willie', 'Georgie', 'Freddy',
+      'Ned', 'Tom', 'Sam', 'Ben', 'Dan', 'Mick', 'Bill', 'Frank', 'Alick', 'Arthur',
+      'Albert', 'Henry', 'Edward', 'Robert', 'Thomas', 'William', 'James', 'John', 'George', 'Simon',
+    ],
+    f: [
+      'Truganini', 'Mathinna', 'Pagerly', 'Wapperty', 'Tarenorerer', 'Cora', 'Maria', 'Dolly', 'Fanny', 'Kitty',
+      'Nelly', 'Topsy', 'Judy', 'Sally', 'Polly', 'Rosie', 'Lucy', 'Annie', 'Jenny', 'Biddy',
+      'Bella', 'Nancy', 'Louisa', 'Mary Ann', 'Eliza', 'Ellen', 'Emma', 'Emily', 'Jane', 'Jessie',
+      'Lizzie', 'Maggie', 'Minnie', 'Nora', 'Rachel', 'Rebecca', 'Ruth', 'Sarah', 'Susan', 'Amy',
+      'Ada', 'Agnes', 'Alice', 'Bessie', 'Caroline', 'Charlotte', 'Clara', 'Dinah', 'Edith', 'Esther',
+      'Ethel', 'Eva', 'Florence', 'Grace', 'Hannah', 'Harriet', 'Hilda', 'Ida', 'Isabel', 'Janet',
+      'Julia', 'Kate', 'Laura', 'Lena', 'Lily', 'Louie', 'Mabel', 'Margaret', 'Martha', 'Matilda',
+      'May', 'Nellie', 'Olive', 'Phoebe', 'Rose', 'Sophia', 'Violet', 'Winnie', 'Kitty Ann', 'Queenie',
+    ],
+  },
+  family: [
+    'Wandin', 'Briggs', 'Terrick', 'Dunolly', 'Coombes', 'Mullett', 'Pepper', 'Hood', 'Bux', 'Onus',
+    'Nicholls', 'Lovett', 'Cooper', 'Clarke', 'Ferguson', 'Gilbert', 'Kennedy', 'Maynard', 'Everett', 'Mansell',
+    'Cochrane', 'Dalrymple', 'Morgan', 'Harrison', 'Foster', 'Dixon', 'Patten', 'Bamblett', 'Atkinson', 'Charles',
+    'Edwards', 'Firebrace', 'Hamilton', 'Jackson', 'Kirby', 'Lonsdale', 'McLeod', 'Moffatt', 'Murray', 'Nelson',
+    'Officer', 'Pearce', 'Rankin', 'Rose', 'Simpson', 'Stewart', 'Thomas', 'Thorpe', 'Walsh', 'Watson',
+    'Wilson', 'Winch', 'Wyatt', 'Ah Chee', 'Ah Kit', 'Ah Mat', 'Ah Sam', 'Morrison', 'Tucker', 'Perkins',
+    'Ryan', 'Roberts', 'Saunders', 'Wanganeen', 'Rigney', 'Sumner', 'Karpany', 'Kartinyeri', 'Yarran', 'Bropho',
+    'Bennell', 'Collard', 'Colbung', 'Hayden', 'Humphries', 'Jetta', 'Kickett', 'Narkle', 'Ugle', 'Nannup',
+  ],
+  places: [
+    'Parramatta', 'Woolloomooloo', 'Bondi', 'Coogee', 'Ballarat', 'Bendigo', 'Geelong', 'Wagga Wagga', 'Wangaratta', 'Mildura',
+    'Echuca', 'Toowoomba', 'Nambour', 'Maroochydore', 'Noosa', 'Mooloolaba', 'Bundaberg', 'Gympie', 'Wollongong', 'Kiama',
+    'Ulladulla', 'Narooma', 'Moruya', 'Bega', 'Merimbula', 'Yass', 'Canberra', 'Queanbeyan', 'Cooma', 'Jindabyne',
+    'Tumut', 'Gundagai', 'Junee', 'Cootamundra', 'Temora', 'Narrandera', 'Coolamon', 'Wodonga', 'Yackandandah', 'Warrnambool',
+    'Koroit', 'Colac', 'Wonthaggi', 'Korumburra', 'Warragul', 'Moe', 'Morwell', 'Traralgon', 'Orbost', 'Mallacoota',
+    'Murrumbidgee', 'Barwon', 'Namoi', 'Gwydir', 'Bogan', 'Warrego', 'Paroo', 'Culgoa', 'Balonne', 'Maranoa',
+    'Kakadu', 'Uluru', 'Kata Tjuta', 'Pilbara', 'Illawarra', 'Monaro', 'Riverina', 'Mallee', 'Wimmera', 'Coorong',
+  ],
+}

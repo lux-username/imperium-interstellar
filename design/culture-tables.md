@@ -1,54 +1,20 @@
 # Culture tables
 
-Weighting tables for the cultural heritage of generated people (governors, commanders, agents, merchants, envoys) and, by extension, of the name pools they draw from. Our own tables; not derived from any third-party source.
+Demographic generation tables approximating the Victorian-era world, used for flavour: worlds have cultural inspirations, and people have names that come from somewhere. Our own tables; not derived from any third-party source.
 
-Two tables exist because two populations exist. Which population a character is drawn from is a design choice still to be made (see *Use* below). Both are d100 tables: roll once, read the row.
+**The data lives in `src/sim/data/names/`** — one file per culture (given names by sex, family or second names, places, a naming pattern and notes on the record's thin spots) and `index.ts`, which holds the two weighting tables as `CORE` and `WORLD`. That directory is the single home for the names and the weights; this page is the design intent. `names.test.ts` enforces pool sizes (80 given names per sex, 80 family, 60 places), uniqueness, and that every culture file is in a table.
 
-## Table A — the wide mix
+## The two populations
 
-| Roll | % | Culture | Heritage group |
-|---|---|---|---|
-| 01–14 | 14 | Han | East Asian |
-| 15–27 | 13 | Japanese | East Asian |
-| 28–40 | 13 | Korean | East Asian |
-| 41–47 | 7 | Gangetic | South Asian |
-| 48–54 | 7 | Bengali | South Asian |
-| 55–61 | 7 | Deccani | South Asian |
-| 62–67 | 6 | Great Russian | European |
-| 68–73 | 6 | French | European |
-| 74–79 | 6 | North German | European |
-| 80–81 | 2 | Turkish | Middle Eastern |
-| 82–83 | 2 | Persian | Middle Eastern |
-| 84–85 | 2 | Egyptian | Middle Eastern |
-| 86 | 1 | Javanese | Southeast Asian |
-| 87 | 1 | Vietnamese | Southeast Asian |
-| 88 | 1 | Siamese | Southeast Asian |
-| 89 | 1 | Yoruba | African |
-| 90 | 1 | Igbo | African |
-| 91 | 1 | Afro-American | African |
-| 92 | 1 | Quechua | Indigenous American |
-| 93 | 1 | Nahuatl | Indigenous American |
-| 94 | 1 | Maya | Indigenous American |
-| 95 | 1 | Uzbek | Central Asian |
-| 96 | 1 | Kazakh | Central Asian |
-| 97 | 1 | Uyghur | Central Asian |
-| 98 | 1 | Aborigine | Pacific / misc. |
-| 99 | 1 | Maori | Pacific / misc. |
-| 100 | 1 | Hawaiian | Pacific / misc. |
-
-Group totals: East Asian 40, South Asian 21, European 18, Middle Eastern 6, Southeast Asian 3, African 3, Indigenous American 3, Central Asian 3, Pacific/misc. 3.
-
-## Table B — the Anglo-Celtic mix
-
-| Roll | % | Culture | Heritage group |
-|---|---|---|---|
-| 01–65 | 65 | English | European |
-| 66–90 | 25 | Irish | European |
-| 91–98 | 8 | Scottish | European |
-| 99–100 | 2 | Welsh | European |
+- **Core** (`CORE`) — the imperial core, modelled on the British Isles: English 65, Irish 25, Scottish 8, Welsh 2.
+- **World** (`WORLD`) — the wider population, 27 cultures in nine heritage groups: East Asian 40 (Han 14, Japanese 13, Korean 13), South Asian 21 (Gangetic, Bengali, Deccani at 7), European 18 (Great Russian, French, North German at 6), Middle Eastern 6 (Turkish, Persian, Egyptian at 2), and Southeast Asian, African, Indigenous American, Central Asian and Pacific at 1 each per culture (Javanese, Vietnamese, Siamese; Yoruba, Igbo, Afro-American; Quechua, Nahuatl, Maya; Uzbek, Kazakh, Uyghur; Aborigine, Maori, Hawaiian).
 
 ## Use
 
-- Each culture row will eventually point at a name pool (given names, family names, naming order and honorifics). The pools do not exist yet; this file is the weighting, not the names.
-- Open: which population each kind of character draws from — e.g. Table B for one founding stratum or one world's colonists, Table A for the subsector at large — and whether a world has its own mix. Decide in `spec.md` when characters are generated (`#11`); once a data file under `src/` implements these tables, that file becomes the home and this one becomes a pointer.
-- Rolling goes through `src/sim/rng.ts` like everything else.
+1. **Worlds:** each world rolls 1d3 cultures from `WORLD`. Its name, settlements and features draw from those cultures' place pools.
+2. **Officers:** each officer's name comes from one culture — 60% `CORE`, 40% `WORLD` — assembled by that culture's `pattern` (which handles family-first order, patronymics, and the Vietnamese Văn/Thị element).
+3. Rolling goes through `src/sim/rng.ts` like everything else. Wiring these pools into `src/sim/names.ts` in place of the syllable generator is a separate code task.
+
+## Period
+
+Roughly 1837–1901 in each tradition's own terms — late Qing, Meiji, late Joseon, the Raj, Romanov Russia, the Second Empire, Prussia, late Ottoman, Qajar, the Khedivate, the Dutch Indies, the Nguyễn court, the fifth reign of Siam, the Lagos Colony and Igboland's first missions, Reconstruction, the Andean and Mexican republics, Russian Turkestan and the Qing Tarim, and the colonial Pacific. Where a culture had no hereditary surnames (Ottoman, Qajar, Central Asian, Siamese, Javanese commoners), the file says what stood in their place and the pattern uses it.
