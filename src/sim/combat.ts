@@ -25,7 +25,7 @@ import { recordEvent } from './events'
 import { PIRATES, capitalOf, hostile } from './factions'
 import { hexDistance } from './hex'
 import { shipsAt } from './mail'
-import { pirateFromPrize } from './pirates'
+import { interrogate, pirateFromPrize } from './pirates'
 import { check, nextInt, roll } from './rng'
 import { impound } from './world'
 import type { FactionId, GameState, Ship, ShipId, WorldId } from './types'
@@ -135,7 +135,7 @@ export function docked(state: GameState, ship: Ship, at: WorldId, arriving: Read
  * arrives next week with whatever she carries.
  */
 function breakOff(state: GameState, ship: Ship, at: WorldId): boolean {
-  const target = ship.role === 'scout' ? 4 : ship.role === 'courier' || ship.role === 'packet' ? 7 : 9
+  const target = ship.role === 'scout' ? 4 : ship.role === 'packet' ? 7 : 9
   const commander = ship.commander ? state.characters[ship.commander] : null
   if (!check(state.rng, target, commander?.traits.competence.naval ?? 0)) return false
   const to = refuge(state, ship, at)
@@ -191,6 +191,9 @@ export function capture(state: GameState, ship: Ship, at: WorldId, by: Ship[]): 
   const captor = by[0].faction
   loseMail(state, ship)
   recordEvent(state, at, { kind: 'ship_captured', valence: 'neutral', against: ship.faction, favours: captor, severity: 3, ship })
+  // A pirate crew is questioned by whoever took them, if that side keeps a seat to write to.
+  const questioner = by.find((s) => s.commander)?.commander ?? null
+  if (ship.faction === PIRATES && questioner && capitalOf(state, captor)) interrogate(state, ship, ship.havens ?? [], questioner, at)
   if (ship.commander) delete state.characters[ship.commander]
   for (const p of ship.passengers) delete state.characters[p]
   ship.passengers = []
@@ -327,13 +330,12 @@ export function fightAtWorlds(state: GameState, landed: readonly ShipId[] = []):
   }
 }
 
-/** A knocked-about hull lying at a friendly A or B port is patched up a point a week. Pirates refit only at a haven. */
+/** A knocked-about hull lying docked at a port of class C or better is patched up a point a week. Pirates refit only at a haven of that class. */
 export function repairShips(state: GameState): void {
   for (const ship of Object.values(state.ships)) {
     if (ship.damage === 0 || ship.location.kind !== 'world') continue
     const world = state.worlds[ship.location.world]
-    if (!docked(state, ship, world.id)) continue
-    if (ship.faction !== PIRATES && world.profile.starport !== 'A' && world.profile.starport !== 'B') continue
+    if (!docked(state, ship, world.id) || !['A', 'B', 'C'].includes(world.profile.starport)) continue
     ship.damage -= 1
   }
 }

@@ -181,6 +181,7 @@ export function regrowGarrisons(state: GameState): void {
       if (world.garrison < cap && check(state.rng, 10)) world.garrison += 1
     } else if (world.faction === WARLORD && state.factions[WARLORD]?.capital === id) {
       if (world.garrison < 8 && state.week % 4 === 0) world.garrison += 1
+      if (world.marines < 2 && state.week % 8 === 4) world.marines += 1
     }
   }
 }

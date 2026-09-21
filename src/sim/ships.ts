@@ -5,9 +5,15 @@
  *
  * A charted route is preferred. A hull someone sent on purpose may also
  * jump off-lane to any world within its jump rating — that is what makes
- * scouts and warships worth having. Fuel risk is Phase 1b.
+ * scouts and warships worth having. Every jump costs a tank of fuel, and
+ * only a port of class B or better that is open to her fills them: a hull
+ * down to her last jump makes for fuel — her rendezvous if it will serve —
+ * before anything else, and one with none sits where she is.
  */
 import { hexRoute, laneBetween, nextDeparture, route } from './chart'
+import { burnsFuel, fuelCapacity } from './fleet'
+import { PIRATES } from './factions'
+import { hexDistance } from './hex'
 import { eventsAt, hullArrivedEvent, hullDepartedEvent, recordEvent } from './events'
 import { capitalOf, hostile } from './factions'
 import { loadMail, snapshotWorld, unloadMail, writeReport } from './mail'
@@ -130,20 +136,51 @@ export function portKnowsClosed(state: GameState, from: WorldId, to: WorldId, fa
 }
 
 /**
- * An unarmed hull that docks at a port held against her side is taken at
- * the quay: packets and couriers land; scouts and warships stay in orbit
- * and are not. Runs on this week's arrivals after the encounters.
+ * A packet that docks at a port held against her side is taken at the
+ * quay; scouts and warships stay in orbit and are not. Runs on this week's
+ * arrivals after the encounters.
  */
 export function impoundAtPorts(state: GameState, landed: readonly ShipId[]): void {
   for (const id of landed) {
     const ship = state.ships[id]
     if (!ship || ship.location.kind !== 'world') continue
-    if (ship.role !== 'packet' && ship.role !== 'courier') continue
+    if (ship.role !== 'packet') continue
     const world = state.worlds[ship.location.world]
     if (!hostile(world.faction, ship.faction) || !world.actingGovernor) continue
     recordEvent(state, world.id, { kind: 'ship_captured', valence: 'neutral', against: ship.faction, favours: world.faction, severity: 2, ship })
     impound(state, ship, world.faction)
   }
+}
+
+/**
+ * Whether a hull can fill her tanks here: a port of class B or better that
+ * is open to her side — for a pirate, a haven she knows of that class.
+ */
+export function refuelsAt(state: GameState, ship: Ship, at: WorldId): boolean {
+  const world = state.worlds[at]
+  if (!world || (world.profile.starport !== 'A' && world.profile.starport !== 'B')) return false
+  if (ship.faction === PIRATES) return ship.havens?.includes(at) ?? false
+  return !hostile(world.faction, ship.faction)
+}
+
+/** Fill the tanks if the port will do it. Called on arrival and again before sailing, in case the port changed hands meanwhile. */
+export function refuel(state: GameState, ship: Ship, at: WorldId): void {
+  if (burnsFuel(ship.role) && refuelsAt(state, ship, at)) ship.fuel = fuelCapacity(ship.role)
+}
+
+/**
+ * Where a hull with one jump left should go instead of `to`, if `to` has
+ * no fuel for her: the nearest place within a jump that has, her
+ * rendezvous first if it qualifies. Null if nowhere — she stays.
+ */
+export function fuelStop(state: GameState, ship: Ship, from: WorldId, to: WorldId): WorldId | null {
+  if (refuelsAt(state, ship, to)) return to
+  const here = state.worlds[from]
+  const inRange = (Object.keys(state.worlds).sort() as WorldId[]).filter((w) => w !== from && hexDistance(state.worlds[w].hex, here.hex) <= ship.jump && refuelsAt(state, ship, w))
+  if (inRange.length === 0) return null
+  const rendezvous = ship.order && 'then' in ship.order && ship.order.then?.kind === 'world' ? ship.order.then.world : ship.standing.rally
+  if (rendezvous && inRange.includes(rendezvous)) return rendezvous
+  return inRange.sort((a, b) => hexDistance(state.worlds[a].hex, state.worlds[to].hex) - hexDistance(state.worlds[b].hex, state.worlds[to].hex) || (a < b ? -1 : 1))[0]
 }
 
 /** A port where a hull of this faction can lie safely and hand mail to the packets for home. */
@@ -153,9 +190,11 @@ export function friendlyPort(state: GameState, ship: Ship, at: WorldId): boolean
   return world !== undefined && world.faction === ship.faction && home !== null && route(state.lanes, at, home) !== null
 }
 
-/** Whether this officer has already posted a letter this week, so an action and an arrival do not make two. */
+/** Whether this officer has already posted a letter this week, so an action and an arrival do not make two. Notes from questioning prisoners are not the week's letter. */
 function wroteThisWeek(state: GameState, commander: Ship['commander']): boolean {
-  return Object.values(state.mail).some((m) => m.contents.kind === 'report' && m.contents.report.observer === commander && m.contents.report.observed === state.week)
+  return Object.values(state.mail).some(
+    (m) => m.contents.kind === 'report' && m.contents.report.observer === commander && m.contents.report.observed === state.week && !m.contents.report.events.every((e) => e.kind === 'haven_named'),
+  )
 }
 
 /**
@@ -200,6 +239,7 @@ export function landShips(state: GameState): ShipId[] {
     if (ship.location.kind !== 'transit' || ship.location.arrives > state.week) continue
     const at = ship.location.to
     ship.location = { kind: 'world', world: at }
+    refuel(state, ship, at)
     hullArrivedEvent(state, at, ship)
     landed.push(id)
   }
@@ -270,15 +310,26 @@ export function departShips(state: GameState): void {
       ship.order = { kind: 'hold' }
       continue
     }
-    const to = path[1]
+    let to = path[1]
     const lane = laneBetween(state.lanes, from, to)
     // Packets keep the lane's timetable, and are held back only once the port they are leaving knows the far port is
     // closed to them; anything else sails as soon as it can.
     if (ship.role === 'packet' && lane && nextDeparture(lane, from, state.week) !== state.week) continue
     if (ship.role === 'packet' && portKnowsClosed(state, from, to, ship.faction)) continue
+    // Fuel: the port may have filled her since she landed; with one jump left she goes only where there is more.
+    if (burnsFuel(ship.role)) {
+      refuel(state, ship, from)
+      if (ship.fuel <= 0) continue
+      if (ship.fuel === 1) {
+        const stop = fuelStop(state, ship, from, to)
+        if (stop === null) continue
+        to = stop
+      }
+    }
     loadMail(state, ship, from, to, path)
     takeOnWaiting(state, ship, from)
     hullDepartedEvent(state, from, ship)
+    if (burnsFuel(ship.role)) ship.fuel -= 1
     ship.location = { kind: 'transit', from, to, arrives: state.week + 1 }
   }
 }

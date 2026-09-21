@@ -43,6 +43,8 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
   const talk = view.rumours.filter((r) => r.snapshot.kind === 'event' && r.snapshot.event.at === world)
   const pending = view.outgoing.filter((d) => d.envelope.destination.kind === 'world' && d.envelope.destination.world === world)
   const touching = view.lanes.filter((l) => l.ends.includes(world))
+  // What prisoners have said about this world. Not all of it is true.
+  const named = view.inbox.flatMap((r) => r.events.filter((e) => e.kind === 'haven_named' && e.at === world).map((e) => ({ report: r, event: e })))
 
   return (
     <div className="dossier">
@@ -176,6 +178,21 @@ export function Dossier({ view, world, onRequest, onOrders, onShowReport }: Prop
               <li key={r.id}>
                 <span className="muted">obs. {weekLabel(r.observed)}, arrived {weekLabel(r.delivered ?? 0)}, {r.observerName}:</span>{' '}
                 {r.events.length > 0 ? r.events.map(eventText).join(' ') : `${holderText(view, r.snapshot.world)}, garrison ${r.snapshot.world.garrison + r.snapshot.world.marines}, Governor ${r.snapshot.world.governorName ?? '—'}`}{' '}
+                <button type="button" className="link" onClick={() => onShowReport(r.id)}>
+                  show
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {named.length > 0 && (
+        <>
+          <h4>Named as a haven</h4>
+          <ul className="history">
+            {named.map(({ report: r, event: e }) => (
+              <li key={`${r.id}-${e.id}`}>
+                <span className="muted">{weekLabel(e.week)}, {r.observerName}:</span> {e.person ?? 'prisoners'} named this world as a haven under questioning.{' '}
                 <button type="button" className="link" onClick={() => onShowReport(r.id)}>
                   show
                 </button>

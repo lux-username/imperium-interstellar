@@ -34,9 +34,6 @@ const POSTURES: { value: Posture; label: string }[] = [
   { value: 'always', label: 'always engage' },
 ]
 
-/** Detachments a hull can carry; only transports carry troops in numbers (mirrors the sim's troopCapacity). */
-const TROOP_CAPACITY = 3
-
 export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
   const worlds = useMemo(() => Object.values(view.chart).sort((a, b) => (a.name < b.name ? -1 : 1)), [view.chart])
   const lanes = useMemo(() => Object.fromEntries(view.lanes.map((l) => [l.id, l])), [view.lanes])
@@ -91,7 +88,7 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
     const s = view.known.ships[r.id]
     return r.id !== ship && r.commanderName !== null && s?.ship.at === view.capital && s.observed === view.week && !lastOrderSent(view, r.id)
   })
-  const chosenCourier = couriers.find((c) => c.id === courier) ?? couriers.find((c) => c.role === 'courier') ?? couriers[0] ?? null
+  const chosenCourier = couriers.find((c) => c.id === courier) ?? couriers.find((c) => c.role === 'scout') ?? couriers[0] ?? null
   const courierPath = chosenCourier && address !== view.capital ? hexRoute(view.chart, view.capital, address, chosenCourier.jump) : null
   const courierLands = courierPath ? view.week + courierPath.length : null
   const courierOffered = couriers.length > 0 && address !== view.capital && (landsAt === null || (courierLands !== null && courierLands < landsAt - 1))
@@ -99,9 +96,10 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
 
   // Cargo is taken aboard wherever the order is read: from the desk's reserve here, from that world's garrison elsewhere.
   const loadsHere = address === view.capital
-  const carriesTroops = entry?.role === 'transport'
-  const maxArmy = loadsHere ? Math.min(TROOP_CAPACITY, view.reserve.army) : TROOP_CAPACITY
-  const maxMarines = loadsHere ? Math.min(TROOP_CAPACITY - army, view.reserve.marines) : TROOP_CAPACITY - army
+  const capacity = entry?.troops ?? 0
+  const carriesTroops = capacity > 0
+  const maxArmy = loadsHere ? Math.min(capacity, view.reserve.army) : capacity
+  const maxMarines = loadsHere ? Math.min(capacity - army, view.reserve.marines) : capacity - army
   const passengers = loadsHere ? view.pool : []
   const needsPassenger = purpose !== 'land'
 
@@ -246,13 +244,13 @@ export function OrdersDialog({ view, draft, onSubmit, onClose }: Props) {
                   <input type="number" min={0} max={maxArmy} value={army} onChange={(e) => setArmy(Math.min(maxArmy, Math.max(0, Number.parseInt(e.target.value, 10) || 0)))} /> marines{' '}
                   <input type="number" min={0} max={maxMarines} value={marines} onChange={(e) => setMarines(Math.min(maxMarines, Math.max(0, Number.parseInt(e.target.value, 10) || 0)))} />{' '}
                   <small className="muted">
-                    detachments, {TROOP_CAPACITY} at most.{' '}
+                    detachments, {capacity} at most for a {entry?.role}.{' '}
                     {loadsHere ? `The reserve here: ${view.reserve.army} army, ${view.reserve.marines} marine.` : 'Taken from the garrison where the order is read.'} One in ten does not wake from the passage. On a
                     world held against us, {2} marines make a beachhead; fewer and the landing costs a detachment.
                   </small>
                 </div>
               ) : (
-                <small className="muted">Only a transport carries troops; this hull can take a passenger.</small>
+                <small className="muted">A scout has no berths for troops; she can take a passenger.</small>
               )}
               <div>
                 passenger{' '}

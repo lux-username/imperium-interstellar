@@ -33,6 +33,7 @@ export function Fleet({ view, onSelect, onShowReport, onOrders }: Props) {
               <span className="subject">{entry.name}</span>
               <span className="muted">
                 {entry.role}, J-{entry.jump}
+                {seen?.ship.fuel !== null && seen?.ship.fuel !== undefined ? `, fuel for ${seen.ship.fuel} of ${entry.fuel}` : ''}
               </span>
               <span className="arrived">{seen ? `${worldName(view, seen.ship.at)}, ${ago(view.week, seen.observed)}` : 'never seen'}</span>
               {entry.commanderName !== null && (

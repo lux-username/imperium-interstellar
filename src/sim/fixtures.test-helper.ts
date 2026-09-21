@@ -44,8 +44,8 @@ export function line(): GameState {
       [xy]: { id: xy, ends: [X, Y], jumpDistance: 1, schedule: { interval: 4, phase: 1 } },
     },
     ships: {
-      [pcx]: { id: pcx, name: 'P1', role: 'packet', faction: admin, jump: 1, strength: 0, damage: 0, location: { kind: 'world', world: C }, commander: null, troops: { army: 0, marines: 0 }, passengers: [], havens: null, order: { kind: 'courier', route: [C, X], then: null, repeat: true, leg: 1 }, standing: { rally: null, onContact: 'never' }, mailbag: [] },
-      [pxy]: { id: pxy, name: 'P2', role: 'packet', faction: admin, jump: 1, strength: 0, damage: 0, location: { kind: 'world', world: X }, commander: null, troops: { army: 0, marines: 0 }, passengers: [], havens: null, order: { kind: 'courier', route: [X, Y], then: null, repeat: true, leg: 1 }, standing: { rally: null, onContact: 'never' }, mailbag: [] },
+      [pcx]: { id: pcx, name: 'P1', role: 'packet', faction: admin, jump: 1, strength: 0, damage: 0, fuel: 0, location: { kind: 'world', world: C }, commander: null, troops: { army: 0, marines: 0 }, passengers: [], havens: null, order: { kind: 'courier', route: [C, X], then: null, repeat: true, leg: 1 }, standing: { rally: null, onContact: 'never' }, mailbag: [] },
+      [pxy]: { id: pxy, name: 'P2', role: 'packet', faction: admin, jump: 1, strength: 0, damage: 0, fuel: 0, location: { kind: 'world', world: X }, commander: null, troops: { army: 0, marines: 0 }, passengers: [], havens: null, order: { kind: 'courier', route: [X, Y], then: null, repeat: true, leg: 1 }, standing: { rally: null, onContact: 'never' }, mailbag: [] },
     },
     characters: {
       [player]: { id: player, name: 'Gov', faction: admin, post: { kind: 'governor', world: C }, traits: playerTraits() },

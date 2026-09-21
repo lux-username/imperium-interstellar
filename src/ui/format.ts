@@ -115,6 +115,8 @@ export function eventLabel(e: Event): string {
       return `${e.person ?? 'the incumbent'} refuses to go`
     case 'officer_took_command':
       return `${e.person ?? 'an officer'} took command of ${e.ship?.name ?? 'a prize'}`
+    case 'haven_named':
+      return `named as a pirate haven`
   }
 }
 
@@ -173,6 +175,8 @@ export function eventText(e: Event): string {
       return `${e.person ?? 'The incumbent'} has read the appointment and declines to hand over the seal.`
     case 'officer_took_command':
       return `${e.person ?? 'An officer'} has taken command of ${e.ship?.name ?? 'the prize'}.`
+    case 'haven_named':
+      return `Under questioning, ${e.person ?? 'the prisoners'} named this world as a haven where pirates put in.`
   }
 }
 

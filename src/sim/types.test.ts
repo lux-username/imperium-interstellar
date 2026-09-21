@@ -100,6 +100,7 @@ function fixture(): GameState {
         jump: 2,
         strength: 0,
         damage: 0,
+        fuel: 0,
         location: { kind: 'transit', from: outpost, to: capital, arrives: 4 },
         commander: null,
         troops: { army: 0, marines: 0 },

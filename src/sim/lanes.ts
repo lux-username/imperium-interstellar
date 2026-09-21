@@ -134,6 +134,7 @@ export function packetShips(rng: Rng, lanes: Record<LaneId, Lane>): Record<ShipI
       jump: Math.max(2, lane.jumpDistance),
       strength: 0,
       damage: 0,
+      fuel: 0,
       location: { kind: 'world', world: lane.ends[0] },
       commander: null,
       troops: { army: 0, marines: 0 },

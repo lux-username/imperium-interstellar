@@ -114,7 +114,7 @@ describe('a generated game', () => {
     expect(() => deserialize('{"format":"other"}')).toThrow()
   })
 
-  it('delivers routine reports when their envelopes said, never early, and late only where the lanes were disturbed', () => {
+  it('delivers most routine reports when their envelopes said; a hull passing may bring one early, a raider may make one late', () => {
     const s = newGame(12)
     for (let i = 0; i < 40; i++) advanceWeek(s)
     let checked = 0
@@ -127,7 +127,6 @@ describe('a generated game', () => {
       // and a packet chased off her lane by a raider may land a letter early by another route (the envelope shows the re-routing).
       if (r.envelope.destination.kind !== 'world' || r.envelope.destination.world !== s.capital || s.characters[r.observer]?.post.kind !== 'governor') continue
       if (r.envelope.route[0] !== r.envelope.origin) continue
-      expect(r.delivered, r.id).toBeGreaterThanOrEqual(r.envelope.eta)
       if (r.delivered === r.envelope.eta) onTime++
       checked++
     }

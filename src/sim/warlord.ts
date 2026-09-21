@@ -33,6 +33,26 @@ const WARLORD_FLEET: { role: keyof typeof HULLS; count: number }[] = [
 /** He decides once a month, on a week of his own so his moves do not stack with the desk's. */
 const DECISION_WEEK = 2
 
+/** Officers without a post at his seat when the game begins, and the most he keeps. He recruits one more every eight weeks. */
+const OFFICER_POOL = 3
+
+/** One of his officers: rolled like anyone else, but loyal to him or to themselves — the Empire has no claim on them. */
+export function hisOfficer(state: GameState, seat: WorldId): CharacterId {
+  const cid = `c-wl-${state.nextId}` as CharacterId
+  state.nextId += 1
+  const officer = newCharacter(state.rng, cid, WARLORD, { kind: 'unassigned', at: seat })
+  if (officer.traits.loyalty === 'empire') officer.traits.loyalty = 'player'
+  state.characters[cid] = officer
+  return cid
+}
+
+function pool(state: GameState, seat: WorldId): CharacterId[] {
+  return Object.values(state.characters)
+    .filter((c) => c.faction === WARLORD && c.post.kind === 'unassigned' && c.post.at === seat && c.id !== THE_WARLORD)
+    .map((c) => c.id)
+    .sort()
+}
+
 // ---------------------------------------------------------------------------
 // Placement
 
@@ -76,6 +96,8 @@ export function placeWarlord(state: GameState): void {
     }
     world.unrest = Math.min(world.unrest, 4)
   }
+
+  for (let i = 0; i < OFFICER_POOL; i++) hisOfficer(state, seat.id)
 
   // Ships: the hulls he took with him, and a captain for each.
   const taken = new Set(Object.values(state.ships).map((s) => s.name))
@@ -239,24 +261,43 @@ export function warlordActs(state: GameState): void {
   if (!seat || !state.characters[THE_WARLORD]) return
   if (state.week % 4 !== DECISION_WEEK) return
   const p = picture(state, seat)
+  if (state.week % 8 === DECISION_WEEK && pool(state, seat).length < OFFICER_POOL) hisOfficer(state, seat)
   crewPrizes(state, seat)
   defend(state, p)
+  replaceGovernors(state, p)
   attack(state, p)
   hunt(state, p)
   scout(state, p)
 }
 
-/** Prizes that have reached his seat get an officer he recruits on the spot. */
+/** Prizes that have reached his seat get an officer from his pool, while he has one. */
 function crewPrizes(state: GameState, seat: WorldId): void {
   for (const prize of Object.values(state.ships).sort((a, b) => (a.id < b.id ? -1 : 1))) {
     if (prize.faction !== WARLORD || prize.commander !== null || prize.role === 'packet' || prize.location.kind !== 'world' || prize.location.world !== seat) continue
-    const cid = `c-wl-${state.nextId}` as CharacterId
-    state.nextId += 1
-    state.characters[cid] = newCharacter(state.rng, cid, WARLORD, { kind: 'commander', ship: prize.id })
+    const cid = pool(state, seat)[0]
+    if (!cid) return
+    state.characters[cid].post = { kind: 'commander', ship: prize.id }
     prize.commander = cid
     prize.standing = { rally: seat, onContact: 'favourable' }
     prize.order = null
   }
+}
+
+/**
+ * A governor of his whose port his people have seen pirates lying at is
+ * looking the other way: he sends an officer from his pool with a marine
+ * to take the seal. One such errand a month, with a transport to spare.
+ */
+function replaceGovernors(state: GameState, p: Picture): void {
+  const officer = pool(state, p.seat)[0]
+  const transport = idleAt(state, p.seat, 'transport')[0]
+  const home = state.worlds[p.seat]
+  if (!officer || !transport || home.marines < 1) return
+  const nest = p.own
+    .filter((o) => o.world.id !== p.seat && p.piratesAt[o.world.id] && hexRoute(state.worlds, p.seat, o.world.id, 2) !== null)
+    .sort((a, b) => (a.world.id < b.world.id ? -1 : 1))[0]
+  if (!nest) return
+  transport.order = { kind: 'transport', army: 0, marines: 1, passenger: officer, purpose: 'appoint', to: nest.world.id, then: { kind: 'world', world: p.seat }, loaded: false }
 }
 
 /**

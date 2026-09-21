@@ -15,8 +15,10 @@ import { recordEvent } from './events'
 import { PIRATES, REBELS, hostile } from './factions'
 import { HULLS, newShip, shipName } from './fleet'
 import { hexDistance } from './hex'
+import { snapshotShip, writeReport } from './mail'
 import { check, nextFloat, nextInt } from './rng'
 import type { CharacterId, GameState, Ship, ShipId, World, WorldId } from './types'
+import type { Event, EventId } from './view'
 
 /** Chance per haven per week of a new hull putting out. Small: catching the ones at large should be enough to keep piracy down. */
 export const SPAWN_CHANCE = 0.01
@@ -116,12 +118,18 @@ function huntingGrounds(state: GameState, ship: Ship, from: WorldId): WorldId[] 
   })
 }
 
-/** The nearest haven she *knows of*. She sails on her knowledge, not the truth: a haven cleaned up since she heard of it will seize her. */
+/**
+ * The nearest haven she *knows of*. She sails on her knowledge, not the
+ * truth: a haven cleaned up since she heard of it will seize her. With the
+ * tanks low she prefers one with a port that can fill them (B or better).
+ */
 function nearestHaven(state: GameState, ship: Ship, from: WorldId): WorldId | null {
   const known = (ship.havens ?? []).filter((h) => state.worlds[h])
   if (known.length === 0) return null
   const here = state.worlds[from]
-  return [...known].sort((a, b) => hexDistance(state.worlds[a].hex, here.hex) - hexDistance(state.worlds[b].hex, here.hex) || (a < b ? -1 : 1))[0]
+  const fuelled = known.filter((h) => ['A', 'B'].includes(state.worlds[h].profile.starport))
+  const pool = ship.fuel <= 2 && fuelled.length > 0 ? fuelled : known
+  return [...pool].sort((a, b) => hexDistance(state.worlds[a].hex, here.hex) - hexDistance(state.worlds[b].hex, here.hex) || (a < b ? -1 : 1))[0]
 }
 
 /**
@@ -153,6 +161,11 @@ export function pirateOrders(state: GameState): void {
       ship.order = { kind: 'hold' }
       continue
     }
+    // No raid on a dry tank: a haven that cannot fuel her is a place to hide, not to sail from.
+    if (ship.fuel < 3) {
+      ship.order = home && home !== at ? { kind: 'move', to: home, then: null } : { kind: 'hold' }
+      continue
+    }
     const target = grounds[nextInt(state.rng, 0, grounds.length - 1)]
     const back = ship.havens && ship.havens.length > 0 ? ship.havens[nextInt(state.rng, 0, ship.havens.length - 1)] : home
     ship.order = { kind: 'patrol', world: target, weeks: nextInt(state.rng, 3, 6), posture: 'favourable', then: back ? { kind: 'world', world: back } : null, began: null }
@@ -160,11 +173,45 @@ export function pirateOrders(state: GameState): void {
 }
 
 /**
+ * What a captured crew lets slip. Each haven she knew is named on 2d6 ≥ 7;
+ * on a 12 the crew also names a world that is no haven at all, to buy
+ * themselves something. The questioner — the commander who took her, or
+ * the governor whose port seized her — writes it home as an ordinary
+ * letter: a report about the pirate hull, with one event per world named.
+ * The events are the questioner's notes, not things that happened, so they
+ * are not entered in the record a scout would read.
+ */
+export function interrogate(state: GameState, pirate: Ship, havensKnown: WorldId[], questioner: CharacterId, at: WorldId): void {
+  if (havensKnown.length === 0) return
+  const named = havensKnown.filter(() => check(state.rng, 7))
+  if (check(state.rng, 12)) {
+    const ports = (Object.keys(state.worlds).sort() as WorldId[]).filter((w) => !havensKnown.includes(w) && ['A', 'B', 'C'].includes(state.worlds[w].profile.starport) && w !== state.capital)
+    if (ports.length > 0) named.push(ports[nextInt(state.rng, 0, ports.length - 1)])
+  }
+  if (named.length === 0) return
+  const captain = pirate.commander ? state.characters[pirate.commander]?.name : null
+  const notes: Event[] = named.map((w) => ({
+    id: `e-q-${state.nextId++}` as EventId,
+    at: w,
+    week: state.week,
+    kind: 'haven_named',
+    valence: 'neutral',
+    against: null,
+    favours: null,
+    severity: 1,
+    ship: snapshotShip(pirate, at),
+    person: captain ?? pirate.name,
+    level: null,
+  }))
+  writeReport(state, questioner, at, { kind: 'ship', ship: snapshotShip(pirate, at) }, { events: notes })
+}
+
+/**
  * A pirate who puts in at a port she does not know to be a haven — because
  * she fled there, or the haven has since changed hands — is seized by the
  * port's governor and becomes their prize. Lying off a port to raid is not
  * putting in, and neither is passing through on the way somewhere else:
- * only a hull that means to stay is taken.
+ * only a hull that means to stay is taken. Her crew are questioned.
  */
 export function seizePirates(state: GameState): void {
   const ids = Object.keys(state.ships).sort() as ShipId[]
@@ -179,6 +226,7 @@ export function seizePirates(state: GameState): void {
     if (!staying) continue
     if (!world.actingGovernor || world.faction === PIRATES) continue
     recordEvent(state, at, { kind: 'pirate_seized', valence: 'neutral', against: PIRATES, favours: world.faction, severity: 2, ship })
+    if (world.actingGovernor && state.factions[world.faction]?.capital) interrogate(state, ship, ship.havens ?? [], world.actingGovernor, at)
     if (ship.commander) delete state.characters[ship.commander]
     ship.commander = null
     ship.faction = world.faction

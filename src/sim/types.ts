@@ -135,14 +135,15 @@ export interface Lane {
 // Ships, characters, factions
 
 /**
- * What a hull is for. Packets run the lanes on schedule; scouts are tiny
- * two-person hulls that look and run; patrol craft, escorts and transports
- * are the warships the desk commands.
+ * What a hull is for. Packets run the lanes on schedule and are nobody's to
+ * command; scouts are the small fast unarmed hulls that look, watch and
+ * carry — there is no separate courier; patrol craft, escorts, transports
+ * and raiders are the warships.
  */
-export type ShipRole = 'packet' | 'courier' | 'scout' | 'patrol' | 'escort' | 'transport' | 'raider' | 'merchant'
+export type ShipRole = 'packet' | 'scout' | 'patrol' | 'escort' | 'transport' | 'raider' | 'merchant'
 
 /** Hulls the desk can give orders to; the rest run themselves. A captured raider is as commandable as anything else. */
-export const COMMANDABLE_ROLES: readonly ShipRole[] = ['courier', 'scout', 'patrol', 'escort', 'transport', 'raider']
+export const COMMANDABLE_ROLES: readonly ShipRole[] = ['scout', 'patrol', 'escort', 'transport', 'raider']
 
 /** What a ship does when its order runs out or something unexpected happens. Phase 1b adds a damage threshold. */
 export interface StandingOrders {
@@ -161,8 +162,10 @@ export interface Ship {
   jump: number
   /** Abstract fighting strength when undamaged. Zero for hulls that only run. */
   strength: number
-  /** Points of strength knocked off in action; repaired a point a week at a friendly A or B port. A hull with damage ≥ strength cannot fight. */
+  /** Points of strength knocked off in action; repaired a point a week at a friendly port of class C or better. A hull with damage ≥ strength cannot fight. */
   damage: number
+  /** Jumps left in the tanks. Every jump costs one; a port of class B or better that is open to her fills them. Packets carry none and burn none: the lanes keep them fuelled. */
+  fuel: number
   location: Location
   /** Null for a prize waiting for an officer, and for packets, which run themselves. */
   commander: CharacterId | null

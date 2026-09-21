@@ -74,6 +74,8 @@ export interface ShipSnapshot {
   commander: CharacterId | null
   /** Whether she looked knocked about. */
   damaged: boolean
+  /** Jumps in her tanks, when the port that saw her is her own side's and knows; null otherwise. */
+  fuel: number | null
 }
 
 export interface WorldSnapshot {
@@ -147,6 +149,8 @@ export type EventKind =
   | 'appointment_made'
   | 'appointment_refused'
   | 'officer_took_command'
+  /** Under questioning a captured pirate named the world as a haven. `person` is the pirate; `at` the world named. Not always true. */
+  | 'haven_named'
 
 /** Good or bad news. On an event this is the reading for a bystander; a party to it reads it by `against` and `favours`. */
 export type Valence = 'good' | 'bad' | 'neutral'
@@ -292,6 +296,10 @@ export interface RosterEntry {
   jump: number
   /** Null for a prize: taken in action and waiting for an officer to be sent out to her. */
   commanderName: string | null
+  /** Detachments she can carry; a fact of her class. */
+  troops: number
+  /** Jumps a full tank gives her; a fact of her class. */
+  fuel: number
 }
 
 /** An officer at the capital without a post, whom the desk can send out to a seat or a prize. */
