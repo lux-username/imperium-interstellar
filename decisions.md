@@ -197,3 +197,7 @@ Per the user's rulings. Fuel is a count of jumps per hull class (warships four, 
 ## 2026-09-21 — Chose forward bases over a seat-bound Warlord
 
 Because his targets were chosen within two jumps of his *border* but his ships all launched from and returned to his seat with no check on the distance, so a landing on the far side of his territory would arrive on its last tank at a world that would not fill it — marooned by his own orders. He now plans each mission against the tank (a jump at a time, refilled at any B-or-better port of his, with enough left on arrival to reach the nearest such port), and every such port is a base: missions launch from the nearest base with the ships and troops to spare, and rally afterwards at the base nearest the target, so his strength drifts toward his frontier as the user asked. Prizes still sail home to the seat, because that is where his officer pool is.
+
+## 2026-09-20 — Chose to exclude named individuals, real or fictional, from the name pools
+
+Because a pool entry must read as a generic period name, and a name that is chiefly known as one person's — a famous historical figure, or a named character in a well-known novel — reads instead as that person, which is either a borrowing (the project rule on third-party works) or, for the recently dead in a culture that avoids their names, a discourtesy. Ordinary period names that happen to coincide with someone famous stay; names distinctive to one individual go. Applied to the Aborigine and Han women's pools this session; `#51` applies it to the Aborigine men's pool.

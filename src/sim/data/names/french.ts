@@ -1,0 +1,53 @@
+import type { Culture } from './culture'
+
+export const french: Culture = {
+  name: 'French',
+  group: 'European',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: 'Second Empire and early Third Republic. Provincial and Parisian mixed; no particles, the Republic having made them unfashionable for anyone the game would generate.',
+  given: {
+    m: [
+      'Jean', 'Pierre', 'Louis', 'Joseph', 'François', 'Jacques', 'Henri', 'Charles', 'Auguste', 'Jules',
+      'Léon', 'Émile', 'Eugène', 'Paul', 'Georges', 'Marcel', 'Alphonse', 'Alfred', 'Albert', 'Gustave',
+      'Victor', 'Édouard', 'Ernest', 'Étienne', 'Fernand', 'Gaston', 'Lucien', 'Maurice', 'Raymond', 'René',
+      'Camille', 'Claude', 'Antoine', 'Armand', 'Adolphe', 'Achille', 'Anatole', 'Aristide', 'Arsène', 'Baptiste',
+      'Casimir', 'Célestin', 'Clément', 'Constant', 'Désiré', 'Edmond', 'Félix', 'Ferdinand', 'Firmin', 'Gabriel',
+      'Gaspard', 'Gilbert', 'Hector', 'Hippolyte', 'Honoré', 'Isidore', 'Jérôme', 'Julien', 'Léopold', 'Marius',
+      'Mathieu', 'Michel', 'Narcisse', 'Octave', 'Onésime', 'Philippe', 'Prosper', 'Raoul', 'Rémi', 'Roger',
+      'Séverin', 'Sylvain', 'Théodore', 'Théophile', 'Urbain', 'Valentin', 'Vincent', 'Xavier', 'Yves', 'Zéphyrin',
+    ],
+    f: [
+      'Marie', 'Jeanne', 'Louise', 'Marguerite', 'Anne', 'Françoise', 'Madeleine', 'Joséphine', 'Augustine', 'Berthe',
+      'Blanche', 'Célestine', 'Clémence', 'Émilie', 'Eugénie', 'Ernestine', 'Félicie', 'Geneviève', 'Henriette', 'Hortense',
+      'Julie', 'Léonie', 'Léontine', 'Lucie', 'Mathilde', 'Pauline', 'Rosalie', 'Suzanne', 'Thérèse', 'Victorine',
+      'Virginie', 'Adèle', 'Adrienne', 'Aimée', 'Alphonsine', 'Amélie', 'Angèle', 'Antoinette', 'Apolline', 'Cécile',
+      'Céline', 'Charlotte', 'Claire', 'Clotilde', 'Constance', 'Delphine', 'Élise', 'Élisabeth', 'Eulalie', 'Fernande',
+      'Flore', 'Gabrielle', 'Germaine', 'Honorine', 'Irma', 'Jeannette', 'Justine', 'Laure', 'Lucienne', 'Marceline',
+      'Marthe', 'Mélanie', 'Noémie', 'Odette', 'Palmyre', 'Philomène', 'Reine', 'Renée', 'Rose', 'Séraphine',
+      'Sidonie', 'Simone', 'Sophie', 'Stéphanie', 'Valentine', 'Véronique', 'Yvonne', 'Zélie', 'Zoé', 'Éléonore',
+    ],
+  },
+  family: [
+    'Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau',
+    'Simon', 'Laurent', 'Lefebvre', 'Michel', 'David', 'Bertrand', 'Roux', 'Vincent', 'Fournier', 'Morel',
+    'Girard', 'André', 'Mercier', 'Dupont', 'Lambert', 'Bonnet', 'François', 'Legrand', 'Garnier', 'Faure',
+    'Rousseau', 'Blanc', 'Guérin', 'Roussel', 'Perrin', 'Morin', 'Mathieu', 'Clément', 'Gauthier', 'Dumont',
+    'Fontaine', 'Chevalier', 'Robin', 'Masson', 'Gérard', 'Boyer', 'Denis', 'Lemaire', 'Duval', 'Joly',
+    'Roche', 'Noël', 'Meunier', 'Marchand', 'Dufour', 'Blanchard', 'Barbier', 'Brun', 'Dumas', 'Brunet',
+    'Leroux', 'Colin', 'Renard', 'Arnaud', 'Rolland', 'Caron', 'Aubert', 'Giraud', 'Leclerc', 'Vidal',
+    'Bourgeois', 'Renaud', 'Lemoine', 'Picard', 'Gaillard', 'Lacroix', 'Fabre', 'Dupuis', 'Carpentier', 'Poirier',
+    'Berger', 'Lemaître', 'Bouvier', 'Bailly', 'Germain', 'Delacroix', 'Beaumont', 'Chartier', 'Deschamps', 'Tessier',
+  ],
+  places: [
+    'Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Toulouse', 'Nantes', 'Lille', 'Rouen', 'Strasbourg', 'Reims',
+    'Dijon', 'Orléans', 'Tours', 'Angers', 'Le Mans', 'Caen', 'Rennes', 'Brest', 'Quimper', 'Nancy',
+    'Metz', 'Besançon', 'Grenoble', 'Chambéry', 'Nice', 'Toulon', 'Avignon', 'Nîmes', 'Montpellier', 'Perpignan',
+    'Carcassonne', 'Albi', 'Limoges', 'Poitiers', 'Bourges', 'Clermont', 'Vichy', 'Le Puy', 'Bayonne', 'Pau',
+    'Périgueux', 'Cahors', 'Rodez', 'Amiens', 'Arras', 'Calais', 'Boulogne', 'Dunkerque', 'Beauvais', 'Chartres',
+    'Versailles', 'Fontainebleau', 'Saint-Malo', 'Cherbourg', 'La Rochelle', 'Rochefort', 'Dieppe', 'Le Havre', 'Sedan', 'Verdun',
+    'Troyes', 'Auxerre', 'Mâcon', 'Valence', 'Arles', 'Loire', 'Seine', 'Rhône', 'Garonne', 'Dordogne',
+    'Somme', 'Marne', 'Meuse', 'Vosges', 'Jura', 'Cévennes', 'Auvergne', 'Provence', 'Bretagne', 'Normandie',
+    'Bourgogne', 'Champagne', 'Picardie', 'Gascogne', 'Savoie', 'Dauphiné', 'Languedoc', 'Vendée', 'Anjou', 'Touraine',
+  ],
+}

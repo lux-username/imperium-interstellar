@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const hawaiian: Culture = {
+  name: 'Hawaiian',
+  group: 'Pacific / misc.',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "The Kingdom of Hawaiʻi. A law of 1860 made the father's name a surname, so `family` is largely a second pool of men's names plus the Chinese-Hawaiian and haole-Hawaiian family names of the port towns. Given names are the Hawaiian forms of scripture names (Keoni, Kimo, Malia, Mele) beside the older ones; the ʻokina and kahakō are written as the language writes them now.",
+  given: {
+    m: [
+      'Keoni', 'Kimo', 'Kale', 'Kawika', 'Iokepa', 'Lopaka', 'Pilipo', 'Palakiko', 'Hanale', 'Ioane',
+      'Iakopa', 'Pekelo', 'Kelekolio', 'Kaniela', 'Kimokeo', 'Lui', 'Mose', 'Paulo', 'Solomona', 'Kamuela',
+      'Aberahama', 'Elia', 'Isaia', 'Iona', 'Ionatana', 'Iokua', 'Mataio', 'Noa', 'Uilama', 'Wiliama',
+      'Makaio', 'Malaki', 'Kekoa', 'Kaleo', 'Kapono', 'Makoa', 'Nāinoa', 'Kai', 'Koa', 'Ikaika',
+      'Kahale', 'Kalani', 'Keola', 'Kekai', 'Kāne', 'Kalei', 'Hōkū', 'Keaka', 'Kanoa', 'Kaipo',
+      'Kealoha', 'Kekipi', 'Kapena', 'Keliʻi', 'Kealiʻi', 'Nakoa', 'Kuakini', 'Hoapili', 'Boki', 'Naihe',
+      'Kapihe', 'Paki', 'Kanehoa', 'Kapaʻakea', 'Hulu', 'Malo', 'Kaeo', 'Kamakau', 'Kepelino', 'Kahananui',
+      'Kaʻōnohi', 'Piʻilani', 'Kawelo', 'Keawe', 'Keōua', 'Kahahana', 'Kūaliʻi', 'Manu', 'Lono', 'Mākua',
+    ],
+    f: [
+      'Malia', 'Mele', 'Kilikina', 'Lāhela', 'Luika', 'Elikapeka', 'Emalia', 'Hana', 'Iolana', 'Kalena',
+      'Keleka', 'Kina', 'Mikala', 'Lokelia', 'Kaleinani', 'Leilani', 'Kalani', 'Keala', 'Kealoha', 'Lani',
+      'Nohea', 'Noelani', 'Puanani', 'Pua', 'Lehua', 'Mahina', 'Moana', 'Nani', 'ʻIwalani', 'Ululani',
+      'Kalei', 'Haunani', 'Hōkūlani', 'Keanuenue', 'Kiele', 'Luana', 'Makana', 'Momi', 'Nālani', 'Napua',
+      'Olina', 'Pualani', 'Ulu', 'Waiola', 'Wehi', 'Hina', 'Kapua', 'Kawena', 'Kahala', 'Kamaile',
+      'Lokelani', 'Maile', 'Palila', 'Pohai', 'Pilialoha', 'Pōmaikaʻi', 'Puaʻala', 'Uʻilani', 'Ānuenue', 'Halia',
+      'Hiʻilei', 'Kanani', 'Kaʻiu', 'Kaulana', 'Kauʻi', 'Kēhau', 'Kealani', 'Nālei', 'Kamaka', 'Kiana',
+      'Lehiwa', 'Ualani', 'Kamāmalu', 'Kalama', 'Kekela', 'Kaleiheana', 'Kekāuluohi', 'Likelike', 'Pauahi', 'Kapiʻolani',
+    ],
+  },
+  family: [
+    'Kaʻaukai', 'Kahanamoku', 'Kaʻaihue', 'Kealoha', 'Kahoʻohanohano', 'Kapule', 'Kaʻanaʻana', 'Akana', 'Akaka', 'Aiona',
+    'Apo', 'Awana', 'Kaʻaikala', 'Kahale', 'Kahanu', 'Kahele', 'Kahikina', 'Kaholokula', 'Kaiwi', 'Kalama',
+    'Kaleikini', 'Kalili', 'Kaluna', 'Kamaka', 'Kanahele', 'Kanaʻe', 'Kāne', 'Kaniho', 'Kapahu', 'Kapuni',
+    'Kaʻuhane', 'Kawelo', 'Keawe', 'Kekahuna', 'Kekumu', 'Kelekolio', 'Keliʻihoʻomalu', 'Keoki', 'Kepano', 'Kiaʻāina',
+    'Kinimaka', 'Kukahiko', 'Kuʻualoha', 'Lindsey', 'Makaʻai', 'Mākaha', 'Mahoe', 'Malo', 'Manu', 'Mokuau',
+    'Naʻope', 'Nāhale', 'Nāone', 'Nāpela', 'Nāwahī', 'Nuʻuhiwa', 'Pahinui', 'Paʻahana', 'Paʻakaula', 'Pali',
+    'Pukui', 'Puʻu', 'Waiau', 'Waiwaiole', 'Wailehua', 'Kaʻapuni', 'Kahalewai', 'Kahoʻokele', 'Kaʻilihiwa', 'Kaupu',
+    'Kekona', 'Kūpau', 'Kuhaulua', 'Lono', 'Lua', 'Nāihe', 'Pilipo', 'Palakiko', 'Hanale', 'Kimo',
+  ],
+  places: [
+    'Honolulu', 'Lahaina', 'Hilo', 'Kailua', 'Kona', 'Kohala', 'Hāmākua', 'Puna', 'Kaʻū', 'Waimea',
+    'Wailuku', 'Kahului', 'Hāna', 'Kīpahulu', 'Kaupō', 'Molokaʻi', 'Kalaupapa', 'Lānaʻi', 'Kauaʻi', 'Līhuʻe',
+    'Hanalei', 'Kōloa', 'Niʻihau', 'Oʻahu', 'Waikīkī', 'Nuʻuanu', 'Kāneʻohe', 'Waiʻanae', 'ʻEwa', 'Wahiawā',
+    'Waialua', 'Kahuku', 'Haleʻiwa', 'Mānoa', 'Kalihi', 'Pālolo', 'Makiki', 'Pūowaina', 'Lēʻahi', 'Mauna Kea',
+    'Mauna Loa', 'Hualālai', 'Kīlauea', 'Haleakalā', 'Waiʻaleʻale', 'Kaʻala', 'Koʻolau', 'Wailua', 'Waipiʻo', 'Waimanu',
+    'Pololū', 'Kealakekua', 'Hōnaunau', 'Kawaihae', 'Māhukona', 'Kahoʻolawe', 'Molokini', 'Kāʻanapali', 'ʻĪao', 'Kula',
+    'Makawao', 'Pāʻia', 'Keʻanae', 'Puʻukoholā', 'Mokuʻāweoweo',
+  ],
+}

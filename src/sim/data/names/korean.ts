@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const korean: Culture = {
+  name: 'Korean',
+  group: 'East Asian',
+  order: 'family-given',
+  pattern: { m: '{family} {given}', f: '{family} {given}' },
+  notes: "Late Joseon, Revised Romanization except the three surnames (Kim, Lee, Park) whose English spellings are fixed by use. THIN: women were mostly recorded by clan, not given name; the pool uses the vernacular -sun/-nyeo/-ok/-hui names of the countryside and avoids the -ja ending, which came with the next century's occupation.",
+  given: {
+    m: [
+      'Yun-sik', 'Byeong-ho', 'Jae-pil', 'Ok-gyun', 'Yeong-hyo', 'Chi-ho', 'Hong-jip', 'Beom-jin', 'Gil-jun', 'Seung-hun',
+      'Sang-jae', 'Jun-yeong', 'Dong-hui', 'Man-sik', 'Byeong-jik', 'In-ho', 'Jong-ho', 'Gi-ho', 'Chang-ho', 'Yeong-ho',
+      'Seok-ju', 'Tae-yeong', 'Won-jung', 'Hyeon-mo', 'Ik-hyeon', 'Jin-ho', 'Bong-jun', 'Dae-yong', 'Deok-su', 'Gap-su',
+      'Gil-su', 'Han-su', 'Ho-jun', 'Hyeong-sik', 'Il-lo', 'Jae-hong', 'Jae-uk', 'Jeong-hui', 'Ji-yeong', 'Jung-ho',
+      'Mun-sik', 'Myeong-hwan', 'Nam-seon', 'Pil-su', 'Sang-ho', 'Se-hun', 'Seong-gyu', 'Si-yeong', 'Sun-jae', 'Tae-hun',
+      'Ui-seong', 'Wan-yong', 'Won-sik', 'Yeong-gil', 'Yong-ho', 'Yong-sik', 'Yeong-il', 'Bong-gil', 'Byeong-cheol', 'Chun-sik',
+      'Dong-hyeok', 'Du-han', 'Gwang-su', 'Gyu-sik', 'Hak-su', 'Heung-sik', 'Hui-yeong', 'Hyeon-sik', 'In-yeong', 'Jae-yeong',
+      'Jeong-sik', 'Jong-il', 'Ju-yeong', 'Jun-ho', 'Gi-yeong', 'Man-su', 'Myeong-su', 'Nam-il', 'Sang-yeong', 'Seok-hun',
+    ],
+    f: [
+      'Bok-sun', 'Sun-i', 'Ok-hui', 'Jeong-hui', 'Yeong-suk', 'Myeong-suk', 'Gil-nyeo', 'Bok-nyeo', 'Sun-deok', 'Deok-sun',
+      'Geum-sun', 'Yeong-sun', 'Jeong-suk', 'Ok-sun', 'Bun-i', 'Gan-nan', 'Ip-bun', 'Sun-hui', 'Eun-hui', 'Hye-suk',
+      'Chun-hui', 'Jeong-ok', 'Myeong-ok', 'Yeong-ok', 'Gyeong-suk', 'Hui-suk', 'In-suk', 'Jae-suk', 'Mi-suk', 'Seon-hui',
+      'Su-jeong', 'Yeon-hui', 'Bong-sun', 'Gwi-sun', 'Hwa-sun', 'Mal-sun', 'Nam-sun', 'Se-sun', 'Yong-sun', 'Ae-gyeong',
+      'Chae-ok', 'Do-hui', 'Eun-suk', 'Geum-ok', 'Gyeong-hui', 'Hae-suk', 'Hyang-sun', 'Il-sun', 'Jeom-sun', 'Jin-ok',
+      'Ju-hui', 'Man-ok', 'Mun-hui', 'Nan-hui', 'Ok-bun', 'Pil-nyeo', 'Sang-hui', 'Seok-nyeo', 'Sun-ok', 'Tae-hui',
+      'Wol-sun', 'Yeo-ok', 'Yong-hui', 'Yun-hui', 'Bong-nyeo', 'Dal-nyeo', 'Eun-nyeo', 'Gap-sun', 'Geum-nyeo', 'Gwi-nyeo',
+      'Hong-nyeo', 'Jong-hui', 'Ju-ok', 'Mi-ok', 'Myeong-hui', 'Nam-hui', 'Ok-nyeo', 'Sun-nyeo', 'Yeong-hui', 'Hui-ok',
+    ],
+  },
+  family: [
+    'Kim', 'Lee', 'Park', 'Choi', 'Jeong', 'Kang', 'Jo', 'Yun', 'Jang', 'Im',
+    'Han', 'O', 'Seo', 'Sin', 'Gwon', 'Hwang', 'An', 'Song', 'Jeon', 'Hong',
+    'Yu', 'Go', 'Mun', 'Yang', 'Son', 'Bae', 'Baek', 'Heo', 'Nam', 'Sim',
+    'No', 'Ha', 'Gwak', 'Seong', 'Cha', 'Ju', 'U', 'Gu', 'Min', 'Ryu',
+    'Na', 'Jin', 'Ji', 'Eom', 'Chae', 'Won', 'Cheon', 'Bang', 'Gong', 'Hyeon',
+    'Ham', 'Byeon', 'Yeom', 'Yeo', 'Chu', 'Do', 'So', 'Seok', 'Seon', 'Seol',
+    'Ma', 'Gil', 'Yeon', 'Wi', 'Pyo', 'Myeong', 'Gi', 'Ban', 'Wang', 'Geum',
+    'Ok', 'Yuk', 'In', 'Maeng', 'Je', 'Mo', 'Tak', 'Guk', 'Jwa', 'Pyeon',
+  ],
+  places: [
+    'Hanseong', 'Gaeseong', 'Pyeongyang', 'Uiju', 'Jeonju', 'Gwangju', 'Naju', 'Gyeongju', 'Daegu', 'Andong',
+    'Sangju', 'Jinju', 'Busan', 'Dongnae', 'Ulsan', 'Gimhae', 'Masan', 'Gangneung', 'Wonju', 'Chuncheon',
+    'Chungju', 'Cheongju', 'Gongju', 'Hongju', 'Suwon', 'Yangju', 'Icheon', 'Yeoju', 'Ganghwa', 'Jemulpo',
+    'Haeju', 'Hwangju', 'Anju', 'Jeongju', 'Hamheung', 'Wonsan', 'Gilju', 'Hoeryong', 'Gangjin', 'Suncheon',
+    'Yeosu', 'Mokpo', 'Jeju', 'Ulleung', 'Geoje', 'Tongyeong', 'Jindo', 'Baekdu', 'Geumgang', 'Jiri',
+    'Halla', 'Seorak', 'Taebaek', 'Sobaek', 'Nakdong', 'Daedong', 'Seomjin', 'Yeongsan', 'Imjin', 'Amnok',
+    'Duman', 'Gyeonggi', 'Chungcheong', 'Jeolla', 'Gyeongsang', 'Gangwon', 'Hwanghae', 'Pyeongan', 'Hamgyeong',
+  ],
+}

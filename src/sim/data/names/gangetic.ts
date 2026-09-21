@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const gangetic: Culture = {
+  name: 'Gangetic',
+  group: 'South Asian',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: 'The Ganges plain — Awadh, Banaras, Bihar — under the Company and then the Crown. Hindustani given names are often two words (Ram Prasad, Kedar Nath); about a fifth of each pool is Muslim, as Awadh was.',
+  given: {
+    m: [
+      'Ram Prasad', 'Shiv Narayan', 'Ganga Prasad', 'Jagannath', 'Raghunath', 'Bhagwan Das', 'Mathura Das', 'Kishori Lal', 'Babu Ram', 'Sita Ram',
+      'Jai Kishan', 'Hari Shankar', 'Radhey Shyam', 'Girdhari Lal', 'Banwari Lal', 'Bhola Nath', 'Kedar Nath', 'Kashi Nath', 'Baij Nath', 'Durga Prasad',
+      'Devi Prasad', 'Kali Charan', 'Ram Charan', 'Ram Sewak', 'Ram Dayal', 'Ram Autar', 'Ram Nath', 'Ram Lakhan', 'Ram Bharose', 'Nand Kishore',
+      'Nand Lal', 'Chhote Lal', 'Chhedi Lal', 'Bhagirath', 'Ramanand', 'Sukhdev', 'Tulsi Ram', 'Balmukund', 'Vishwanath', 'Har Prasad',
+      'Gopal Das', 'Gobind Ram', 'Keshav Deo', 'Madan Mohan', 'Mohan Lal', 'Moti Lal', 'Pyare Lal', 'Sundar Lal', 'Shyam Sundar', 'Jagdish Prasad',
+      'Ayodhya Prasad', 'Awadh Bihari', 'Bihari Lal', 'Lakhan', 'Bhairon', 'Bhawani', 'Jhinku', 'Mahabir', 'Ramdhari', 'Ramashray',
+      'Sheo Ratan', 'Suraj Bali', 'Wajid Ali', 'Amjad Ali', 'Asadullah', 'Muhammad Husain', 'Abdul Karim', 'Abdul Rahman', 'Ghulam Husain', 'Ghulam Muhammad',
+      'Amir Ali', 'Sayyid Ahmad', 'Altaf Husain', 'Nazir Ahmad', 'Ilahi Bakhsh', 'Khuda Bakhsh', 'Karim Bakhsh', 'Pir Bakhsh', 'Nabi Bakhsh', 'Nur Muhammad',
+    ],
+    f: [
+      'Sita', 'Radha', 'Ganga', 'Jamuna', 'Parvati', 'Lakshmi', 'Durga', 'Saraswati', 'Savitri', 'Gauri',
+      'Kamla', 'Vimla', 'Shanti', 'Sumitra', 'Kaushalya', 'Janki', 'Rukmini', 'Damyanti', 'Shakuntala', 'Phoolmati',
+      'Ramkali', 'Ramrati', 'Ramdei', 'Ramdulari', 'Sukhdei', 'Bhagwanti', 'Jagrani', 'Rajrani', 'Munni', 'Chhoti',
+      'Bitto', 'Gomti', 'Sarju', 'Tulsi', 'Champa', 'Chameli', 'Chandni', 'Kesar', 'Kasturi', 'Mohini',
+      'Nirmala', 'Prabhavati', 'Ratna', 'Roopwati', 'Sundari', 'Surajmukhi', 'Urmila', 'Chandrawati', 'Indrawati', 'Raj Kumari',
+      'Ram Piari', 'Shyam Piari', 'Devki', 'Jasoda', 'Anandi', 'Basanti', 'Dhanpati', 'Hira', 'Moti', 'Panna',
+      'Pushpa', 'Sona', 'Ganga Dei', 'Kishori', 'Fatima', 'Zainab', 'Amina', 'Khadija', 'Ruqayya', 'Kulsum',
+      'Sakina', 'Zohra', 'Mehrunnisa', 'Hamida', 'Rashida', 'Wahida', 'Sughra', 'Kubra', 'Bilqis', 'Umrao',
+    ],
+  },
+  family: [
+    'Tiwari', 'Tripathi', 'Dubey', 'Pandey', 'Mishra', 'Shukla', 'Upadhyay', 'Chaturvedi', 'Dwivedi', 'Pathak',
+    'Sharma', 'Vajpayee', 'Awasthi', 'Bajpai', 'Dixit', 'Srivastava', 'Saxena', 'Mathur', 'Nigam', 'Bhatnagar',
+    'Kulshreshtha', 'Agarwal', 'Gupta', 'Bansal', 'Goel', 'Singhal', 'Jaiswal', 'Sahu', 'Sonkar', 'Kushwaha',
+    'Maurya', 'Yadav', 'Verma', 'Patel', 'Lodhi', 'Chauhan', 'Rathore', 'Thakur', 'Singh', 'Chandel',
+    'Bais', 'Gaharwar', 'Bisen', 'Kachhwaha', 'Sinha', 'Prasad', 'Lal', 'Ojha', 'Jha', 'Choubey',
+    'Rai', 'Das', 'Kanaujia', 'Gaur', 'Saraswat', 'Pandit', 'Bhargava', 'Tandon', 'Kapoor', 'Khanna',
+    'Khan', 'Siddiqui', 'Ansari', 'Qureshi', 'Sheikh', 'Sayyid', 'Farooqi', 'Usmani', 'Rizvi', 'Zaidi',
+    'Naqvi', 'Kidwai', 'Hashmi', 'Abbasi', 'Chishti', 'Kazmi', 'Jafri', 'Nomani', 'Alvi', 'Mirza',
+  ],
+  places: [
+    'Banaras', 'Allahabad', 'Lucknow', 'Kanpur', 'Agra', 'Mathura', 'Vrindavan', 'Ayodhya', 'Faizabad', 'Gorakhpur',
+    'Azamgarh', 'Jaunpur', 'Ghazipur', 'Mirzapur', 'Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Darbhanga', 'Chapra',
+    'Arrah', 'Buxar', 'Sasaram', 'Monghyr', 'Hardoi', 'Sitapur', 'Bareilly', 'Moradabad', 'Rampur', 'Shahjahanpur',
+    'Pilibhit', 'Budaun', 'Etawah', 'Mainpuri', 'Farrukhabad', 'Fatehpur', 'Banda', 'Jhansi', 'Bundelkhand', 'Rohilkhand',
+    'Awadh', 'Doab', 'Meerut', 'Aligarh', 'Bulandshahr', 'Saharanpur', 'Bijnor', 'Haridwar', 'Almora', 'Nainital',
+    'Ganga', 'Jamuna', 'Gomti', 'Ghaghra', 'Gandak', 'Son', 'Kosi', 'Betwa', 'Chambal', 'Mithila',
+    'Magadh', 'Bhojpur', 'Tirhut', 'Champaran', 'Saran', 'Purnea',
+  ],
+}
