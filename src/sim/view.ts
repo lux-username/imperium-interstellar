@@ -82,6 +82,8 @@ export interface ShipSnapshot {
   commander: CharacterId | null
   /** Whether she looked knocked about. */
   damaged: boolean
+  /** Whether she looked a wreck: nothing left to fight with, wanting a dockyard. */
+  hulk: boolean
   /** Jumps in her tanks, when the port that saw her is her own side's and knows; null otherwise. */
   fuel: number | null
 }
@@ -161,6 +163,8 @@ export type EventKind =
   | 'haven_named'
   /** A pirate lay docked at the port and the port made no move to seize her. `ship` is the pirate, `level` how many, `person` the governor who let it pass. */
   | 'pirates_harboured'
+  /** Talk put about by a governor that their port asks no questions of any hull that pays. Only ever a rumour; `person` is the governor. */
+  | 'haven_touted'
 
 /** Good or bad news. On an event this is the reading for a bystander; a party to it reads it by `against` and `favours`. */
 export type Valence = 'good' | 'bad' | 'neutral'

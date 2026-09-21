@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { playerTraits } from './characters'
-import { fightAtWorlds } from './combat'
+import { fightAtWorlds, repairShips } from './combat'
 import { PIRATES } from './factions'
 import { HULLS, newShip } from './fleet'
 import { advanceWeek } from './game'
 import { discloses, governorLetter } from './governors'
-import { harbourPirates, pirateOrders, seizePirates, spawnPirate } from './pirates'
+import { harbourPirates, pirateOrders, pirateTalk, seizePirates, spawnPirate, toutHavens } from './pirates'
 import { buildPlayerView } from './player'
+import { spreadRumours } from './rumours'
 import type { CharacterId, GameState, ShipId, WorldId } from './types'
 import { line } from './fixtures.test-helper'
 
@@ -72,7 +73,7 @@ describe('a governor who harbours pirates', () => {
     const s = line()
     const pirate = havenAtY(s)
     const governor = s.characters['c-y' as CharacterId]
-    const arrived = { id: 'e-1' as never, at: Y, week: 1, kind: 'hull_arrived' as const, valence: 'neutral' as const, against: governor.faction, favours: null, severity: 2, ship: { id: pirate.id, name: pirate.name, role: 'raider' as const, faction: PIRATES, at: Y, commander: null, damaged: false, fuel: null }, person: null, level: null }
+    const arrived = { id: 'e-1' as never, at: Y, week: 1, kind: 'hull_arrived' as const, valence: 'neutral' as const, against: governor.faction, favours: null, severity: 2, ship: { id: pirate.id, name: pirate.name, role: 'raider' as const, faction: PIRATES, at: Y, commander: null, damaged: false, hulk: false, fuel: null }, person: null, level: null }
     const harboured = { ...arrived, kind: 'pirates_harboured' as const, valence: 'bad' as const, against: null, favours: PIRATES, severity: 3 }
     const battle = { ...arrived, kind: 'battle' as const, valence: 'bad' as const, against: null, severity: 2 }
     let arrivals = 0
@@ -135,5 +136,111 @@ describe('pirates seen to be harboured', () => {
     for (let i = 0; i < 12; i++) advanceWeek(s)
     const view = buildPlayerView(s)
     expect(view.inbox.some((r) => r.events.some((e) => e.kind === 'pirates_harboured' && e.at === Y && e.person === 'Wy'))).toBe(true)
+  })
+})
+
+describe('dockyards', () => {
+  it('a C port patches a hull that still fights, but a knocked-out hull lies there a hulk until she reaches a B or better', () => {
+    const s = line()
+    s.worlds[Y].profile.starport = 'C'
+    patrol(s, Y)
+    const ship = s.ships['s-war' as ShipId]
+    ship.damage = 1 // hurt, still fights
+    repairShips(s)
+    expect(ship.damage).toBe(0)
+    ship.damage = ship.strength // knocked out
+    repairShips(s)
+    expect(ship.damage).toBe(ship.strength)
+    s.worlds[Y].profile.starport = 'B'
+    repairShips(s)
+    expect(ship.damage).toBe(ship.strength - 1)
+  })
+
+  it('a knocked-out pirate at a C haven limps to a haven with a dockyard; a merely hurt one refits where she lies', () => {
+    const s = line()
+    s.worlds[Y].profile.starport = 'C'
+    s.worlds[X].profile.starport = 'B'
+    s.characters['c-x' as CharacterId].traits.loyalty = 'self'
+    const pirate = havenAtY(s)
+    pirate.havens = [Y, X]
+    pirate.damage = pirate.strength
+    pirateOrders(s)
+    expect(pirate.order).toEqual({ kind: 'move', to: X, then: null })
+    pirate.damage = 1
+    pirate.order = null
+    pirateOrders(s)
+    expect(pirate.order).toEqual({ kind: 'hold' })
+  })
+
+  it('a sighting says whether she is a hulk', () => {
+    const s = line()
+    patrol(s, Y)
+    s.ships['s-war' as ShipId].damage = 3
+    const view = (() => {
+      const m = governorLetter(s, s.worlds[Y], [])!
+      return m.contents.kind === 'report' ? m.contents.report : null
+    })()
+    expect(view?.snapshot.kind === 'world' && view.snapshot.world.ships.find((h) => h.id === 's-war')?.hulk).toBe(true)
+  })
+})
+
+describe('pirates talk', () => {
+  it('two hulls lying at the same world pool what they know of havens', () => {
+    const s = line()
+    s.characters['c-x' as CharacterId].traits.loyalty = 'self'
+    const a = havenAtY(s)
+    const b = havenAtY(s)
+    a.havens = [Y]
+    b.havens = [X]
+    pirateTalk(s)
+    expect(a.havens).toEqual([X, Y])
+    expect(b.havens).toEqual([X, Y])
+  })
+
+  it('a hull docked at a haven hears the docks: a port that harboured pirates, or touts for them, is a haven to try; a pirate seized is one to strike off', () => {
+    const s = line()
+    const pirate = havenAtY(s)
+    pirate.havens = [Y, C]
+    const talk = (kind: 'pirates_harboured' | 'pirate_seized', at: WorldId) => ({ event: { id: `e-${kind}` as never, at, week: 1, kind, valence: 'bad' as const, against: null, favours: null, severity: 2, ship: null, person: null, level: null }, origin: at, born: 1, heard: { [Y]: 1 } })
+    s.rumours.push(talk('pirates_harboured', X), talk('pirate_seized', C))
+    pirateTalk(s)
+    expect(pirate.havens).toEqual([X, Y])
+    // Talk she has not reached is not heard: the same rumours at X mean nothing to a hull at Y.
+    const other = havenAtY(s)
+    other.havens = [Y]
+    s.rumours = [{ ...talk('pirates_harboured', C), heard: { [X]: 0 } }]
+    pirateTalk(s)
+    expect(other.havens).toEqual([X, Y]) // pooled from her neighbour, not from the talk at X
+  })
+
+  it('a bold, self-serving governor at a haven puts it about that the port asks no questions; the desk hears it as talk and marks nothing', () => {
+    const s = line()
+    havenAtY(s)
+    const governor = s.characters['c-y' as CharacterId]
+    governor.traits.initiative = 2
+    let touted = 0
+    for (let i = 0; i < 100; i++) {
+      s.week = i + 1
+      toutHavens(s)
+    }
+    touted = s.rumours.filter((r) => r.event.kind === 'haven_touted').length
+    expect(touted).toBeGreaterThan(5)
+    expect(touted).toBeLessThan(40)
+    expect(Object.values(s.events).some((e) => e.kind === 'haven_touted')).toBe(false)
+    // A cautious governor holds their tongue.
+    s.rumours = []
+    governor.traits.initiative = -2
+    for (let i = 0; i < 100; i++) toutHavens(s)
+    expect(s.rumours).toHaveLength(0)
+    // What reaches the desk is a rumour, and rumours mark no haven.
+    governor.traits.initiative = 2
+    for (let i = 0; i < 20; i++) {
+      s.week += 1
+      toutHavens(s)
+      spreadRumours(s)
+    }
+    const view = buildPlayerView(s)
+    expect(view.rumours.some((r) => r.snapshot.kind === 'event' && r.snapshot.event.kind === 'haven_touted')).toBe(true)
+    expect(view.havens).toEqual([])
   })
 })

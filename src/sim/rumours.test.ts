@@ -29,6 +29,21 @@ describe('rumour', () => {
     }
   })
 
+  it('the better the story, the more likely it is told: a world lost outruns a step of unrest', () => {
+    const s = line()
+    s.week = 1
+    for (let i = 0; i < 100; i++) {
+      recordEvent(s, Y, { kind: 'unrest_rose', valence: 'bad', against: null, favours: null, severity: 1, level: 2 })
+      recordEvent(s, Y, { kind: 'world_fell', valence: 'bad', against: null, favours: null, severity: 3 })
+    }
+    spawnRumours(s)
+    const mild = s.rumours.filter((r) => r.event.kind === 'unrest_rose').length
+    const grave = s.rumours.filter((r) => r.event.kind === 'world_fell').length
+    expect(grave).toBeGreaterThan(40)
+    expect(mild).toBeLessThan(20)
+    expect(grave).toBeGreaterThan(mild * 3)
+  })
+
   it('a port with no working starport starts no talk', () => {
     const s = line()
     s.worlds[Y].profile.starport = 'E'

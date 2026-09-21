@@ -4,7 +4,7 @@
  * first. A row opens her dossier, with every report that mentions her.
  */
 import { isDeskObservation, mentionsShip, type PlayerView, type ReportId, type ShipId } from '../sim/view'
-import { ago, coloursOf, hullKind, weekLabel, worldName } from './format'
+import { ago, coloursOf, conditionText, hullKind, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
@@ -30,7 +30,7 @@ export function EnemyShips({ view, onSelect, onShowReport }: Props) {
               </span>
               <span className="muted">
                 {hullKind(view, s.ship)}
-                {s.ship.damaged ? ', damaged' : ''}
+                {conditionText(s.ship)}
               </span>
               <span className="arrived">
                 {worldName(view, s.ship.at)}, {weekLabel(s.observed)} ({ago(view.week, s.observed)})

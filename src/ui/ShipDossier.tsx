@@ -7,7 +7,7 @@
  */
 import { useState } from 'react'
 import { isDeskObservation, mentionsShip, type PlayerView, type ReportId, type ShipId, type WorldId } from '../sim/view'
-import { ago, coloursOf, eventText, hullKind, lastOrderSent, orderText, signature, weekLabel, worldName } from './format'
+import { ago, coloursOf, conditionText, eventText, hullKind, lastOrderSent, orderText, signature, weekLabel, worldName } from './format'
 
 interface Props {
   /** The picture being shown: the present, or what the desk now knows of an earlier week. */
@@ -44,7 +44,7 @@ export function ShipDossier({ view, now, ship, onSelectWorld, onOrders, onShowRe
         {name} <span className="muted">{snap ? hullKind(now, snap) : entry ? entry.role : ''}</span>
         <span className={`tag ${colours}`}>{COLOUR_WORDS[colours]}</span>
         {entry && !entry.commanderName && <span className="tag warn">prize</span>}
-        {snap?.damaged && <span className="tag warn">damaged</span>}
+        {snap?.hulk ? <span className="tag warn">hulk</span> : snap?.damaged ? <span className="tag warn">damaged</span> : null}
       </h3>
 
       <dl>
@@ -70,6 +70,7 @@ export function ShipDossier({ view, now, ship, onSelectWorld, onOrders, onShowRe
               </button>
               , {weekLabel(seen.observed)} ({ago(view.week, seen.observed)})
               {seen.ship.fuel !== null && entry ? `, fuel for ${seen.ship.fuel} of ${entry.fuel}` : ''}
+              {conditionText(seen.ship)}
               {isDeskObservation(seen.report) ? (
                 <span className="muted"> — seen from the desk</span>
               ) : (

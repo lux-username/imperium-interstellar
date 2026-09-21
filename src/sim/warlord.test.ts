@@ -133,7 +133,7 @@ describe('what the Warlord does with what he knows', () => {
     const seen = (n: number) => {
       const belief = s.beliefs[THE_WARLORD]
       belief.ships = {}
-      for (let i = 0; i < n; i++) belief.ships[`s-ours-${i}` as ShipId] = { ship: { id: `s-ours-${i}` as ShipId, name: 'V', role: 'patrol', faction: 'f-admin' as never, at: X, commander: null, damaged: false, fuel: null }, observed: 1, report: 'r' as never }
+      for (let i = 0; i < n; i++) belief.ships[`s-ours-${i}` as ShipId] = { ship: { id: `s-ours-${i}` as ShipId, name: 'V', role: 'patrol', faction: 'f-admin' as never, at: X, commander: null, damaged: false, hulk: false, fuel: null }, observed: 1, report: 'r' as never }
     }
     seen(2)
     warlordActs(s)
@@ -142,7 +142,7 @@ describe('what the Warlord does with what he knows', () => {
     heTinks(s2, X, 1, (w) => {
       w.garrison = 0
     })
-    s2.beliefs[THE_WARLORD].ships['s-ours-0' as ShipId] = { ship: { id: 's-ours-0' as ShipId, name: 'V', role: 'patrol', faction: 'f-admin' as never, at: X, commander: null, damaged: false, fuel: null }, observed: 1, report: 'r' as never }
+    s2.beliefs[THE_WARLORD].ships['s-ours-0' as ShipId] = { ship: { id: 's-ours-0' as ShipId, name: 'V', role: 'patrol', faction: 'f-admin' as never, at: X, commander: null, damaged: false, hulk: false, fuel: null }, observed: 1, report: 'r' as never }
     warlordActs(s2)
     const landing = ordersOf(s2).filter((o) => o.order.kind === 'transport' && o.order.to === X)
     expect(landing.length).toBeGreaterThan(0)
@@ -157,7 +157,7 @@ describe('what the Warlord does with what he knows', () => {
       w.profile.starport = 'C'
       w.garrison = 5 // not worth a landing
     })
-    s.beliefs[THE_WARLORD].ships['s-swift' as ShipId] = { ship: { id: 's-swift' as ShipId, name: 'Swift', role: 'scout', faction: 'f-admin' as never, at: X, commander: null, damaged: false, fuel: null }, observed: 1, report: 'r' as never }
+    s.beliefs[THE_WARLORD].ships['s-swift' as ShipId] = { ship: { id: 's-swift' as ShipId, name: 'Swift', role: 'scout', faction: 'f-admin' as never, at: X, commander: null, damaged: false, hulk: false, fuel: null }, observed: 1, report: 'r' as never }
     warlordActs(s)
     const hunters = ordersOf(s).filter((o) => o.role === 'patrol' && o.order.kind === 'patrol' && o.order.world === X)
     expect(hunters.length).toBe(1) // one patrol craft is favourable against a courier under one gun
@@ -205,8 +205,8 @@ describe('what the Warlord does with what he knows', () => {
     heTinks(s, X, 1, (w) => {
       w.faction = WARLORD
     })
-    s.beliefs[THE_WARLORD].ships['s-gull' as ShipId] = { ship: { id: 's-gull' as ShipId, name: 'Gull', role: 'raider', faction: PIRATES, at: X, commander: null, damaged: false, fuel: null }, observed: 1, report: 'r' as never }
-    s.beliefs[THE_WARLORD].ships['s-swift' as ShipId] = { ship: { id: 's-swift' as ShipId, name: 'Swift', role: 'scout', faction: 'f-admin' as never, at: C, commander: null, damaged: false, fuel: null }, observed: 1, report: 'r' as never }
+    s.beliefs[THE_WARLORD].ships['s-gull' as ShipId] = { ship: { id: 's-gull' as ShipId, name: 'Gull', role: 'raider', faction: PIRATES, at: X, commander: null, damaged: false, hulk: false, fuel: null }, observed: 1, report: 'r' as never }
+    s.beliefs[THE_WARLORD].ships['s-swift' as ShipId] = { ship: { id: 's-swift' as ShipId, name: 'Swift', role: 'scout', faction: 'f-admin' as never, at: C, commander: null, damaged: false, hulk: false, fuel: null }, observed: 1, report: 'r' as never }
     warlordActs(s)
     const hunters = ordersOf(s).filter((o) => o.role === 'patrol' && o.order.kind === 'patrol')
     expect(hunters.length).toBeGreaterThan(0)
@@ -220,7 +220,7 @@ describe('what the Warlord does with what he knows', () => {
       w.faction = WARLORD
       w.garrison = 1
     })
-    s.beliefs[THE_WARLORD].ships['s-gull' as ShipId] = { ship: { id: 's-gull' as ShipId, name: 'Gull', role: 'raider', faction: PIRATES, at: X, commander: null, damaged: false, fuel: null }, observed: 1, report: 'r' as never }
+    s.beliefs[THE_WARLORD].ships['s-gull' as ShipId] = { ship: { id: 's-gull' as ShipId, name: 'Gull', role: 'raider', faction: PIRATES, at: X, commander: null, damaged: false, hulk: false, fuel: null }, observed: 1, report: 'r' as never }
     warlordActs(s)
     expect(ordersOf(s).filter((o) => o.order.kind === 'transport' && o.order.to === X)).toEqual([])
   })
@@ -248,7 +248,7 @@ describe('what the Warlord does with what he knows', () => {
     heTinks(s, X, 1, (w) => {
       w.faction = WARLORD
     })
-    s.beliefs[THE_WARLORD].ships['s-gull' as ShipId] = { ship: { id: 's-gull' as ShipId, name: 'Gull', role: 'raider', faction: PIRATES, at: X, commander: null, damaged: false, fuel: null }, observed: 1, report: 'r' as never }
+    s.beliefs[THE_WARLORD].ships['s-gull' as ShipId] = { ship: { id: 's-gull' as ShipId, name: 'Gull', role: 'raider', faction: PIRATES, at: X, commander: null, damaged: false, hulk: false, fuel: null }, observed: 1, report: 'r' as never }
     warlordActs(s)
     const errand = ordersOf(s).find((o) => o.order.kind === 'transport' && o.order.purpose === 'appoint')
     expect(errand?.order.kind === 'transport' && errand.order.to).toBe(X)

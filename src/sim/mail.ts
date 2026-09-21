@@ -48,7 +48,7 @@ function envelope(state: GameState, origin: WorldId, destination: WorldId, sent:
 export function snapshotShip(ship: Ship, at: WorldId, holder?: Ship['faction']): ShipSnapshot {
   const { id, name, role, faction, commander } = ship
   const fuel = holder === faction && burnsFuel(role) ? ship.fuel : null
-  return { id, name, role, faction, at, commander, damaged: ship.damage > 0, fuel }
+  return { id, name, role, faction, at, commander, damaged: ship.damage > 0, hulk: ship.strength > 0 && ship.damage >= ship.strength, fuel }
 }
 
 /** A world as seen from its own port this week: its state and every hull lying there. */

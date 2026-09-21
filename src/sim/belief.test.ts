@@ -10,7 +10,7 @@ const C = 'w-c' as WorldId
 const X = 'w-x' as WorldId
 const Y = 'w-y' as WorldId
 
-const raider: ShipSnapshot = { id: 's-r' as ShipId, name: 'Black Gull', role: 'raider', faction: PIRATES, at: X, commander: null, damaged: false, fuel: null }
+const raider: ShipSnapshot = { id: 's-r' as ShipId, name: 'Black Gull', role: 'raider', faction: PIRATES, at: X, commander: null, damaged: false, hulk: false, fuel: null }
 
 function event(kind: Event['kind'], at: WorldId, week: number, extra: Partial<Event> = {}): Event {
   return { id: `e-${kind}-${week}` as EventId, at, week, kind, valence: 'neutral', against: null, favours: null, severity: 2, ship: raider, person: null, level: null, ...extra }

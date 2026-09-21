@@ -6,7 +6,7 @@
  * own mail. A row opens the hull's dossier.
  */
 import { isDeskObservation, type PlayerView, type ReportId, type ShipId } from '../sim/view'
-import { ago, lastOrderSent, orderText, weekLabel, worldName } from './format'
+import { ago, conditionText, lastOrderSent, orderText, weekLabel, worldName } from './format'
 
 interface Props {
   view: PlayerView
@@ -47,6 +47,7 @@ export function Fleet({ view, onSelect, onShowReport, onOrders }: Props) {
             </div>
             <div className="line2">
               {entry.commanderName ? `Commander ${entry.commanderName}` : <span className="warn">Prize — no crew. Send an officer out to take command.</span>}
+              {seen && (seen.ship.hulk || seen.ship.damaged) && <span className="warn">{conditionText(seen.ship)}</span>}
               {seen && !isDeskObservation(seen.report) && (
                 <>
                   {' '}

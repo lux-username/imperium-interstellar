@@ -86,6 +86,11 @@ export function coloursOf(view: PlayerView, faction: FactionId): Colours {
   return kind === 'rival' ? 'warlord' : kind === 'pirates' ? 'pirates' : kind === 'rebels' ? 'rebels' : 'other'
 }
 
+/** ", damaged" or ", a hulk — wants a dockyard": how a sighting describes her state, if it is worth a word. */
+export function conditionText(ship: ShipSnapshot): string {
+  return ship.hulk ? ', a hulk — wants a dockyard (B or better)' : ship.damaged ? ', damaged' : ''
+}
+
 /** "patrol craft", "Warlord escort", "pirate raider": a hull's kind with whose it is, unless ours. */
 export function hullKind(view: PlayerView, ship: ShipSnapshot): string {
   const colours = coloursOf(view, ship.faction)

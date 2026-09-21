@@ -54,8 +54,16 @@ function degrade(state: GameState, event: Event): Event {
   return copy
 }
 
-/** The 2d6 target for an event to become talk. The docks have no preference between good news and bad; routine traffic never becomes talk. */
-export const TALK_TARGET = 9
+/**
+ * The 2d6 target for an event to become talk, by how interesting it is:
+ * its severity. A world risen or lost, a hull sunk (3) is told nearly
+ * always; a battle or a robbery (2) about a quarter of the time; a step of
+ * unrest or a new governor (1) now and then. The docks have no preference
+ * between good news and bad; routine traffic (0) never becomes talk.
+ */
+export function talkTarget(severity: number): number {
+  return severity >= 3 ? 7 : severity === 2 ? 9 : 11
+}
 
 /** This week's events at ports may become rumours, good and bad alike. */
 export function spawnRumours(state: GameState): void {
@@ -64,7 +72,7 @@ export function spawnRumours(state: GameState): void {
     .filter((e) => e.week === state.week && valenceFor(e, state.worlds[e.at].faction) !== 'neutral' && e.severity >= 1 && e.at !== state.capital && hasPort(state, e.at))
     .sort((a, b) => (a.id < b.id ? -1 : 1))
   for (const e of events) {
-    if (!check(state.rng, TALK_TARGET)) continue
+    if (!check(state.rng, talkTarget(e.severity))) continue
     state.rumours.push({ event: degrade(state, e), origin: e.at, born: state.week, heard: { [e.at]: 0 } })
   }
 }
@@ -84,7 +92,9 @@ export function spreadRumours(state: GameState): void {
       for (const to of neighbours(state.lanes, from)) {
         if (to in rumour.heard) continue
         // Merchants think twice about a lane with a raider lying at either end, and their talk goes with them.
-        if (!check(state.rng, raided(state, from) || raided(state, to) ? 11 : 9)) continue
+        // The better the story, the further it goes: a serious piece of news hops a lane more readily.
+        const dm = rumour.event.severity >= 3 ? 1 : 0
+        if (!check(state.rng, raided(state, from) || raided(state, to) ? 11 : 9, dm)) continue
         rumour.heard[to] = rumour.heard[from] + 1
         hearRumour(state, rumour, to)
       }

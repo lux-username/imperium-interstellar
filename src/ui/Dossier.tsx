@@ -6,7 +6,7 @@
  */
 import { hexLabel } from '../sim/hex'
 import { expectedArrival, isDeskObservation, nextDeparture, route, type CharacterId, type PlayerView, type ReportId, type ShipId, type WorldId } from '../sim/view'
-import { ago, eventText, holderText, hullKind, profileString, sailsText, signature, stateOf, weekLabel, worldName } from './format'
+import { ago, conditionText, eventText, holderText, hullKind, profileString, sailsText, signature, stateOf, weekLabel, worldName } from './format'
 
 interface Props {
   /** The picture being shown: the present, or what the desk now knows of an earlier week. */
@@ -157,7 +157,7 @@ export function Dossier({ view, now, world, onRequest, onOrders, onSelectShip, o
                 </button>{' '}
                 <span className="muted">
                   ({hullKind(view, s.ship)}
-                  {s.ship.damaged ? ', damaged' : ''}) — {weekLabel(s.observed)}, {ago(view.week, s.observed)}
+                  {conditionText(s.ship)}) — {weekLabel(s.observed)}, {ago(view.week, s.observed)}
                 </span>{' '}
                 {isDeskObservation(s.report) ? (
                   <span className="muted">(seen from the desk)</span>

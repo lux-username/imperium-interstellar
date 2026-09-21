@@ -36,6 +36,16 @@ export function effectiveStrength(ship: Ship): number {
   return Math.max(0, ship.strength - ship.damage)
 }
 
+/** A hull with nothing left: knocked out in action, or a prize. She cannot fight, and only a dockyard can put her back together. */
+export function knockedOut(ship: Pick<Ship, 'strength' | 'damage'>): boolean {
+  return ship.strength > 0 && ship.damage >= ship.strength
+}
+
+/** Ports with a dockyard, which can rebuild a knocked-out hull. A C port can only patch one that still fights. */
+export function hasDockyard(starport: string): boolean {
+  return starport === 'A' || starport === 'B'
+}
+
 function hullStrength(ships: Ship[]): number {
   return ships.reduce((sum, s) => sum + effectiveStrength(s), 0)
 }
@@ -339,12 +349,19 @@ export function fightAtWorlds(state: GameState, landed: readonly ShipId[] = []):
   }
 }
 
-/** A knocked-about hull lying docked at a port of class C or better is patched up a point a week. Pirates refit only at a haven of that class. */
+/**
+ * A knocked-about hull lying docked at a port of class C or better is
+ * patched up a point a week. A hull knocked out — nothing left to fight
+ * with — is a job for a dockyard: a C port cannot begin on her, and she
+ * lies there a hulk until she is got to a B or better. Pirates refit only
+ * at a haven they know.
+ */
 export function repairShips(state: GameState): void {
   for (const ship of Object.values(state.ships)) {
     if (ship.damage === 0 || ship.location.kind !== 'world') continue
     const world = state.worlds[ship.location.world]
     if (!docked(state, ship, world.id) || !['A', 'B', 'C'].includes(world.profile.starport)) continue
+    if (knockedOut(ship) && !hasDockyard(world.profile.starport)) continue
     ship.damage -= 1
   }
 }
