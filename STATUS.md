@@ -14,7 +14,7 @@ Current thinking: an 8-seed, 80-week soak with a passive desk runs in about a se
 
 | Fact | Value |
 |---|---|
-| Test status | 125 passed (125) |
+| Test status | 127 passed (127) |
 | Typecheck | ok |
 | Version | 0.0.1 |
 | Sim modules | `characters.ts`, `chart.ts`, `combat.ts`, `events.ts`, `factions.ts`, `fleet.ts`, `game.ts`, `generate.ts`, `governors.ts`, `ground.ts`, `hex.ts`, `lanes.ts`, `mail.ts`, `names.ts`, `orders.ts`, `pirates.ts`, `player.ts`, `rng.ts`, `rumours.ts`, `save.ts`, `scouts.ts`, `ships.ts`, `troops.ts`, `types.ts`, `view.ts`, `warlord.ts`, `world.ts` |
