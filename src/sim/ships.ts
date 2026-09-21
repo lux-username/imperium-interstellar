@@ -221,6 +221,8 @@ export function departShips(state: GameState): void {
   for (const id of ids) {
     const ship = state.ships[id]
     if (ship.location.kind !== 'world') continue
+    // A prize without a crew, or a seized packet, goes nowhere until someone takes her over.
+    if (ship.commander === null && !(ship.role === 'packet' && ship.order?.kind === 'courier')) continue
     const from = ship.location.world
     const wasPatrolling = ship.order?.kind === 'patrol' && ship.order.world === from && ship.order.began !== null
     const target = orderTarget(state, ship, from)

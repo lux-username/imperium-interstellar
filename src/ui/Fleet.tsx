@@ -1,7 +1,9 @@
 /**
  * The desk's books: every hull it commands, where each was last seen and
- * by whom, and the last order sent to it. Nothing here is the truth about
- * where a ship is; it is the newest report and the desk's own mail.
+ * by whom, and the last order sent to it — and the prizes taken in action,
+ * which want an officer sent out before they are any use. Nothing here is
+ * the truth about where a ship is; it is the newest report and the desk's
+ * own mail.
  */
 import type { PlayerView, ReportId, ShipId, WorldId } from '../sim/view'
 import { ago, lastOrderSent, orderText, weekLabel, worldName } from './format'
@@ -33,19 +35,21 @@ export function Fleet({ view, onSelect, onShowReport, onOrders }: Props) {
                 {entry.role}, J-{entry.jump}
               </span>
               <span className="arrived">{seen ? `${worldName(view, seen.ship.at)}, ${ago(view.week, seen.observed)}` : 'never seen'}</span>
-              <button
-                type="button"
-                className="small"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onOrders(entry.id)
-                }}
-              >
-                Give orders…
-              </button>
+              {entry.commanderName !== null && (
+                <button
+                  type="button"
+                  className="small"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onOrders(entry.id)
+                  }}
+                >
+                  Give orders…
+                </button>
+              )}
             </div>
             <div className="line2">
-              {entry.commanderName ? `Commander ${entry.commanderName}` : 'No commander'}
+              {entry.commanderName ? `Commander ${entry.commanderName}` : <span className="warn">Prize — no crew. Send an officer out to take command.</span>}
               {seen && !isDeskObservation(seen.report) && (
                 <>
                   {' '}

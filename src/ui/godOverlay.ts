@@ -7,7 +7,7 @@ export function overlayFor(state: GameState): Overlay {
   for (const s of Object.values(state.ships)) {
     const at = s.location.kind === 'world' ? s.location.world : s.location.to
     const hex = state.worlds[at]?.hex
-    if (hex) ships.push({ hex, label: s.name, inTransit: s.location.kind === 'transit' })
+    if (hex) ships.push({ hex, label: `${s.name} (${state.factions[s.faction]?.name ?? s.faction})`, inTransit: s.location.kind === 'transit', faction: s.faction })
   }
   const unrest: Record<WorldId, number> = {}
   for (const w of Object.values(state.worlds)) unrest[w.id] = w.unrest

@@ -1,5 +1,37 @@
 /** Small formatting helpers shared by the panes. Everything takes PlayerView data only. */
-import type { Dispatch, Event, Order, PlayerView, Report, ShipId, Week, WorldId, WorldProfile } from '../sim/view'
+import { worldStateOf, type Dispatch, type Event, type Order, type PlayerView, type Report, type ShipId, type Week, type WorldId, type WorldProfile, type WorldSnapshot, type WorldState } from '../sim/view'
+
+/** A world's state as the desk believes it, from the newest snapshot. */
+export function stateOf(view: PlayerView, snap: WorldSnapshot): WorldState {
+  return worldStateOf(view.factions[snap.faction]?.kind, snap.contest, snap.unrest, snap.contest ? view.factions[snap.contest.attacker]?.kind : undefined)
+}
+
+export const STATE_WORDS: Record<WorldState, string> = {
+  loyal: 'loyal',
+  unrest: 'unrestful',
+  revolt: 'in revolt',
+  contested: 'contested',
+  independent: 'independent',
+  warlord: 'held by the Warlord',
+}
+
+/** "held by the Warlord", "independent", "ours, in revolt" — the holder and the fight, for a dossier line. */
+export function holderText(view: PlayerView, snap: WorldSnapshot): string {
+  const state = stateOf(view, snap)
+  if (state === 'warlord' || state === 'independent') return STATE_WORDS[state]
+  const who = snap.faction === view.faction ? 'ours' : (view.factions[snap.faction]?.name ?? 'unknown')
+  if (snap.contest) {
+    const attacker = view.factions[snap.contest.attacker]
+    return `${who}, ${state === 'revolt' ? 'in revolt' : `under attack by ${attacker?.name ?? 'unknown forces'}`} (${snap.contest.strength} detachment${snap.contest.strength === 1 ? '' : 's'} against the garrison)`
+  }
+  return `${who}, ${unrestWord(snap.unrest)}`
+}
+
+/** "in 2 wk", "this week", "next week" for a lane's next sailing. */
+export function sailsText(week: Week, next: Week): string {
+  const n = next - week
+  return n <= 0 ? 'sails this week' : n === 1 ? 'sails next week' : `sails in ${n} wk`
+}
 
 /** "now", "1 wk ago", "14 wk ago". */
 export function ago(week: Week, observed: Week): string {

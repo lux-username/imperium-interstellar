@@ -32,7 +32,7 @@ import type {
 
 // Timetable arithmetic over the public chart, so the UI can tell the player
 // when a letter should land using the same sums the sim uses.
-export { expectedArrival, hexRoute, route } from './chart'
+export { expectedArrival, hexRoute, nextDeparture, route } from './chart'
 
 // The public-knowledge primitives the UI needs, re-exported so it never has
 // a reason to reach into types.ts.
@@ -94,6 +94,17 @@ export interface WorldSnapshot {
 
 /** How a world stands, as far as a snapshot can say. Loyal means held by the administration and quiet. */
 export type WorldState = 'loyal' | 'unrest' | 'revolt' | 'contested' | 'independent' | 'warlord'
+
+/**
+ * Read a world's state off a snapshot, given who holds it. Pure, so the
+ * map and the dossier agree with each other and with nothing else.
+ */
+export function worldStateOf(holder: FactionKind | undefined, contest: WorldSnapshot['contest'], unrest: number, contestantKind?: FactionKind): WorldState {
+  if (holder === 'rival') return 'warlord'
+  if (holder === 'rebels') return 'independent'
+  if (contest) return contestantKind === 'rebels' ? 'revolt' : 'contested'
+  return unrest >= 6 ? 'unrest' : 'loyal'
+}
 
 // ---------------------------------------------------------------------------
 // Events: something that happened, as it may be told.

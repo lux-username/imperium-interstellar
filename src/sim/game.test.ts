@@ -200,3 +200,17 @@ describe('a generated game', () => {
     expect(buildPlayerView(copy).known).toEqual(view.known)
   })
 })
+
+describe('the desk reads only its own mail', () => {
+  it('never shows a letter addressed to the Warlord’s seat, nor talk heard there', () => {
+    const s = newGame(7)
+    for (let i = 0; i < 30; i++) advanceWeek(s)
+    const view = buildPlayerView(s)
+    for (const r of [...view.inbox, ...view.rumours]) {
+      expect(r.envelope.destination).toEqual({ kind: 'world', world: s.capital })
+    }
+    // And his seat did get letters of its own.
+    const his = Object.values(s.mail).filter((m) => m.contents.kind === 'report' && m.status.kind === 'delivered' && m.contents.report.envelope.destination.kind === 'world' && m.contents.report.envelope.destination.world !== s.capital)
+    expect(his.length).toBeGreaterThan(0)
+  })
+})

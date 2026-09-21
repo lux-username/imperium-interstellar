@@ -211,7 +211,8 @@ describe('ordered hulls', () => {
     patrol(s).location = { kind: 'world', world: Z }
     patrol(s).order = { kind: 'hold' }
     const courierId = 's-courier' as ShipId
-    s.ships[courierId] = { ...patrol(s), id: courierId, name: 'Swift', role: 'courier', strength: 0, location: { kind: 'world', world: C }, commander: null, order: null, mailbag: [] }
+    s.characters['c-swift' as CharacterId] = { id: 'c-swift' as CharacterId, name: 'Swift', faction: patrol(s).faction, post: { kind: 'commander', ship: courierId }, traits: playerTraits() }
+    s.ships[courierId] = { ...patrol(s), id: courierId, name: 'Swift', role: 'courier', strength: 0, location: { kind: 'world', world: C }, commander: 'c-swift' as CharacterId, order: null, mailbag: [] }
     const order = orderShip(s, 's-patrol' as ShipId, { kind: 'move', to: C, then: null }, Z)
     expect(order.contents.kind === 'dispatch' && order.contents.dispatch.envelope.eta).toBeNull() // no packet goes to Z
     expect(sendByCourier(s, courierId, order)).toBe(true)

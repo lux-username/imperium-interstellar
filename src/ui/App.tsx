@@ -139,7 +139,7 @@ export function App() {
               Rumours{view.rumours.some((r) => r.delivered === view.week) ? ' •' : ''}
             </button>
             <button type="button" className={tab === 'fleet' ? 'on' : ''} onClick={() => setTab('fleet')}>
-              Fleet ({view.roster.length})
+              Fleet ({view.roster.length}){view.roster.some((r) => r.commanderName === null) ? ' · prize' : ''}
             </button>
             <button type="button" className={tab === 'outgoing' ? 'on' : ''} onClick={() => setTab('outgoing')}>
               Outgoing ({view.outgoing.length})
@@ -147,14 +147,24 @@ export function App() {
           </div>
           {tab === 'inbox' && <Inbox view={view} pile="inbox" onSelect={setSelected} focus={focus} />}
           {tab === 'rumours' && <Inbox view={view} pile="rumours" onSelect={setSelected} focus={focus} />}
-          {tab === 'fleet' && <Fleet view={view} onSelect={setSelected} onShowReport={showReport} onOrders={(ship) => setOrders({ ship })} />}
+          {tab === 'fleet' && (
+            <>
+              <div className="toolbar">
+                <span className="count">
+                  At the capital: {view.reserve.army} army, {view.reserve.marines} marine detachments; {view.pool.length === 0 ? 'no officers' : `officers ${view.pool.map((p) => p.name).join(', ')}`} without a post.
+                </span>
+              </div>
+              <Fleet view={view} onSelect={setSelected} onShowReport={showReport} onOrders={(ship) => setOrders({ ship })} />
+            </>
+          )}
           {tab === 'outgoing' && <Outgoing view={view} onSelect={setSelected} />}
         </section>
         <section className="pane centre">
           <Map view={view} selected={selected} onSelect={setSelected} overlay={overlay} />
           <div className="legend">
-            <span className="fresh">● ≤4 wk</span> <span className="aging">● ≤12 wk</span> <span className="stale">● ≤30 wk</span> <span className="ancient">● older</span>{' '}
-            <span className="muted">— solid lane: packet every 2 wk; dashed: every 4 wk. ▲ hull last seen there.</span>
+            <span className="loyal"><i className="swatch" />loyal</span> <span className="unrest"><i className="swatch" />unrest</span> <span className="revolt"><i className="swatch" />revolt</span>{' '}
+            <span className="contested"><i className="swatch" />contested</span> <span className="independent"><i className="swatch" />independent</span> <span className="warlord"><i className="swatch" />Warlord</span>{' '}
+            <span className="muted">— as the desk last heard; the badge says how long ago, a dashed ring means the word is old. ▲ hull last seen there. Hover a lane for its packet.</span>
           </div>
         </section>
         <section className="pane right">

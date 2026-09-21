@@ -17,6 +17,8 @@ export function buildPlayerView(state: GameState): PlayerView {
     if (mail.contents.kind === 'report') {
       const report = mail.contents.report
       if (report.delivered === null || mail.status.kind !== 'delivered') continue
+      // Only what was addressed to the desk: the Warlord's seat reads its own mail.
+      if (report.envelope.destination.kind !== 'world' || report.envelope.destination.world !== state.capital) continue
       if (isRumour(report.channel)) rumours.push(report)
       else inbox.push(report)
     } else if (mail.contents.dispatch.sender === state.player) {
