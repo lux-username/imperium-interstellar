@@ -19,7 +19,7 @@ import { nextFloat, nextInt, roll, type Rng } from './rng'
 import { fuelPrice, holdFree, maintenanceCost, newShip, overdue, reachable, setCourse, unload } from './ships'
 import { layUp } from './game'
 import { stanceKey, SHIP_CLASSES, type Character, type CharacterId, type EmpireId, type GameState, type Guild, type PriceBook, type Ship, type ShipId, type Week, type World, type WorldId, type WorldProfile } from './types'
-import type { Belief } from './view'
+import { lineKey, type Belief } from './view'
 
 /** A trader's purse at the start: enough for half a hold of something ordinary. */
 const TRADER_PURSE = 30000
@@ -229,7 +229,7 @@ function onwardProfit(state: GameState, belief: Belief, captain: Character, ship
 }
 
 /** The best plan from here by the captain's own lights, or null if nothing clears the bar. */
-function bestPlan(state: GameState, captain: Character, ship: Ship, at: WorldId): Plan | null {
+export function bestPlan(state: GameState, captain: Character, ship: Ship, at: WorldId): Plan | null {
   const here = state.worlds[at]
   const belief = beliefOf(state, captain.id)
   const room = holdFree(ship)
@@ -260,7 +260,9 @@ function bestPlan(state: GameState, captain: Character, ship: Ship, at: WorldId)
     // Every rival in port is after the same lots and the same markets; and every hull seen sailing for the same port
     // with the same goods these last two weeks got there first.
     const crowd = (belief.traffic[at] ?? []).filter((k) => k.movement.ship !== ship.id && k.movement.to === to && state.week - k.movement.week <= 2 && k.movement.bought.some((b) => cargo.some((l) => l.good === b.good))).length
-    profit = Math.round(profit / (1 + 0.15 * rivalsAt(state, ship, at) + 0.3 * crowd))
+    // A guild line on this pair means a bulk hauler is already carrying whatever pays: the route is theirs. A captain who knows of it halves their hopes.
+    const lined = belief.lines[lineKey(at, to)] !== undefined && state.week - belief.lines[lineKey(at, to)].observed <= 26
+    profit = Math.round(profit / ((1 + 0.15 * rivalsAt(state, ship, at) + 0.3 * crowd) * (lined ? 2 : 1)))
     const onward = onwardProfit(state, belief, captain, ship, to, captain.purse + profit)
     const score = profit + Math.round(onward / 2)
     if (!best || score > best.score) best = { to, lots: cargo, freight: taken, profit, score }
@@ -293,10 +295,19 @@ function somewhereToLook(state: GameState, captain: Character, ship: Ship, at: W
     if (!p) return Number.POSITIVE_INFINITY
     return state.week - Math.max(...Object.values(p).map((e) => e?.observed ?? -999))
   }
+  // A world that hulls have lately come in from with cargo that sold well is worth a look: somebody found something there.
+  const origins: Record<string, number> = {}
+  for (const t of Object.values(belief.traffic)) {
+    for (const k of t) {
+      if (!k.movement.from || state.week - k.movement.week > 12 || k.movement.sold.length === 0) continue
+      origins[k.movement.from] = (origins[k.movement.from] ?? 0) + k.movement.sold.reduce((sum, x) => sum + x.tons * x.price, 0)
+    }
+  }
   const score = (w: WorldId) => {
     const e = belief.worlds[w]?.snapshot.kind === 'world' ? belief.worlds[w].snapshot.world.empire : state.worlds[w].empire
     const port = state.worlds[w].profile.starport
-    return Math.min(age(w), 52) + (e === captain.empire ? 10 : 0) + (port === 'A' || port === 'B' ? 6 : port === 'C' ? 2 : -20)
+    const lead = origins[w] ? Math.min(20, Math.round(origins[w] / 5000)) : 0
+    return Math.min(age(w), 52) + (e === captain.empire ? 10 : 0) + (port === 'A' || port === 'B' ? 6 : port === 'C' ? 2 : -20) + lead
   }
   options.sort((a, b) => score(b) - score(a) || (a < b ? -1 : 1))
   // A little whim, so a crowd of captains does not all go the same way.

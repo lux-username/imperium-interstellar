@@ -93,7 +93,18 @@ export function stanceKnown(belief: Pick<Belief, 'stances'>, a: EmpireId, b: Emp
 export const TRAFFIC_WEEKS = 52
 
 /** Enter lines of a port's register into a belief, newest first, one per hull and week, the better source winning. */
-export function learnTraffic(belief: Pick<Belief, 'traffic'>, world: WorldId, lines: readonly Movement[], source: TrafficKnown['source'], observed: Week): number {
+export function learnTraffic(belief: Pick<Belief, 'traffic'> & Partial<Pick<Belief, 'prices'>>, world: WorldId, lines: readonly Movement[], source: TrafficKnown['source'], observed: Week): number {
+  // A sale or purchase is a price seen at that port that week, by whoever made it: evidence like any other, hearsay if heard.
+  if (belief.prices) {
+    const prices = (belief.prices[world] ??= {})
+    for (const m of lines) {
+      for (const x of [...m.sold, ...m.bought]) {
+        const g = x.good as keyof typeof prices
+        const known = prices[g]
+        if (!known || m.week > known.observed) prices[g] = { price: x.price, stock: known?.stock ?? 0, observed: m.week, heard: source === 'heard' }
+      }
+    }
+  }
   const known = (belief.traffic[world] ??= [])
   const rank = { register: 3, seen: 2, heard: 1 }
   let news = 0
