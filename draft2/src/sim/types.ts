@@ -94,17 +94,17 @@ export interface World {
 /** Prices by world and good, with when each was seen. The shape of a guild's book, a port's gossip, and the price slice of a belief. */
 export type PriceBook = Record<WorldId, Partial<Record<string, { price: number; stock: number; observed: Week; heard?: boolean }>>>
 
-/** A bulk line the guild runs: a good hauled from one world to another, and what comes back if anything. */
+/** A bulk line the guild runs between two worlds. What is carried each way is whatever pays, sized to the markets, decided at the dock. */
 export interface Line {
   from: WorldId
   to: WorldId
-  good: string
-  back: string | null
-  /** The profit a week the guild reckoned on when it set the line up. */
+  /** The profit a week the guild reckoned on, for one hauler, when it last ranked its lines. */
   reckoned: number
   since: Week
   /** What the line has actually made or lost for the guild since `since`. */
   earned: number
+  /** Haulers assigned. */
+  haulers: number
 }
 
 /** An empire's merchant guild: its book, its purse, and the bulk lines it runs. */
@@ -309,8 +309,8 @@ export type Duty =
   | { kind: 'patrol'; until: Week }
   /** An outlaw: lying off ports to take what comes, and selling it at a haven. */
   | { kind: 'raid'; haven: WorldId; until: Week }
-  /** A guild bulk hauler on a line, or idle at the seat when `line` is null. */
-  | { kind: 'haul'; line: Line | null }
+  /** A guild bulk hauler on a line, or idle at the seat when `line` is null. `waited`: weeks spent at a loading end with too little to carry. */
+  | { kind: 'haul'; line: Line | null; waited: number }
 
 // ---------------------------------------------------------------------------
 // People

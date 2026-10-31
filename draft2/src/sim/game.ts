@@ -344,10 +344,11 @@ export function advanceWeek(state: GameState): void {
   guildPost(state)
   dockTalk(state)
   // Captains decide on what they now see and have heard, and sail next week.
-  captainsAct(state)
-  huntersAct(state)
+  // The guild's factor has first claim on the dock: haulers load before the free traders act.
   guildsPlan(state)
   haulersAct(state)
+  captainsAct(state)
+  huntersAct(state)
   pruneMail(state)
 }
 

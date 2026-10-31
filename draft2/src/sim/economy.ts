@@ -124,7 +124,32 @@ export function isolationOf(laneCount: number): number {
 
 /** The strength of a world's supply and demand on its prices: a hub's are shaved by traffic, a dark world's are not. */
 export function codeStrength(isolation: number): number {
-  return 0.15 + 0.1 * isolation
+  return isolation === 0 ? 0.15 : isolation === 1 ? 0.3 : 0.4
+}
+
+/**
+ * How many tons of trade it takes to move a world's price: the market's
+ * depth. Deep at a hub on the lanes, where a hold of grain is nothing;
+ * shallow at a dark world, where your own eighty tons crash the price.
+ * Scaled down for dear goods, which move in small lots.
+ */
+export function marketDepth(p: WorldProfile, good: Good, isolation: number): number {
+  const reach = isolation === 0 ? 2 : isolation === 1 ? 1.4 : 1
+  return 40 * Math.max(0.5, marketScale(p)) * valueScale(good) * reach
+}
+
+/**
+ * How far net selling of `pressure` tons moves a price: down to 0.6 of
+ * it under a flood; up to 1.25 under a run on the dock, since a world
+ * that makes a good keeps making it.
+ */
+export function pressureFactor(pressure: number, depth: number): number {
+  return pressure >= 0 ? 1 - 0.4 * Math.tanh(pressure / depth) : 1 + 0.25 * Math.tanh(-pressure / depth)
+}
+
+/** How much of the week's pressure is left the week after: a hub shrugs trade off, a backwater remembers it. */
+export function easing(isolation: number): number {
+  return isolation === 0 ? 0.8 : isolation === 1 ? 0.88 : 0.93
 }
 
 /** What the price of a good comes to at a world this week, before anyone trades. */
@@ -132,8 +157,7 @@ export function priceOf(p: WorldProfile, good: Good, entry: Pick<MarketEntry, 'm
   const spec = GOOD_SPECS[good]
   const k = codeStrength(isolation)
   const factor = 1 + k * demandLevel(p, good) - k * supplyLevel(p, good)
-  const scale = 40 * Math.max(0.5, marketScale(p)) * valueScale(good)
-  const press = 1 - 0.5 * Math.tanh(entry.pressure / scale)
+  const press = pressureFactor(entry.pressure, marketDepth(p, good, isolation))
   return Math.max(1, Math.round(spec.base * factor * entry.mood * press))
 }
 
@@ -171,7 +195,7 @@ export function tickMarket(rng: Rng, world: World): void {
     const made = production(p, good)
     e.stock = Math.min(made * stockWeeks(world.isolation), e.stock + made)
     if (made === 0 && e.stock > 0) e.stock = Math.max(0, e.stock - Math.ceil(e.stock * 0.2))
-    e.pressure *= 0.88
+    e.pressure *= easing(world.isolation)
     if (Math.abs(e.pressure) < 0.5) e.pressure = 0
     e.mood = Math.min(1.2, Math.max(0.85, e.mood + (nextFloat(rng) - 0.5) * 0.04))
     e.price = priceOf(p, good, e, world.isolation)
@@ -229,6 +253,8 @@ export interface Deal {
 export interface Terms {
   /** Off the books: no duty, and the customs house may look. */
   smuggle?: boolean
+  /** The guild's own hulls pay half: it collects the duty for the governor. */
+  guild?: boolean
 }
 
 /**
@@ -241,7 +267,7 @@ export function buy(world: World, good: Good, tons: number, trader: EmpireId, te
   const n = Math.max(0, Math.min(tons, e.stock))
   if (n === 0) return null
   const price = e.price
-  const rate = terms.smuggle ? 0 : dutyRate(world, trader)
+  const rate = terms.smuggle ? 0 : dutyRate(world, trader) * (terms.guild ? 0.5 : 1)
   const duty = Math.round(n * price * rate)
   e.stock -= n
   e.pressure -= n
@@ -257,7 +283,7 @@ export function buy(world: World, good: Good, tons: number, trader: EmpireId, te
 export function sell(world: World, good: Good, tons: number, trader: EmpireId, terms: Terms = {}): Deal {
   const e = world.market[good]
   const price = e.price
-  const rate = terms.smuggle ? 0 : dutyRate(world, trader)
+  const rate = terms.smuggle ? 0 : dutyRate(world, trader) * (terms.guild ? 0.5 : 1)
   const duty = Math.round(tons * price * rate)
   e.pressure += tons
   if (demandLevel(world.profile, good) === 0) e.stock += Math.round(tons / 2)

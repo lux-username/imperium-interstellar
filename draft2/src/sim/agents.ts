@@ -10,7 +10,7 @@
  */
 import { expectedArrival, route } from './chart'
 import { hexDistance } from './hex'
-import { buy, demandLevel, dutyRate, GOOD_SPECS, GOODS, marketScale, sell, supplyLevel, valueScale, type Good } from './economy'
+import { buy, demandLevel, dutyRate, GOOD_SPECS, GOODS, marketDepth, marketScale, pressureFactor, sell, supplyLevel, valueScale, type Good } from './economy'
 import { beliefOf, characterLocation } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { nextFloat, nextInt, roll, type Rng } from './rng'
@@ -123,10 +123,14 @@ function expectedPrice(state: GameState, belief: Belief, world: WorldId, good: G
   return { price: known.price * trust + prior * (1 - trust), age }
 }
 
-/** How far a sale of `tons` at a world of this size knocks the price: the same curve the brokers use, as every captain knows it. */
-function afterSelling(profile: WorldProfile, good: Good, price: number, tons: number): number {
-  const scale = 40 * Math.max(0.5, marketScale(profile)) * valueScale(good)
-  return price * (1 - 0.5 * Math.tanh(tons / scale))
+/** How far a sale of `tons` at a world knocks the price: the same curve the brokers use, as every captain knows it. */
+function afterSelling(profile: WorldProfile, good: Good, isolation: number, price: number, tons: number): number {
+  return price * pressureFactor(tons, marketDepth(profile, good, isolation))
+}
+
+/** A world's isolation as the chart has it: the lanes are public. */
+function isolationOf_(state: GameState, _belief: Belief, world: WorldId): number {
+  return state.worlds[world].isolation
 }
 
 /** The profile a captain believes a world has: from the chart, which never lies about a profile. */
@@ -194,7 +198,7 @@ function lotsFor(state: GameState, belief: Belief, captain: Character, here: Wor
     // Size the lot where the next ten tons would no longer pay.
     let best: Lot | null = null
     for (let n = 10; n <= most; n += 10) {
-      const avg = (afterSelling(toProfile, m.good, m.sale, n) + m.sale) / 2
+      const avg = (afterSelling(toProfile, m.good, isolationOf_(state, belief, to), m.sale, n) + m.sale) / 2
       const profit = Math.round((avg - m.cost) * n)
       if (!best || profit > best.profit) best = { good: m.good, tons: n, profit }
     }
@@ -539,12 +543,38 @@ export function depositAt(guild: Guild, book: PriceBook, danger: Record<WorldId,
   for (const w of Object.keys(danger) as WorldId[]) if ((guild.danger[w] ?? -99) < danger[w]) guild.danger[w] = danger[w]
 }
 
-/** Deposits made at the guild's offices reach the seat when their sailings do. */
+/** Deposits made at the guild's offices reach the seat when their sailings do; and every office posts its own dock's prices home each week. */
 export function guildPost(state: GameState): void {
   for (const g of Object.values(state.guilds)) {
     const due = g.post.filter((p) => p.arrives <= state.week)
     g.post = g.post.filter((p) => p.arrives > state.week)
     for (const p of due.sort((a, b) => a.arrives - b.arrives)) depositAt(g, p.book, p.danger)
+    factorsReport(state, g)
+  }
+}
+
+/**
+ * The factor at each of the guild's offices — the seat and every dockyard
+ * port of the empire — reads their own dock and sends the prices to the
+ * seat by the next sailings. The guild thus always knows its own ports as
+ * of a few weeks ago, and depends on members only for everyone else's.
+ */
+function factorsReport(state: GameState, g: Guild): void {
+  const ids = Object.keys(state.worlds).sort() as WorldId[]
+  for (const id of ids) {
+    const w = state.worlds[id]
+    if (w.empire !== g.empire || !['A', 'B'].includes(w.profile.starport)) continue
+    const book: PriceBook = { [id]: {} }
+    for (const good of Object.keys(w.market) as Good[]) book[id][good] = { price: w.market[good].price, stock: w.market[good].stock, observed: state.week }
+    const danger: Record<WorldId, Week> = {}
+    for (const n of w.news) if (/taken in the approaches/.test(n.text) && (danger[id] ?? -99) < n.week) danger[id] = n.week
+    if (id === g.seat) {
+      depositAt(g, book, danger)
+      continue
+    }
+    const path = route(state.lanes, id, g.seat)
+    const weeks = path ? (expectedArrival(state.lanes, path, state.week) ?? state.week + path.length) : state.week + 2 * hexDistance(w.hex, state.worlds[g.seat].hex)
+    g.post.push({ arrives: Math.max(state.week + 1, weeks), book, danger })
   }
 }
 

@@ -41,9 +41,10 @@ describe('the guilds\' bulk lines', () => {
     expect(news).toBe(true)
     for (const g of Object.values(state.guilds)) {
       for (const l of g.lines) {
-        // The line was reckoned on fresh prices known to the book, not on anything else.
-        expect(g.book[l.from]?.[l.good]).toBeDefined()
-        expect(g.book[l.to]?.[l.good]).toBeDefined()
+        // The line was reckoned on worlds the book knows, not on anything else.
+        expect(g.book[l.from]).toBeDefined()
+        expect(g.book[l.to]).toBeDefined()
+        expect(l.haulers).toBeGreaterThan(0)
         expect(g.danger[l.from] === undefined || state.week - g.danger[l.from] > 12).toBe(true)
       }
     }
