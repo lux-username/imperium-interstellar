@@ -228,17 +228,29 @@ function lotsFor(state: GameState, belief: Belief, captain: Character, here: Wor
   return lots
 }
 
-/** The best believed leg onward from `from`, bought there at the prices last known: a guess at what the next week offers. */
-function onwardProfit(state: GameState, belief: Belief, captain: Character, ship: Ship, from: WorldId, purse: number): number {
+/**
+ * The best believed legs onward from `from`, bought there at the prices
+ * last known: the next leg, and the one beyond it from the two best next
+ * worlds, each weighed half as much as the one before. A circuit, not a
+ * leg: what makes a hub worth more than a dead end, and lets a far trader
+ * plan the long way round.
+ */
+function onwardProfit(state: GameState, belief: Belief, captain: Character, ship: Ship, from: WorldId, purse: number, depth = 2): number {
   const snap = belief.worlds[from]?.snapshot
   if (snap?.kind !== 'world') return 0
   const pretend = { ...state.worlds[from], profile: snap.world.profile, empire: snap.world.empire }
-  let best = 0
+  const legs: { next: WorldId; profit: number }[] = []
   for (const next of reachable(state, from, SHIP_CLASSES[ship.type].jump)) {
     if (!belief.prices[next] && !belief.worlds[next]) continue
     const lots = lotsFor(state, belief, captain, pretend, next, SHIP_CLASSES[ship.type].hold, purse, false)
-    const profit = lots.reduce((s, l) => s + l.profit, 0)
-    if (profit > best) best = profit
+    legs.push({ next, profit: lots.reduce((s, l) => s + l.profit, 0) })
+  }
+  legs.sort((a, b) => b.profit - a.profit || (a.next < b.next ? -1 : 1))
+  let best = 0
+  for (const leg of legs.slice(0, 2)) {
+    const beyond = depth > 1 ? onwardProfit(state, belief, captain, ship, leg.next, purse + leg.profit, depth - 1) : 0
+    const total = leg.profit + Math.round(beyond / 2)
+    if (total > best) best = total
   }
   return best
 }
@@ -277,6 +289,8 @@ export function bestPlan(state: GameState, captain: Character, ship: Ship, at: W
     profit = Math.round(profit * dangerFactor(state, belief, captain, ship, to))
     // A leg longer than two parsecs is one the common free trader cannot run: a far trader's own, with fewer rivals on it.
     if (SHIP_CLASSES[ship.type].jump >= 3 && hexDistance(here.hex, state.worlds[to].hex) > 2) profit = Math.round(profit * 1.3)
+    // And what this pair has actually paid them lately outranks what the board promises.
+    profit = Math.round(profit * legFactor(state, captain, at, to))
     // Every rival in port is after the same lots and the same markets; and every hull seen sailing for the same port
     // with the same goods these last two weeks got there first. A proud captain contests a rival's leg rather than yield it;
     // anyone else gives a rival a wider berth than a stranger.
@@ -361,6 +375,23 @@ export function noticeUndercut(state: GameState, me: Character, ship: Ship, here
     if (m.ship === ship.id || !m.captain || state.week - m.week > 1 || !m.sold.some((x) => x.good === good)) continue
     deal(state, me.id, m.captain, -1, `${m.captainName} undercut me on ${good} at ${here.name}`, 'undercut')
   }
+}
+
+/** A run from one world to another came to `made` credits: the captain remembers, a third new and two thirds old. */
+export function rememberLeg(state: GameState, captain: Character, from: WorldId, to: WorldId, made: number): void {
+  const legs = (captain.legs ??= {})
+  const key = `${from}>${to}`
+  const m = legs[key]
+  legs[key] = m ? { earned: Math.round(m.earned * 0.67 + made * 0.33), runs: m.runs + 1, last: state.week } : { earned: made, runs: 1, last: state.week }
+}
+
+/** What the captain's own runs say of a pair: a factor on their hopes, from half for a pair that has lately paid nothing to a tenth over for one that has paid well. */
+function legFactor(state: GameState, captain: Character, from: WorldId, to: WorldId): number {
+  const m = captain.legs?.[`${from}>${to}`]
+  if (!m || m.runs < 2 || state.week - m.last > 16) return 1
+  if (m.earned < WORTH_IT) return 0.5
+  if (m.earned > 4 * WORTH_IT) return 1.1
+  return 1
 }
 
 /**
@@ -456,62 +487,10 @@ export function turnsRobber(state: GameState, captain: Character, ship: Ship, he
   return true
 }
 
-/** One captain's week in port. */
-function captainActs(state: GameState, captain: Character, ship: Ship, at: WorldId): void {
-  const here = state.worlds[at]
+/** Take a plan's freight and lots aboard. */
+function loadPlan(state: GameState, captain: Character, ship: Ship, here: World, plan: Plan): void {
+  const at = here.id
   const belief = beliefOf(state, captain.id)
-  const duty = dutyRate(here, captain.empire)
-  // Sell what pays here, in tranches, while the price still beats what was paid; hold the rest for a port believed to pay more, unless it has been aboard too long.
-  for (const lot of [...ship.hold]) {
-    if (lot.kind !== 'cargo') continue
-    noticeUndercut(state, captain, ship, here, lot.good, lot.paid)
-    const stale = state.week - lot.week >= PATIENCE
-    const net = here.market[lot.good].price * (1 - duty)
-    // Past patience, a captain cuts the loss here unless a neighbour is believed to pay clearly more; past half as long again, she sells wherever she stands.
-    const hopeless = state.week - lot.week >= PATIENCE * 1.5
-    if (hopeless || (stale && !betterElsewhere(state, belief, captain, ship, at, lot.good, net))) {
-      const n = unload(ship, lot.good, lot.tons)
-      if (n > 0) {
-        const credits = trade(state, here, sell(here, lot.good, n, captain.empire), ship, 'sold', lot.good).credits
-        captain.purse += credits
-        settleTip(state, captain.id, lot, credits - lot.paid * n, here)
-      }
-      continue
-    }
-    let tons = lot.tons
-    let made = 0
-    let soldTons = 0
-    while (tons > 0) {
-      const n = Math.min(10, tons)
-      const priceNow = here.market[lot.good].price * (1 - duty)
-      if (priceNow <= lot.paid * 1.02) break
-      if (!stale && betterElsewhere(state, belief, captain, ship, at, lot.good, priceNow)) break
-      const sold = unload(ship, lot.good, n)
-      if (sold === 0) break
-      const credits = trade(state, here, sell(here, lot.good, sold, captain.empire), ship, 'sold', lot.good).credits
-      captain.purse += credits
-      made += credits - lot.paid * sold
-      soldTons += sold
-      tons -= sold
-    }
-    if (soldTons > 0) settleTip(state, captain.id, lot, made, here)
-  }
-  // Fuel, if it can be had and afforded: the first tank before anything else, the rest with a cushion.
-  const fuel = fuelPrice(here.profile.starport)
-  while (fuel !== null && ship.fuel < SHIP_CLASSES[ship.type].tanks && captain.purse >= fuel + (ship.fuel === 0 ? 0 : 2000)) {
-    captain.purse -= fuel
-    ship.fuel += 1
-  }
-  if (ship.fuel < 1) return
-  // A captain with nothing left and the nerve for it turns robber: lies off this port and takes what comes.
-  if (turnsRobber(state, captain, ship, here)) return
-  // Maintenance when due, if this is a dockyard and the purse allows; a captain lets it slide a while if short.
-  if (state.week - ship.maintained >= 26 - 4 * traitsOf(captain).caution && ['A', 'B'].includes(here.profile.starport) && captain.purse >= maintenanceCost(ship) + (overdue(ship, state.week) > 0 ? 500 : 2500) && (overdue(ship, state.week) > 0 || roll(state.rng) >= 7)) {
-    if (layUp(state, ship, here)) return
-  }
-  // Buy for the best believed plan, or go and look.
-  const plan = bestPlan(state, captain, ship, at)
-  if (plan) {
     for (const id of plan.freight) {
       const i = here.freight.findIndex((f) => f.id === id)
       if (i < 0) continue
@@ -539,6 +518,106 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
       const word = belief.prices[plan.to]?.[lot.good]
       ship.hold.push({ kind: 'cargo', good: lot.good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: at, week: state.week, tip: word?.heard && word.from ? word.from : null })
     }
+}
+
+/** The nearest dockyard of the captain's own empire and the next hop toward it, when maintenance will fall due before a captain wandering could reach one. */
+function yardBound(state: GameState, captain: Character, ship: Ship, at: WorldId): { yard: WorldId; next: WorldId } | null {
+  const here = state.worlds[at]
+  if (['A', 'B'].includes(here.profile.starport) && here.empire === captain.empire) return null
+  const due = ship.maintained + 26 - state.week
+  const yards = (Object.keys(state.worlds).sort() as WorldId[]).filter((w) => ['A', 'B'].includes(state.worlds[w].profile.starport) && state.worlds[w].empire === captain.empire)
+  let best: { yard: WorldId; hops: number; next: WorldId } | null = null
+  for (const y of yards) {
+    const path = hexRoute(state.worlds, at, y, SHIP_CLASSES[ship.type].jump)
+    if (!path || path.length < 2) continue
+    if (!best || path.length - 1 < best.hops) best = { yard: y, hops: path.length - 1, next: path[1] }
+  }
+  if (!best) return null
+  // Two weeks a hop with lie-overs, and a fortnight's grace.
+  return due <= best.hops * 2 + 2 ? { yard: best.yard, next: best.next } : null
+}
+
+/** One captain's week in port. */
+function captainActs(state: GameState, captain: Character, ship: Ship, at: WorldId): void {
+  const here = state.worlds[at]
+  const belief = beliefOf(state, captain.id)
+  const duty = dutyRate(here, captain.empire)
+  // Sell what pays here, in tranches, while the price still beats what was paid; hold the rest for a port believed to pay more, unless it has been aboard too long.
+  for (const lot of [...ship.hold]) {
+    if (lot.kind !== 'cargo') continue
+    noticeUndercut(state, captain, ship, here, lot.good, lot.paid)
+    const stale = state.week - lot.week >= PATIENCE
+    const net = here.market[lot.good].price * (1 - duty)
+    // Past patience, a captain cuts the loss here unless a neighbour is believed to pay clearly more; past half as long again, she sells wherever she stands.
+    const hopeless = state.week - lot.week >= PATIENCE * 1.5
+    if (hopeless || (stale && !betterElsewhere(state, belief, captain, ship, at, lot.good, net))) {
+      const n = unload(ship, lot.good, lot.tons)
+      if (n > 0) {
+        const credits = trade(state, here, sell(here, lot.good, n, captain.empire), ship, 'sold', lot.good).credits
+        captain.purse += credits
+        settleTip(state, captain.id, lot, credits - lot.paid * n, here)
+        rememberLeg(state, captain, lot.from, at, credits - lot.paid * n)
+      }
+      continue
+    }
+    let tons = lot.tons
+    let made = 0
+    let soldTons = 0
+    while (tons > 0) {
+      const n = Math.min(10, tons)
+      const priceNow = here.market[lot.good].price * (1 - duty)
+      if (priceNow <= lot.paid * 1.02) break
+      if (!stale && betterElsewhere(state, belief, captain, ship, at, lot.good, priceNow)) break
+      const sold = unload(ship, lot.good, n)
+      if (sold === 0) break
+      const credits = trade(state, here, sell(here, lot.good, sold, captain.empire), ship, 'sold', lot.good).credits
+      captain.purse += credits
+      made += credits - lot.paid * sold
+      soldTons += sold
+      tons -= sold
+    }
+    if (soldTons > 0) {
+      settleTip(state, captain.id, lot, made, here)
+      rememberLeg(state, captain, lot.from, at, Math.round((made * lot.tons) / soldTons))
+    }
+  }
+  // A captain with money and a stale book buys the port's register: the best information there is, for a few hundred.
+  if (captain.purse >= 20000 && ['A', 'B', 'C'].includes(here.profile.starport)) {
+    const pages = belief.traffic[at] ?? []
+    const fresh = pages.filter((k) => k.source === 'register' && state.week - k.observed <= 12).length
+    if (fresh === 0 && here.register.length >= 10) {
+      const fee = 300 + Math.min(700, 5 * here.register.length)
+      captain.purse -= fee
+      state.empires[here.empire].treasury += fee
+      learnTraffic(belief, at, here.register, 'register', state.week)
+    }
+  }
+  // Fuel, if it can be had and afforded: the first tank before anything else, the rest with a cushion.
+  const fuel = fuelPrice(here.profile.starport)
+  while (fuel !== null && ship.fuel < SHIP_CLASSES[ship.type].tanks && captain.purse >= fuel + (ship.fuel === 0 ? 0 : 2000)) {
+    captain.purse -= fuel
+    ship.fuel += 1
+  }
+  if (ship.fuel < 1) return
+  // A captain with nothing left and the nerve for it turns robber: lies off this port and takes what comes.
+  if (turnsRobber(state, captain, ship, here)) return
+  // Maintenance when due, if this is a dockyard and the purse allows; a captain lets it slide a while if short.
+  if (state.week - ship.maintained >= 26 - 4 * traitsOf(captain).caution && ['A', 'B'].includes(here.profile.starport) && captain.purse >= maintenanceCost(ship) + (overdue(ship, state.week) > 0 ? 500 : 2500) && (overdue(ship, state.week) > 0 || roll(state.rng) >= 7)) {
+    if (layUp(state, ship, here)) return
+  }
+  // Maintenance coming due and no yard here: head for one, with whatever pays on the way, before it is overdue.
+  const toYard = yardBound(state, captain, ship, at)
+  if (toYard) {
+    const plan = bestPlan(state, captain, ship, at)
+    const target = plan && hexDistance(state.worlds[plan.to].hex, state.worlds[toYard.yard].hex) < hexDistance(here.hex, state.worlds[toYard.yard].hex) ? plan.to : toYard.next
+    if (plan && plan.to === target) loadPlan(state, captain, ship, here, plan)
+    setCourse(state, ship, target)
+    return
+  }
+  // Buy for the best believed plan, or go and look.
+  const plan = bestPlan(state, captain, ship, at)
+  if (plan) {
+    loadPlan(state, captain, ship, here, plan)
     setCourse(state, ship, plan.to)
     return
   }

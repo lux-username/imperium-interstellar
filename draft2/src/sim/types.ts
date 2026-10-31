@@ -361,6 +361,8 @@ export interface Character {
   outlaw?: boolean
   /** Held by a captor: where, and since when. Null when free. */
   captive?: Captivity | null
+  /** What each pair of worlds has earned them lately, keyed `from>to`: a running average of the profit a run, and when last run. */
+  legs?: Record<string, { earned: number; runs: number; last: Week }>
 }
 
 export interface Captivity {

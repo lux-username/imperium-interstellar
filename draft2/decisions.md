@@ -124,3 +124,13 @@
 - **A navy hull takes no cargo**: what a prize carried stays on the prize, which is the navy's; patrols' holds stay empty, and a test says so.
 - **Far traders** are a fifth of merchants (was a twelfth). Their planner rates a leg longer than two parsecs, which a free trader cannot run, at 1.3, and when looking for somewhere to go they prefer worlds off the lanes and beyond a free trader's reach. About half their legs are now over two parsecs.
 - Two-year runs: with four boats a navy, piracy fell on the two richer maps to nothing and held on the poorer two. Deterrence works; whether it works too well is a playtest matter.
+
+## 2026-10-31 — smarter captains, and nine patrols
+
+- **Nine patrol boats**, three a navy (user's call: deterrence was too strong at twelve).
+- **A captain remembers her legs**: what each pair of worlds earned her lately, a third new and two thirds old; a pair that has paid under the bar on its last runs is rated at half whatever the board promises, one that has paid well a tenth over.
+- **Two legs beyond**: a destination is scored on this leg, the best next, and the best beyond from the two best nexts, each half the weight of the one before. A circuit, which is what a far trader's long legs need.
+- **Home before overdue**: with maintenance due within two weeks a hop plus a fortnight of the nearest dockyard of her empire, a captain not at one heads there, carrying whatever pays on the way.
+- **Buying the register**: a captain with twenty thousand and no page of this port's register under twelve weeks old buys it, at the player's price. Everyone does within a year, and the treasuries notice.
+- **No loans against cargo** (user's call): interstellar banking is not ready to lend to someone who may never be seen again.
+- One-year review after: idle weeks one to three percent, overdue six to ten, stranded for fuel none, ping-pong between a pair a third of legs, medians up a fifth.
