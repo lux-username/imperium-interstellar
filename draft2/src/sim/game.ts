@@ -8,9 +8,10 @@
  * lanes with mail and news, every body at a port seeing the port, and a
  * player who can take passage. Nothing trades or fights yet.
  */
-import { askCaptain, captainsAct, dockTalk, listenAtBar, seedTraderKnowledge, spawnTraders } from './agents'
+import { askCaptain, captainsAct, dockTalk, guildPost, listenAtBar, seedTraderKnowledge, spawnTraders } from './agents'
 import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, type Hail } from './combat'
 import { huntersAct, spawnHunters } from './navy'
+import { GUILD_PURSE, guildsPlan, haulersAct, spawnHaulers } from './guild'
 import { captivityTick, landCaptives, payRansom, ransomFor } from './captivity'
 import { postNewsItem } from './news'
 import { hexLabel } from './hex'
@@ -31,7 +32,7 @@ export const PLAYER = 'c-player' as CharacterId
 /** What a free trader costs new, what the player starts with in hand, and the terms of the mortgage on her. */
 export const SHIP_PRICE = 60000
 export const STARTING_PURSE = 20000
-export const MORTGAGE = { payment: 2000, every: 4 }
+export const MORTGAGE = { payment: 5000, every: 4 }
 
 // ---------------------------------------------------------------------------
 // The stance clock
@@ -166,7 +167,7 @@ export function newGame(seed: number): GameState {
     guilds: {},
     asked: {},
   }
-  for (const e of Object.values(empires)) state.guilds[e.id] = { empire: e.id, seat: e.seat, book: {} }
+  for (const e of Object.values(empires)) state.guilds[e.id] = { empire: e.id, seat: e.seat, book: {}, danger: {}, purse: GUILD_PURSE, lines: [], planned: 0, post: [] }
   const eids = Object.keys(empires).sort() as EmpireId[]
   for (let i = 0; i < eids.length; i++) {
     for (let j = i + 1; j < eids.length; j++) {
@@ -179,6 +180,7 @@ export function newGame(seed: number): GameState {
   state.characters[PLAYER].body = { kind: 'aboard', ship: own.id }
   spawnTraders(state, taken)
   spawnHunters(state, taken)
+  spawnHaulers(state, taken)
   offerFreight(state)
   openingChart(state, PLAYER, home)
   for (const c of Object.values(state.characters)) {
@@ -255,6 +257,39 @@ export function collectDebts(state: GameState): void {
     d.arrears = due - paid
     if (d.balance === 0) c.debt = null
   }
+  repossess(state)
+}
+
+/**
+ * Two payments behind, the lender takes the hull the next time she lies
+ * at a dockyard of her owner's empire: the debt is settled by the hull,
+ * and her owner is put ashore.
+ */
+export function repossess(state: GameState): void {
+  const ids = Object.keys(state.characters).sort() as CharacterId[]
+  for (const id of ids) {
+    const c = state.characters[id]
+    const d = c.debt
+    if (!d || d.arrears < 2 * d.payment) continue
+    for (const ship of Object.values(state.ships)) {
+      if (ship.owner.kind !== 'personal' || ship.owner.character !== id || ship.location.kind !== 'world') continue
+      const at = state.worlds[ship.location.world]
+      if (at.empire !== c.empire || !['A', 'B'].includes(at.profile.starport)) continue
+      ship.owner = { kind: 'organisation', empire: at.empire, arm: 'guild' }
+      ship.captain = null
+      ship.course = null
+      ship.lyingOff = false
+      for (const p of ship.passengers) {
+        const pc = state.characters[p]
+        if (pc && !pc.captive) pc.body = { kind: 'world', world: at.id }
+      }
+      ship.passengers = []
+      if (c.body.kind === 'aboard' && c.body.ship === ship.id) c.body = { kind: 'world', world: at.id }
+      c.debt = null
+      postNewsItem(state, at.id, `The lender's men took the ${ship.name} off ${c.name} for the arrears on her.`)
+      break
+    }
+  }
 }
 
 /**
@@ -306,10 +341,13 @@ export function advanceWeek(state: GameState): void {
   departScouts(state)
   departOnAccount(state)
   observeAll(state)
+  guildPost(state)
   dockTalk(state)
   // Captains decide on what they now see and have heard, and sail next week.
   captainsAct(state)
   huntersAct(state)
+  guildsPlan(state)
+  haulersAct(state)
   pruneMail(state)
 }
 
@@ -521,7 +559,7 @@ export function ransomAsked(state: GameState): number {
 }
 
 /** Terms a lender offers a captain without a hull: a free trader, nothing down, on top of whatever is still owed. */
-export const LENDER = { payment: 3000, every: 4 }
+export const LENDER = { payment: 6000, every: 4 }
 
 /**
  * A captain with no hull can go to a lender at a port of their own empire

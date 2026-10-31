@@ -12,7 +12,7 @@ import { beliefOf } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { nextInt, roll } from './rng'
 import { MAINTENANCE_EVERY, maintenanceCost, newShip, reachable, setCourse, unload } from './ships'
-import { SHIP_CLASSES, type Character, type CharacterId, type EmpireId, type GameState, type Ship, type ShipId, type WorldId } from './types'
+import { SHIP_CLASSES, type Character, type CharacterId, type Duty, type EmpireId, type GameState, type Ship, type ShipId, type WorldId } from './types'
 
 /** Corvettes each empire keeps in the subsector. */
 const CORVETTES = 2
@@ -65,11 +65,13 @@ export function spawnHunters(state: GameState, taken: Set<string>): void {
   }
 }
 
+type Hunt = Exclude<Duty, { kind: 'haul' }>
+
 function hunters(state: GameState): { captain: Character; ship: Ship; at: WorldId }[] {
   const out: { captain: Character; ship: Ship; at: WorldId }[] = []
   for (const id of Object.keys(state.ships).sort() as ShipId[]) {
     const ship = state.ships[id]
-    if (!ship.duty || !ship.captain || ship.location.kind !== 'world') continue
+    if (!ship.duty || ship.duty.kind === 'haul' || !ship.captain || ship.location.kind !== 'world') continue
     const captain = state.characters[ship.captain]
     if (!captain || captain.captive) continue
     out.push({ captain, ship, at: ship.location.world })
@@ -91,7 +93,7 @@ function nextStation(state: GameState, captain: Character, ship: Ship, at: World
 /** The hunters act: refuel, sell plunder at a haven, lie off, move on. */
 export function huntersAct(state: GameState): void {
   for (const { captain, ship, at } of hunters(state)) {
-    const duty = ship.duty!
+    const duty = ship.duty as Hunt
     const here = state.worlds[at]
     // The navy fuels and mends at any of its own ports; an outlaw only at a haven, and pays.
     const home = duty.kind === 'patrol' ? here.empire === ship.empire : at === duty.haven

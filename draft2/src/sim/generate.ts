@@ -17,7 +17,7 @@ import { neighbours } from './chart'
 import { chartLanes } from './lanes'
 import { seatName, worldCultures, worldName } from './names'
 import type { CoreName } from './data/names'
-import { newMarket } from './economy'
+import { isolationOf, newMarket, reprice } from './economy'
 import { createRng, nextInt, roll, type Rng } from './rng'
 import type { Empire, EmpireId, Lane, LaneId, StarportClass, World, WorldId, WorldProfile } from './types'
 
@@ -109,6 +109,7 @@ function newWorld(rng: Rng, hex: Hex, taken: Set<string>): World {
     freight: [],
     news: [],
     gossip: {},
+    isolation: 0,
   }
 }
 
@@ -307,6 +308,10 @@ export function generateSubsector(rng: Rng): Generated & { lanes: Record<LaneId,
   for (let i = 1; i <= LAYOUT_TRIES; i++) {
     const g = generateWorlds(rng)
     const lanes = chartLanes(rng, g.worlds)
+    for (const w of Object.values(g.worlds)) {
+      w.isolation = isolationOf(neighbours(lanes, w.id).length)
+      reprice(w)
+    }
     last = { ...g, lanes }
     if (layoutFaults(g.worlds, lanes, g.empires).length === 0) return { ...last, tries: i }
   }

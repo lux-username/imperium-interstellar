@@ -87,16 +87,39 @@ export interface World {
   news: NewsItem[]
   /** Prices let slip on the docks: what anyone in port may pick up as hearsay. */
   gossip: PriceBook
+  /** 0 on two or more lanes, 1 on a spur, 2 dark. */
+  isolation: number
 }
 
 /** Prices by world and good, with when each was seen. The shape of a guild's book, a port's gossip, and the price slice of a belief. */
 export type PriceBook = Record<WorldId, Partial<Record<string, { price: number; stock: number; observed: Week; heard?: boolean }>>>
 
-/** An empire's merchant guild: for now, the book of prices kept at its headquarters at the seat. */
+/** A bulk line the guild runs: a good hauled from one world to another, and what comes back if anything. */
+export interface Line {
+  from: WorldId
+  to: WorldId
+  good: string
+  back: string | null
+  /** The profit a week the guild reckoned on when it set the line up. */
+  reckoned: number
+  since: Week
+  /** What the line has actually made or lost for the guild since `since`. */
+  earned: number
+}
+
+/** An empire's merchant guild: its book, its purse, and the bulk lines it runs. */
 export interface Guild {
   empire: EmpireId
   seat: WorldId
   book: PriceBook
+  /** The last week a member reported hulls taken in a world's approaches. A line is not run through danger. */
+  danger: Record<WorldId, Week>
+  purse: number
+  lines: Line[]
+  /** The week the guild last ranked its lines. */
+  planned: Week
+  /** Books deposited at the guild's offices elsewhere, on their way to the seat by the next sailings. */
+  post: { arrives: Week; book: PriceBook; danger: Record<WorldId, Week> }[]
 }
 
 export interface NewsItem {
@@ -286,6 +309,8 @@ export type Duty =
   | { kind: 'patrol'; until: Week }
   /** An outlaw: lying off ports to take what comes, and selling it at a haven. */
   | { kind: 'raid'; haven: WorldId; until: Week }
+  /** A guild bulk hauler on a line, or idle at the seat when `line` is null. */
+  | { kind: 'haul'; line: Line | null }
 
 // ---------------------------------------------------------------------------
 // People

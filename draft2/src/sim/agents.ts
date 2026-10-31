@@ -8,6 +8,7 @@
  * same menu the player has at this seat; nothing here reads ground truth
  * about any world but the one the captain is standing on.
  */
+import { expectedArrival, route } from './chart'
 import { hexDistance } from './hex'
 import { buy, demandLevel, dutyRate, GOOD_SPECS, GOODS, marketScale, sell, supplyLevel, valueScale, type Good } from './economy'
 import { beliefOf, characterLocation } from './mail'
@@ -15,7 +16,7 @@ import { officerCulture, personName, rollSex } from './names'
 import { nextFloat, nextInt, roll, type Rng } from './rng'
 import { fuelPrice, holdFree, maintenanceCost, newShip, overdue, reachable, setCourse, unload } from './ships'
 import { layUp } from './game'
-import { stanceKey, SHIP_CLASSES, type Character, type CharacterId, type EmpireId, type GameState, type PriceBook, type Ship, type ShipId, type Week, type World, type WorldId, type WorldProfile } from './types'
+import { stanceKey, SHIP_CLASSES, type Character, type CharacterId, type EmpireId, type GameState, type Guild, type PriceBook, type Ship, type ShipId, type Week, type World, type WorldId, type WorldProfile } from './types'
 import type { Belief } from './view'
 
 /** A trader's purse at the start: enough for half a hold of something ordinary. */
@@ -502,15 +503,48 @@ export function dockTalk(state: GameState): void {
         if (told) tellPrices(beliefOf(state, a.id).prices, beliefOf(state, b.id).prices)
       }
     }
-    // The guild's book at its seat.
-    const guild = Object.values(state.guilds).find((g) => g.seat === port)
-    if (guild) {
+    // The guild's offices: at the seat the book itself; at any other dockyard port of the empire a factor who takes
+    // deposits and sends them on to the seat by the next sailings. Withdrawals only at the seat, where the book is.
+    const guild = state.guilds[here.empire]
+    const office = guild && (port === guild.seat || ['A', 'B'].includes(here.profile.starport))
+    if (guild && office) {
+      const deposit: PriceBook = {}
+      const danger: Record<WorldId, Week> = {}
       for (const c of captains) {
         if (c.guild !== guild.empire) continue
-        tellPrices(beliefOf(state, c.id).prices, guild.book, false)
-        tellPrices(guild.book, beliefOf(state, c.id).prices, false)
+        const belief = beliefOf(state, c.id)
+        tellPrices(belief.prices, deposit, false)
+        for (const w of Object.keys(belief.worlds) as WorldId[]) {
+          const snap = belief.worlds[w].snapshot
+          if (snap.kind !== 'world') continue
+          for (const n of snap.world.news) if (/taken in the approaches/.test(n.text) && (danger[w] ?? -99) < n.week) danger[w] = n.week
+        }
+        if (port === guild.seat) tellPrices(guild.book, belief.prices, false)
+      }
+      if (Object.keys(deposit).length > 0 || Object.keys(danger).length > 0) {
+        if (port === guild.seat) depositAt(guild, deposit, danger)
+        else {
+          const path = route(state.lanes, port, guild.seat)
+          const weeks = path ? expectedArrival(state.lanes, path, state.week) ?? state.week + path.length : state.week + 2 * hexDistance(here.hex, state.worlds[guild.seat].hex)
+          guild.post.push({ arrives: Math.max(state.week + 1, weeks), book: deposit, danger })
+        }
       }
     }
+  }
+}
+
+/** Enter a deposit in the guild's book, keeping provenance, and its danger notes where newer. */
+export function depositAt(guild: Guild, book: PriceBook, danger: Record<WorldId, Week>): void {
+  tellPrices(book, guild.book, false)
+  for (const w of Object.keys(danger) as WorldId[]) if ((guild.danger[w] ?? -99) < danger[w]) guild.danger[w] = danger[w]
+}
+
+/** Deposits made at the guild's offices reach the seat when their sailings do. */
+export function guildPost(state: GameState): void {
+  for (const g of Object.values(state.guilds)) {
+    const due = g.post.filter((p) => p.arrives <= state.week)
+    g.post = g.post.filter((p) => p.arrives > state.week)
+    for (const p of due.sort((a, b) => a.arrives - b.arrives)) depositAt(g, p.book, p.danger)
   }
 }
 

@@ -70,7 +70,7 @@ describe('captivity', () => {
     expect(seeLender(state)).toBe(true)
     expect(playerShip(state)).not.toBeNull()
     expect(me.debt!.balance).toBe(owed + 60000)
-    expect(me.debt!.payment).toBe(3000)
+    expect(me.debt!.payment).toBe(6000)
     expect(seeLender(state)).toBe(false)
   })
 

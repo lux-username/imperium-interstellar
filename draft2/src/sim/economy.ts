@@ -112,39 +112,69 @@ export function production(p: WorldProfile, good: Good): number {
   return s === 0 ? 0 : Math.max(1, Math.round(10 * s * marketScale(p) * valueScale(good)))
 }
 
+/**
+ * How far from the lanes a world lies: 0 on two or more lanes, 1 on a
+ * spur, 2 dark. Set by worldgen once the chart is laid. Isolation makes a
+ * world's wants dearer and its surplus cheaper, since nobody comes: that
+ * is where the gems are.
+ */
+export function isolationOf(laneCount: number): number {
+  return laneCount >= 2 ? 0 : laneCount === 1 ? 1 : 2
+}
+
+/** The strength of a world's supply and demand on its prices: a hub's are shaved by traffic, a dark world's are not. */
+export function codeStrength(isolation: number): number {
+  return 0.15 + 0.1 * isolation
+}
+
 /** What the price of a good comes to at a world this week, before anyone trades. */
-export function priceOf(p: WorldProfile, good: Good, entry: Pick<MarketEntry, 'mood' | 'pressure'>): number {
+export function priceOf(p: WorldProfile, good: Good, entry: Pick<MarketEntry, 'mood' | 'pressure'>, isolation = 0): number {
   const spec = GOOD_SPECS[good]
-  const factor = 1 + 0.2 * demandLevel(p, good) - 0.2 * supplyLevel(p, good)
+  const k = codeStrength(isolation)
+  const factor = 1 + k * demandLevel(p, good) - k * supplyLevel(p, good)
   const scale = 40 * Math.max(0.5, marketScale(p)) * valueScale(good)
   const press = 1 - 0.5 * Math.tanh(entry.pressure / scale)
   return Math.max(1, Math.round(spec.base * factor * entry.mood * press))
 }
 
+/** Weeks of production a dock holds before the rest is lost: longer where nobody comes to buy. */
+export function stockWeeks(isolation: number): number {
+  return WEEKS_OF_STOCK + 4 * isolation
+}
+
 /** A fresh market for a world: a few weeks of stock already on the dock, a mood of its own. */
-export function newMarket(rng: Rng, p: WorldProfile): Market {
+export function newMarket(rng: Rng, p: WorldProfile, isolation = 0): Market {
   const m = {} as Market
   for (const good of GOODS) {
     const mood = 0.85 + nextFloat(rng) * 0.35
-    const entry: MarketEntry = { stock: Math.round(production(p, good) * nextInt(rng, 2, WEEKS_OF_STOCK)), price: 0, mood, pressure: 0 }
-    entry.price = priceOf(p, good, entry)
+    const entry: MarketEntry = { stock: Math.round(production(p, good) * nextInt(rng, 2, stockWeeks(isolation))), price: 0, mood, pressure: 0 }
+    entry.price = priceOf(p, good, entry, isolation)
     m[good] = entry
   }
   return m
 }
 
-/** A week passes at a world: stock accrues where goods are made, pressure eases, moods wander, prices are set. */
+/** Set every price afresh from the world's profile, mood and pressure: after worldgen settles isolation. */
+export function reprice(world: World): void {
+  for (const good of GOODS) world.market[good].price = priceOf(world.profile, good, world.market[good], world.isolation)
+}
+
+/**
+ * A week passes at a world: stock accrues where goods are made, pressure
+ * eases (slowly: a route run every month stays depressed, which is what
+ * makes a milk run pay less), moods wander, prices are set.
+ */
 export function tickMarket(rng: Rng, world: World): void {
   const p = world.profile
   for (const good of GOODS) {
     const e = world.market[good]
     const made = production(p, good)
-    e.stock = Math.min(made * WEEKS_OF_STOCK, e.stock + made)
+    e.stock = Math.min(made * stockWeeks(world.isolation), e.stock + made)
     if (made === 0 && e.stock > 0) e.stock = Math.max(0, e.stock - Math.ceil(e.stock * 0.2))
-    e.pressure *= 0.8
+    e.pressure *= 0.88
     if (Math.abs(e.pressure) < 0.5) e.pressure = 0
     e.mood = Math.min(1.2, Math.max(0.85, e.mood + (nextFloat(rng) - 0.5) * 0.04))
-    e.price = priceOf(p, good, e)
+    e.price = priceOf(p, good, e, world.isolation)
   }
 }
 
@@ -215,7 +245,7 @@ export function buy(world: World, good: Good, tons: number, trader: EmpireId, te
   const duty = Math.round(n * price * rate)
   e.stock -= n
   e.pressure -= n
-  e.price = priceOf(world.profile, good, e)
+  e.price = priceOf(world.profile, good, e, world.isolation)
   return { tons: n, credits: n * price + duty, price, duty }
 }
 
@@ -231,7 +261,7 @@ export function sell(world: World, good: Good, tons: number, trader: EmpireId, t
   const duty = Math.round(tons * price * rate)
   e.pressure += tons
   if (demandLevel(world.profile, good) === 0) e.stock += Math.round(tons / 2)
-  e.price = priceOf(world.profile, good, e)
+  e.price = priceOf(world.profile, good, e, world.isolation)
   return { tons, credits: tons * price - duty, price, duty }
 }
 
