@@ -34,7 +34,7 @@ describe('the fold', () => {
 
   it('sights hulls and people from a world report, newest wins', () => {
     const b = emptyBelief()
-    const ship = { id: 's1' as ShipId, name: 'Wren', type: 'scout' as const, empire: A, at: 'w1' as WorldId, captain: null }
+    const ship = { id: 's1' as ShipId, name: 'Wren', type: 'scout' as const, empire: A, at: 'w1' as WorldId, captain: null, captainName: null }
     absorb(b, world('w1', 4, { ships: [ship] }))
     absorb(b, world('w2', 2, { ships: [{ ...ship, at: 'w2' as WorldId }], people: [{ id: 'c1' as never, name: 'X', empire: A, at: 'w2' as WorldId, aboard: null }] }))
     expect(b.ships['s1' as ShipId].ship.at).toBe('w1')

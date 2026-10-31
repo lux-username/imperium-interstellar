@@ -5,7 +5,7 @@
  * development only.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { advanceWeek, buyGoods, goAshore, newGame, refuel, sail, sellGoods, takeFreight, takePassage } from '../sim/game'
+import { advanceWeek, buyGoods, goAshore, newGame, refuel, sail, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
@@ -125,7 +125,7 @@ export function App() {
               {place === 'brokers' && <Brokers view={view} state={state} act={act} />}
               {place === 'factor' && <Factor view={view} />}
               {place === 'captain' && <Captain view={view} />}
-              {place === 'bar' && <Bar view={view} />}
+              {place === 'bar' && <Bar view={view} state={state} act={act} />}
             </section>
           ) : (
             <section>
@@ -174,6 +174,7 @@ function Docks({ view, state, act }: PaneProps) {
             ))}
             {ship.hold.length === 0 && <li className="muted">The hold is empty.</li>}
           </ul>
+          <p className="muted">Her upkeep comes to {cr(ship.upkeep)} a week.</p>
           {view.debt && (
             <p className="muted">
               Owed on her: {cr(view.debt.balance)} · {cr(view.debt.payment)} due week {view.debt.nextDue}
@@ -204,6 +205,7 @@ function Docks({ view, state, act }: PaneProps) {
         {here.hulls.map((h) => (
           <li key={h.id} className={empireClass(view, h.empire)}>
             <span className="dot" /> <b>{h.name}</b>, {TYPE_WORDS[h.type]} of {empireName(view, h.empire)}
+            {h.captainName ? `, ${h.captainName}` : ''}
             {h.sailsTo && h.sailsOn !== null && (
               <>
                 {' '}
@@ -325,12 +327,28 @@ function Captain({ view }: { view: PlayerView }) {
   )
 }
 
-function Bar({ view }: { view: PlayerView }) {
+function Bar({ view, state, act }: PaneProps) {
   const here = view.here!
+  const [heard, setHeard] = useState<number | null>(null)
+  const captains = here.hulls.filter((h) => h.captainName)
   return (
     <div className="scene">
       <p>The bar by the docks.</p>
-      <p className="muted">{here.hulls.length > 0 ? `Crews off ${here.hulls.map((h) => h.name).join(', ')} are drinking. Nobody has anything to tell you yet.` : 'Quiet. Nobody in from anywhere.'}</p>
+      {captains.length > 0 ? (
+        <>
+          <ul>
+            {captains.map((h) => (
+              <li key={h.id}>
+                <b>{h.captainName}</b> of the {h.name}, {TYPE_WORDS[h.type]}, {empireName(view, h.empire)}
+              </li>
+            ))}
+          </ul>
+          <button onClick={act(() => setHeard(talkAtBar(state)))}>ask around about prices</button>
+          {heard !== null && <p className="muted">{heard > 0 ? `${heard} prices you had not heard, or had heard older. They are in your book of the worlds concerned.` : 'Nothing you did not already know.'}</p>}
+        </>
+      ) : (
+        <p className="muted">Quiet. {here.hulls.length > 0 ? 'Only scouts\' crews, who go unnamed and say nothing.' : 'Nobody in from anywhere.'}</p>
+      )}
     </div>
   )
 }

@@ -32,6 +32,7 @@ export interface ShipSnapshot {
   /** The world it was seen at. A ship in jump is seen by nobody. */
   at: WorldId
   captain: CharacterId | null
+  captainName: string | null
 }
 
 /** A person as they were seen: at a world, or aboard a hull lying there. */
@@ -173,6 +174,8 @@ export interface HullHere {
   name: string
   type: ShipType
   empire: EmpireId
+  captain: CharacterId | null
+  captainName: string | null
   /** For a scout on the packets: where she sails to next and when. */
   sailsTo: WorldId | null
   sailsOn: Week | null
@@ -184,6 +187,7 @@ export interface OwnShip {
   name: string
   type: ShipType
   jump: number
+  upkeep: number
   fuel: number
   tanks: number
   holdTons: number

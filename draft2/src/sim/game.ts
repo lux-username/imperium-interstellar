@@ -8,6 +8,7 @@
  * lanes with mail and news, every body at a port seeing the port, and a
  * player who can take passage. Nothing trades or fights yet.
  */
+import { askAround, captainsAct, dockTalk, seedTraderKnowledge, spawnTraders } from './agents'
 import { hexLabel } from './hex'
 import { route } from './chart'
 import { buy, GOODS, sell, tickMarkets, type Good } from './economy'
@@ -25,7 +26,7 @@ export const PLAYER = 'c-player' as CharacterId
 /** What a free trader costs new, what the player starts with in hand, and the terms of the mortgage on her. */
 export const SHIP_PRICE = 60000
 export const STARTING_PURSE = 20000
-export const MORTGAGE = { payment: 600, every: 4 }
+export const MORTGAGE = { payment: 2000, every: 4 }
 
 // ---------------------------------------------------------------------------
 // The stance clock
@@ -166,9 +167,16 @@ export function newGame(seed: number): GameState {
   const own = newShip(rng, 's-player' as ShipId, 'free_trader', first.id, { kind: 'personal', character: PLAYER }, home, taken, PLAYER)
   state.ships[own.id] = own
   state.characters[PLAYER].body = { kind: 'aboard', ship: own.id }
+  spawnTraders(state, taken)
   offerFreight(state)
   openingChart(state, PLAYER, home)
+  for (const c of Object.values(state.characters)) {
+    if (c.id === PLAYER || c.body.kind !== 'aboard') continue
+    const at = state.ships[c.body.ship]?.location
+    if (at?.kind === 'world') seedTraderKnowledge(state, rng, c, at.world)
+  }
   observeAll(state)
+  captainsAct(state)
   departScouts(state)
   return state
 }
@@ -191,6 +199,17 @@ export function offerFreight(state: GameState): void {
       const offer: FreightOffer = { id: `f-${state.nextId++}`, good, tons: nextInt(state.rng, 1, 4) * 10, to, rate: nextInt(state.rng, 40, 120) }
       world.freight.push(offer)
     }
+  }
+}
+
+/** Every hull on a personal account costs her owner her upkeep each week, paid or not. */
+export function payUpkeep(state: GameState): void {
+  const ids = Object.keys(state.ships).sort() as ShipId[]
+  for (const id of ids) {
+    const ship = state.ships[id]
+    if (ship.owner.kind !== 'personal') continue
+    const owner = state.characters[ship.owner.character]
+    if (owner) owner.purse -= SHIP_CLASSES[ship.type].upkeep
   }
 }
 
@@ -218,11 +237,15 @@ export function advanceWeek(state: GameState): void {
   stanceClock(state)
   tickMarkets(state)
   offerFreight(state)
+  payUpkeep(state)
   collectDebts(state)
   // Sailings happen before the week's observation: a hull that sails this week is gone from the port by then.
   departScouts(state)
   departOnAccount(state)
   observeAll(state)
+  dockTalk(state)
+  // Captains decide on what they now see and have heard, and sail next week.
+  captainsAct(state)
   pruneMail(state)
 }
 
@@ -334,6 +357,11 @@ export function sail(state: GameState, to: WorldId | null): boolean {
   const me = state.characters[state.player]
   if (me.body.kind !== 'aboard' || me.body.ship !== ship.id) return false
   return setCourse(state, ship, to)
+}
+
+/** Ask around the bar. Once a visit is enough; the same captains say the same things. Returns how many prices were news. */
+export function talkAtBar(state: GameState): number {
+  return askAround(state)
 }
 
 /** The world the player's body is at, if not in jump. */

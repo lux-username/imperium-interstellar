@@ -49,7 +49,7 @@ export function buildPlayerView(state: GameState): PlayerView {
   }
   const own = playerShip(state)
   const ship: OwnShip | null = own
-    ? { id: own.id, name: own.name, type: own.type, jump: SHIP_CLASSES[own.type].jump, fuel: own.fuel, tanks: SHIP_CLASSES[own.type].tanks, holdTons: SHIP_CLASSES[own.type].hold, holdUsed: holdUsed(own), hold: own.hold.map((l) => ({ ...l })), damage: own.damage, guns: SHIP_CLASSES[own.type].guns, course: own.course }
+    ? { id: own.id, name: own.name, type: own.type, jump: SHIP_CLASSES[own.type].jump, upkeep: SHIP_CLASSES[own.type].upkeep, fuel: own.fuel, tanks: SHIP_CLASSES[own.type].tanks, holdTons: SHIP_CLASSES[own.type].hold, holdUsed: holdUsed(own), hold: own.hold.map((l) => ({ ...l })), damage: own.damage, guns: SHIP_CLASSES[own.type].guns, course: own.course }
     : null
   const world = at === null ? null : state.worlds[at]
   const here =
@@ -63,7 +63,7 @@ export function buildPlayerView(state: GameState): PlayerView {
             .filter((s) => s.id !== own?.id)
             .map((s): HullHere => {
               const next = sailsOn(state, s, at, state.week + 1)
-              return { id: s.id, name: s.name, type: s.type, empire: s.empire, sailsTo: s.run ? otherEnd(state.lanes[s.run.lane], at) : null, sailsOn: next }
+              return { id: s.id, name: s.name, type: s.type, empire: s.empire, captain: s.captain, captainName: s.captain ? (state.characters[s.captain]?.name ?? null) : null, sailsTo: s.run ? otherEnd(state.lanes[s.run.lane], at) : null, sailsOn: next }
             }),
           market: GOODS.map((good) => ({ good, price: world.market[good].price, stock: world.market[good].stock, holding: own ? holding(own, good) : null })),
           freight: world.freight.map((f) => ({ ...f })),

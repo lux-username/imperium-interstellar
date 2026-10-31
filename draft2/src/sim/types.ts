@@ -180,6 +180,8 @@ export type ShipType = 'scout' | 'free_trader' | 'far_trader' | 'bulk_freighter'
 
 export interface ShipClass {
   type: ShipType
+  /** Credits a week to keep her crewed and found, paid by a personal owner. An organisation keeps its own. */
+  upkeep: number
   jump: number
   /** Tanks: jumps on a full load. Scouts scoop and never want for fuel. */
   tanks: number
@@ -190,12 +192,12 @@ export interface ShipClass {
 }
 
 export const SHIP_CLASSES: Record<ShipType, ShipClass> = {
-  scout: { type: 'scout', jump: 3, tanks: 2, hold: 2, guns: 0, crew: 4 },
-  free_trader: { type: 'free_trader', jump: 2, tanks: 2, hold: 80, guns: 1, crew: 5 },
-  far_trader: { type: 'far_trader', jump: 3, tanks: 2, hold: 60, guns: 1, crew: 5 },
-  bulk_freighter: { type: 'bulk_freighter', jump: 1, tanks: 2, hold: 400, guns: 0, crew: 10 },
-  corvette: { type: 'corvette', jump: 2, tanks: 4, hold: 10, guns: 3, crew: 20 },
-  frigate: { type: 'frigate', jump: 3, tanks: 4, hold: 20, guns: 6, crew: 60 },
+  scout: { type: 'scout', upkeep: 300, jump: 3, tanks: 2, hold: 2, guns: 0, crew: 4 },
+  free_trader: { type: 'free_trader', upkeep: 600, jump: 2, tanks: 2, hold: 80, guns: 1, crew: 5 },
+  far_trader: { type: 'far_trader', upkeep: 700, jump: 3, tanks: 2, hold: 60, guns: 1, crew: 5 },
+  bulk_freighter: { type: 'bulk_freighter', upkeep: 1200, jump: 2, tanks: 2, hold: 400, guns: 0, crew: 10 },
+  corvette: { type: 'corvette', upkeep: 2500, jump: 2, tanks: 4, hold: 10, guns: 3, crew: 20 },
+  frigate: { type: 'frigate', upkeep: 7000, jump: 3, tanks: 4, hold: 20, guns: 6, crew: 60 },
 }
 
 /** Where a ship truly is. In transit means committed to a jump that lands on `arrives`. */

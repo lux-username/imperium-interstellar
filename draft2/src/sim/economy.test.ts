@@ -79,7 +79,7 @@ describe('the trader at the brokers', () => {
     const balance = debt.balance
     const due = debt.nextDue
     while (state.week < due) advanceWeek(state)
-    expect(state.characters[state.player].debt!.balance).toBe(balance - 600)
+    expect(state.characters[state.player].debt!.balance).toBe(balance - 2000)
   })
 
   it('carries freight and is paid on delivery', () => {
@@ -95,7 +95,7 @@ describe('the trader at the brokers', () => {
         advanceWeek(state)
         expect(characterLocation(state, state.player)).toBe(offer.to)
         expect(playerShip(state)!.hold.length).toBe(0)
-        expect(state.characters[state.player].purse).toBeGreaterThanOrEqual(purse + offer.tons * offer.rate - 600)
+        expect(state.characters[state.player].purse).toBeGreaterThanOrEqual(purse + offer.tons * offer.rate - 2000 - 2 * 600)
         return
       }
       advanceWeek(state)

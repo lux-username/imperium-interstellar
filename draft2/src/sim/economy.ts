@@ -101,17 +101,22 @@ export type Market = Record<Good, MarketEntry>
 
 const WEEKS_OF_STOCK = 8
 
+/** Dear goods move in small lots: tonnage scales down with the square root of the base price. */
+export function valueScale(good: Good): number {
+  return Math.sqrt(1000 / GOOD_SPECS[good].base)
+}
+
 /** Tons a week a world produces of a good. */
 export function production(p: WorldProfile, good: Good): number {
   const s = supplyLevel(p, good)
-  return s === 0 ? 0 : Math.round(10 * s * marketScale(p))
+  return s === 0 ? 0 : Math.max(1, Math.round(10 * s * marketScale(p) * valueScale(good)))
 }
 
 /** What the price of a good comes to at a world this week, before anyone trades. */
 export function priceOf(p: WorldProfile, good: Good, entry: Pick<MarketEntry, 'mood' | 'pressure'>): number {
   const spec = GOOD_SPECS[good]
   const factor = 1 + 0.2 * demandLevel(p, good) - 0.2 * supplyLevel(p, good)
-  const scale = 40 * Math.max(0.5, marketScale(p))
+  const scale = 40 * Math.max(0.5, marketScale(p)) * valueScale(good)
   const press = 1 - 0.5 * Math.tanh(entry.pressure / scale)
   return Math.max(1, Math.round(spec.base * factor * entry.mood * press))
 }

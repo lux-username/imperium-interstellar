@@ -48,9 +48,9 @@ export function copyDeclaration(d: Declaration): Declaration {
   return { pair: [d.pair[0], d.pair[1]], stance: d.stance, week: d.week }
 }
 
-export function snapshotShip(ship: Ship, at: WorldId): ShipSnapshot {
+export function snapshotShip(state: GameState, ship: Ship, at: WorldId): ShipSnapshot {
   const { id, name, type, empire, captain } = ship
-  return { id, name, type, empire, at, captain }
+  return { id, name, type, empire, at, captain, captainName: captain ? (state.characters[captain]?.name ?? null) : null }
 }
 
 /** Ships in port at a world right now. */
@@ -87,7 +87,7 @@ export function characterLocation(state: GameState, character: CharacterId): Wor
 /** A world as seen from its own port this week: its state, every hull lying there, everyone about, and the notice board. */
 export function snapshotWorld(state: GameState, world: World): Snapshot {
   const { id, name, hex, profile, empire } = world
-  const ships = shipsAt(state, id).map((s) => snapshotShip(s, id))
+  const ships = shipsAt(state, id).map((s) => snapshotShip(state, s, id))
   const board = Object.keys(world.board)
     .sort()
     .map((k) => copyDeclaration(world.board[k]))
