@@ -182,8 +182,11 @@ export interface HullHere {
   mood: 'glad' | 'fence' | 'tight' | null
   /** Whether the captain wears the guild's ticket. */
   guild: boolean
-  /** Whether the player has already asked them this week. */
+  /** Whether the player has already asked them this week, and whether they told. */
   asked: boolean
+  told: boolean
+  /** They refused, but a round would bring them round. */
+  roundWouldHelp: boolean
   /** For a scout on the packets: where she sails to next and when. */
   sailsTo: WorldId | null
   sailsOn: Week | null

@@ -7,7 +7,7 @@
 import { hexDistance } from './hex'
 import { route } from './chart'
 import { dutyRate, GOODS, inspectionChance } from './economy'
-import { onTheFence, willingness } from './agents'
+import { onTheFence, roundWouldHelp, willingness } from './agents'
 import { ransomFor } from './captivity'
 import { quarrel } from './combat'
 import { playerShip, portClosed } from './game'
@@ -68,7 +68,7 @@ export function buildPlayerView(state: GameState): PlayerView {
               const next = sailsOn(state, s, at, state.week + 1)
               const cap = s.captain ? state.characters[s.captain] : null
               const w = cap ? willingness(cap, me) : null
-              return { id: s.id, name: s.name, type: s.type, empire: s.empire, captain: s.captain, captainName: cap?.name ?? null, mood: w === null ? null : w >= 0.7 ? 'glad' : onTheFence(w) ? 'fence' : 'tight', guild: !!cap?.guild, asked: !!s.captain && state.asked[s.captain] === state.week, sailsTo: s.run ? otherEnd(state.lanes[s.run.lane], at) : null, sailsOn: next }
+              return { id: s.id, name: s.name, type: s.type, empire: s.empire, captain: s.captain, captainName: cap?.name ?? null, mood: w === null ? null : w >= 0.7 ? 'glad' : onTheFence(w) ? 'fence' : 'tight', guild: !!cap?.guild, asked: !!s.captain && state.asked[s.captain]?.week === state.week, told: !!s.captain && state.asked[s.captain]?.week === state.week && state.asked[s.captain].told, roundWouldHelp: !!s.captain && roundWouldHelp(state, s.captain), sailsTo: s.run ? otherEnd(state.lanes[s.run.lane], at) : null, sailsOn: next }
             }),
           market: GOODS.map((good) => ({ good, price: world.market[good].price, stock: world.market[good].stock, holding: own ? holding(own, good) : null })),
           freight: world.freight.map((f) => ({ ...f })),

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { onTheFence, wantsInfo, willingness } from './agents'
+import { askCaptain, onTheFence, roundWouldHelp, wantsInfo, willingness } from './agents'
+import { characterLocation } from './mail'
 import { advanceWeek, newGame, PLAYER } from './game'
 import type { Character, EmpireId, WorldId } from './types'
 
@@ -44,5 +45,39 @@ describe('who tells whom', () => {
     // The book keeps provenance: what a member saw is entered as seen, what they only heard stays hearsay.
     const seen = Object.values(state.guilds).reduce((n, g) => n + Object.values(g.book).reduce((t, w) => t + Object.values(w).filter((e) => !e?.heard).length, 0), 0)
     expect(seen).toBeGreaterThan(0)
+  })
+})
+
+describe('standing a round', () => {
+  it('is offered only after a refusal that a round would have tipped, and then tells', () => {
+    const state = newGame(83)
+    let seen = { told: 0, refused: 0, offered: 0, bought: 0 }
+    for (let i = 0; i < 60; i++) {
+      advanceWeek(state)
+      const at = characterLocation(state, PLAYER)
+      if (at === null) continue
+      state.characters[PLAYER].purse = 100000
+      for (const s of Object.values(state.ships)) {
+        if (!s.captain || s.captain === PLAYER || s.duty || characterLocation(state, s.captain) !== at) continue
+        expect(roundWouldHelp(state, s.captain)).toBe(false)
+        const a = askCaptain(state, s.captain)
+        if (a === 'told') {
+          seen.told++
+          expect(roundWouldHelp(state, s.captain)).toBe(false)
+          expect(askCaptain(state, s.captain, true)).toBe('already')
+        } else if (a === 'refused') {
+          seen.refused++
+          if (roundWouldHelp(state, s.captain)) {
+            seen.offered++
+            expect(askCaptain(state, s.captain, true)).toBe('told')
+            seen.bought++
+          } else expect(askCaptain(state, s.captain, true)).toBe('no_use')
+        }
+      }
+    }
+    expect(seen.told).toBeGreaterThan(0)
+    expect(seen.refused).toBeGreaterThan(0)
+    expect(seen.bought).toBe(seen.offered)
+    expect(seen.offered).toBeGreaterThan(0)
   })
 })

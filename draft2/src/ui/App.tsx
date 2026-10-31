@@ -455,7 +455,7 @@ function Bar({ view, state, act }: PaneProps) {
   const MOOD = { glad: 'would gladly tell you what they know', fence: 'might, for a round', tight: 'keeps their own counsel' }
   const ask = (h: (typeof captains)[number], bribe: boolean) => () => {
     const a = askCaptain(state, h.captain!, bribe)
-    setHeard(a === 'told' ? `${h.captainName} tells you what they know of prices.` : a === 'refused' ? `${h.captainName} talks of anything but prices.` : a === 'already' ? 'You asked already this week.' : 'They are not here.')
+    setHeard(a === 'told' ? `${h.captainName} tells you what they know of prices.` : a === 'refused' ? `${h.captainName} talks of anything but prices.` : a === 'already' ? 'You asked already this week.' : a === 'no_use' ? 'A round would not change their mind.' : 'They are not here.')
   }
   return (
     <div className="scene">
@@ -472,11 +472,15 @@ function Bar({ view, state, act }: PaneProps) {
               <>
                 {' '}
                 <button onClick={act(ask(h, false))}>ask</button>
-                {h.mood === 'fence' && (
-                  <button disabled={view.purse < 500} onClick={act(ask(h, true))}>
-                    stand a round (500 Cr)
-                  </button>
-                )}
+              </>
+            )}
+            {h.asked && !h.told && h.roundWouldHelp && (
+              <>
+                {' '}
+                <span className="muted">They might come round for a drink.</span>{' '}
+                <button disabled={view.purse < 500} onClick={act(ask(h, true))}>
+                  stand a round (500 Cr)
+                </button>
               </>
             )}
           </li>

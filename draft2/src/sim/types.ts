@@ -379,8 +379,8 @@ export interface GameState {
   /** An encounter waiting on the player's choice. The week cannot advance while it stands. */
   pending: Encounter | null
   guilds: Record<EmpireId, Guild>
-  /** Captains the player has asked this week, so an answer is given once. */
-  asked: Record<CharacterId, Week>
+  /** Captains the player has asked this week: the week, and the roll their answer turned on, so a round is offered only where it would have tipped it. */
+  asked: Record<CharacterId, { week: Week; roll: number; told: boolean }>
 }
 
 /** A meeting in the approaches, resolved a round at a time. */

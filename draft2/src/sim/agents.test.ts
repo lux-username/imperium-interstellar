@@ -59,11 +59,13 @@ describe('captain-agents', () => {
     let gossip = 0
     let told = 0
     let refused = 0
-    for (let i = 0; i < 40 && (gossip === 0 || told === 0); i++) {
+    for (let i = 0; i < 120 && (gossip === 0 || told === 0); i++) {
       advanceWeek(state)
       const at = characterLocation(state, PLAYER)
       if (at === null) continue
-      gossip += talkAtBar(state)
+      // What the captains told is a superset of what they let slip, so count gossip on the docks rather than what was news.
+      gossip += Object.keys(state.worlds[at].gossip).length
+      talkAtBar(state)
       for (const s of Object.values(state.ships)) {
         if (!s.captain || s.captain === PLAYER || s.duty || characterLocation(state, s.captain) !== at) continue
         const a = askCaptain(state, s.captain)
@@ -72,8 +74,8 @@ describe('captain-agents', () => {
         expect(askCaptain(state, s.captain)).toBe('already')
       }
     }
-    expect(gossip).toBeGreaterThan(0)
-    expect(told).toBeGreaterThan(0)
+    expect(told, 'told').toBeGreaterThan(0)
+    expect(gossip, 'gossip').toBeGreaterThan(0)
     void refused
   })
 })

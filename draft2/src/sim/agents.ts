@@ -420,7 +420,7 @@ export function tellPrices(from: PriceBook, to: PriceBook, heard = true): number
 export function willingness(teller: Character, asker: Character): number {
   if (teller.id === asker.id) return 1
   if (teller.outlaw || asker.outlaw) return 0.1
-  if (teller.guild && asker.guild) return teller.guild === asker.guild ? 0.95 : 0.1
+  if (teller.guild && asker.guild) return teller.guild === asker.guild ? 0.8 : 0.1
   if (teller.guild || asker.guild) return 0.25
   if (teller.empire === asker.empire) return 0.65
   return 0.5
@@ -488,15 +488,18 @@ export function dockTalk(state: GameState): void {
           tellPrices(beliefOf(state, a.id).prices, beliefOf(state, b.id).prices)
           continue
         }
+        // Everyone asks: more known is better than less. Only a captain whose knowledge is thin pays for it.
         const ship = state.ships[(b.body as { ship: ShipId }).ship]
-        if (!ship || !wantsInfo(state, b, ship, port)) continue
-        let w = willingness(a, b)
-        if (onTheFence(w) && b.purse >= BRIBE + reserve(ship) + 2000) {
+        if (!ship) continue
+        const w = willingness(a, b)
+        const r = nextFloat(state.rng)
+        let told = r < w
+        if (!told && onTheFence(w) && r < w + 0.3 && wantsInfo(state, b, ship, port) && b.purse >= BRIBE + reserve(ship) + 2000) {
           b.purse -= BRIBE
           a.purse += BRIBE
-          w += 0.3
+          told = true
         }
-        if (nextFloat(state.rng) < w) tellPrices(beliefOf(state, a.id).prices, beliefOf(state, b.id).prices)
+        if (told) tellPrices(beliefOf(state, a.id).prices, beliefOf(state, b.id).prices)
       }
     }
     // The guild's book at its seat.
@@ -518,27 +521,44 @@ export function listenAtBar(state: GameState): number {
   return tellPrices(state.worlds[at].gossip, beliefOf(state, state.player).prices)
 }
 
-export type Answer = 'told' | 'refused' | 'already' | 'absent'
+export type Answer = 'told' | 'refused' | 'already' | 'absent' | 'no_use'
+
+/** Whether a round would tip a captain who refused the player this week: on the fence, and the roll fell within a round's reach. */
+export function roundWouldHelp(state: GameState, who: CharacterId): boolean {
+  const a = state.asked[who]
+  if (!a || a.week !== state.week || a.told) return false
+  const w = willingness(state.characters[who], state.characters[state.player])
+  return onTheFence(w) && a.roll < w + 0.3
+}
 
 /**
- * The player asks a captain in port what they know. Once a week each; a
- * round of drinks, if offered, moves one on the fence. The answer is
- * rolled against their willingness.
+ * The player asks a captain in port what they know. Once a week each; the
+ * answer turns on a roll against their willingness. A captain who refused
+ * can be stood a round, which tells only where it would have tipped the
+ * roll; the UI offers it only then.
  */
 export function askCaptain(state: GameState, who: CharacterId, bribe = false): Answer {
   const me = state.characters[state.player]
   const them = state.characters[who]
   const at = characterLocation(state, state.player)
   if (!them || at === null || characterLocation(state, who) !== at) return 'absent'
-  if (state.asked[who] === state.week) return 'already'
-  let w = willingness(them, me)
-  if (bribe && onTheFence(w) && me.purse >= BRIBE) {
+  const prior = state.asked[who]
+  if (bribe) {
+    if (!prior || prior.week !== state.week) return 'already'
+    if (prior.told) return 'already'
+    if (!roundWouldHelp(state, who) || me.purse < BRIBE) return 'no_use'
     me.purse -= BRIBE
     them.purse += BRIBE
-    w += 0.3
+    prior.told = true
+    tellPrices(beliefOf(state, who).prices, beliefOf(state, state.player).prices)
+    return 'told'
   }
-  state.asked[who] = state.week
-  if (nextFloat(state.rng) >= w) return 'refused'
+  if (prior && prior.week === state.week) return 'already'
+  const w = willingness(them, me)
+  const roll = nextFloat(state.rng)
+  const told = roll < w
+  state.asked[who] = { week: state.week, roll, told }
+  if (!told) return 'refused'
   tellPrices(beliefOf(state, who).prices, beliefOf(state, state.player).prices)
   return 'told'
 }
