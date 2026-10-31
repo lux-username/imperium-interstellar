@@ -109,3 +109,11 @@
 - **Danger** is a number each captain holds per world, 0 to 1: word of a taking there within the month adds 0.6; every line of safe trade on the page eases it 0.05; a patrol seen in port eases it 0.25 and marks the world patrolled. Passed on in talk where newer. It weighs on a leg by the captain's caution (0.3 to 0.9 of it), by their guns (two guns fear half what none does), and halved if the place was seen patrolled within eight weeks.
 - **The navy, as a placeholder**: a boat at the seat is sent to the most dangerous world of the empire by what its captains hold and what the guild's factors have reported, lies off it twelve weeks, and comes home for a new assignment; with nothing dangerous known she cruises as before. The seat's news says where she was sent.
 - **Degrees**: nine words of standing, from sworn enemy to fast friend.
+
+## 2026-10-31 — turning the vise on piracy
+
+- **More captains**: three at an A port, one or two at a B, often one at a C.
+- **A robber chooses her ground**: among worlds within two jumps, by the pages of their registers she holds, an enemy's hull counting three, a foreigner's two, a countryman's one if her loyalty is slight else a third, a hull with more guns than hers nothing, a world she believes patrolled lately a third of all that; where she knows nothing of a port she judges it by its class and prefers a foreign one. She sails there and lies off, buying fuel on the way like the trader she was.
+- **Who turns**: the desperate and brave as before; and the greedy (≥ 0.7) and bold (≤ 0.3) when a ground rates well and trade does not; and one whose standing is already burned, at a lower bar.
+- **Whom she will rob**: a countryman only if her loyalty is at most half, and never a guild-fellow.
+- Two-year runs now show one to three captains turning robber on every map, three to seventeen hails, one to three hulls taken, and the navy's boats sent to the trouble. A vise turned slightly, as asked; the next turn is a playtest matter.

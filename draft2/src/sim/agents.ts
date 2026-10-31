@@ -8,7 +8,7 @@
  * same menu the player has at this seat; nothing here reads ground truth
  * about any world but the one the captain is standing on.
  */
-import { expectedArrival, route } from './chart'
+import { expectedArrival, hexRoute, route } from './chart'
 import { recordTrade } from './register'
 import { hexDistance } from './hex'
 import { buy, demandLevel, dutyRate, FINE_TIMES_DUTY, GOOD_SPECS, GOODS, inspectionChance, levelOf, marketScale, production, sell, supplyLevel, valueScale, type Good } from './economy'
@@ -57,7 +57,8 @@ export function spawnTraders(state: GameState, taken: Set<string>): void {
   for (const id of ids) {
     const world = state.worlds[id]
     if (world.profile.population === 0 || !['A', 'B', 'C'].includes(world.profile.starport)) continue
-    const count = world.profile.starport === 'A' ? 2 : roll(rng) >= 6 ? 1 : 0
+    const r0 = roll(rng)
+    const count = world.profile.starport === 'A' ? 3 : world.profile.starport === 'B' ? (r0 >= 10 ? 2 : r0 >= 5 ? 1 : 0) : r0 >= 7 ? 1 : 0
     for (let i = 0; i < count; i++) {
       const empire = world.empire
       const cid = `c-trader-${n}` as CharacterId
@@ -372,17 +373,78 @@ export function settleTip(state: GameState, me: CharacterId, lot: { tip?: Charac
  * in, with the nearest slack-law port as her haven to sell at, and goes
  * back to trading once her purse is mended (see huntersAct).
  */
+/**
+ * Where a captain would go to rob, by what she knows: a port with hulls
+ * coming in that she could take, counted from the pages of its register
+ * she holds. An enemy's hull counts three times, a foreigner's twice, a
+ * countryman's a third unless her loyalty is slight; a hull with more
+ * guns than hers not at all; a world she believes patrolled lately is
+ * worth a third. Returns the best within two jumps, with its score.
+ */
+export function huntingGround(state: GameState, captain: Character, ship: Ship, at: WorldId): { world: WorldId; score: number } | null {
+  const belief = beliefOf(state, captain.id)
+  const t = traitsOf(captain)
+  const myGuns = SHIP_CLASSES[ship.type].guns
+  let best: { world: WorldId; score: number } | null = null
+  for (const w of [at, ...reachable(state, at, SHIP_CLASSES[ship.type].jump * 2)]) {
+    const page = (belief.traffic[w] ?? []).filter((k) => state.week - k.movement.week <= 12 && k.movement.from !== null)
+    const world = state.worlds[w]
+    if (page.length === 0) {
+      // Nothing known of its traffic: judge the port by its class, and prefer a foreign one, where the prey are not countrymen.
+      if (world.profile.population === 0) continue
+      const cls = { A: 4, B: 2.5, C: 1, D: 0.3, E: 0.1, X: 0 }[world.profile.starport]
+      // At home the prey are countrymen, whom only the half-loyal will touch, and guild hulls, which a guild member will not.
+      let score = cls * (world.empire !== captain.empire ? 1.5 : (t.loyalty <= 0.5 ? 0.5 : 0.15) * (captain.guild ? 0.5 : 1))
+      if ((belief.patrolled[w] ?? -99) >= state.week - 8) score *= 0.3
+      if (!best || score > best.score) best = { world: w, score }
+      continue
+    }
+    let score = 0
+    for (const k of page) {
+      const m = k.movement
+      if (m.ship === ship.id || m.type === 'scout' || SHIP_CLASSES[m.type].guns > myGuns) continue
+      if (m.captain && regardOf(state, captain.id, m.captain) >= 1) continue
+      let weight = 1
+      if (m.captain && regardOf(state, captain.id, m.captain) <= -1) weight = 3
+      else if (m.empire !== captain.empire) weight = 2
+      else weight = t.loyalty <= 0.5 ? 1 : 0.3
+      score += weight
+    }
+    score /= Math.max(1, Math.min(12, state.week - Math.min(...page.map((k) => k.movement.week))) / 4)
+    if ((belief.patrolled[w] ?? -99) >= state.week - 8) score *= 0.3
+    if (!best || score > best.score) best = { world: w, score }
+  }
+  return best
+}
+
+/**
+ * Desperate and brave enough, or greedy and bold enough with a rich
+ * ground in view: a captain turns to robbing. She goes to the hunting
+ * ground she rates best, lies off it, sells what she takes at the nearest
+ * slack-law port, and goes back to trading once her purse is mended (see
+ * huntersAct).
+ */
 export function turnsRobber(state: GameState, captain: Character, ship: Ship, here: World): boolean {
   if (SHIP_CLASSES[ship.type].guns === 0 || ship.hold.length > 0) return false
   const t = traitsOf(captain)
-  // Desperate: too poor to fill a hold and nothing worth carrying from here anyway, or in arrears.
-  const desperate = (captain.debt?.arrears ?? 0) > 0 || (captain.purse < 12000 && bestPlan(state, captain, ship, here.id) === null)
-  if (!desperate || t.caution > 0.4 || t.greed < 0.4) return false
-  const dens = havens(state).sort((a, b) => hexDistance(state.worlds[a].hex, here.hex) - hexDistance(state.worlds[b].hex, here.hex) || (a < b ? -1 : 1))
+  const plan = bestPlan(state, captain, ship, here.id)
+  const desperate = (captain.debt?.arrears ?? 0) > 0 || (captain.purse < 12000 && plan === null)
+  const ground = huntingGround(state, captain, ship, here.id)
+  const opportunist = t.greed >= 0.7 && t.caution <= 0.3 && ground !== null && ground.score >= 3 && (plan === null || plan.profit < 2 * WORTH_IT)
+  const burned = !!captain.outlaw && ground !== null && ground.score >= 1.5 && (plan === null || plan.profit < 2 * WORTH_IT)
+  if (!(desperate && t.caution <= 0.4 && t.greed >= 0.4) && !opportunist && !burned) return false
+  const where = ground?.world ?? here.id
+  const dens = havens(state).sort((a, b) => hexDistance(state.worlds[a].hex, state.worlds[where].hex) - hexDistance(state.worlds[b].hex, state.worlds[where].hex) || (a < b ? -1 : 1))
   const haven = dens[0] ?? here.id
   ship.duty = { kind: 'raid', haven, until: state.week + 2, since: state.week }
-  ship.lyingOff = true
-  ship.course = null
+  if (where === here.id) {
+    ship.lyingOff = true
+    ship.course = null
+  } else {
+    ship.lyingOff = false
+    const path = hexRoute(state.worlds, here.id, where, SHIP_CLASSES[ship.type].jump)
+    ship.course = path && path.length > 1 ? path[1] : null
+  }
   return true
 }
 

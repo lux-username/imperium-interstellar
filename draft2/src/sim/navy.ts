@@ -14,7 +14,7 @@ import { beliefOf } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { rollTraits } from './people'
 import { nextInt, roll } from './rng'
-import { MAINTENANCE_EVERY, maintenanceCost, newShip, reachable, setCourse, unload } from './ships'
+import { fuelPrice, MAINTENANCE_EVERY, maintenanceCost, newShip, reachable, setCourse, unload } from './ships'
 import { SHIP_CLASSES, type Character, type CharacterId, type Duty, type EmpireId, type GameState, type Ship, type ShipId, type WorldId } from './types'
 
 /** Corvettes each empire keeps in the subsector. */
@@ -131,6 +131,14 @@ export function huntersAct(state: GameState): void {
     const here = state.worlds[at]
     // The navy fuels and mends at any of its own ports; an outlaw only at a haven, and pays.
     const home = duty.kind === 'patrol' ? here.empire === ship.empire : at === duty.haven
+    // A robber on her own account buys fuel wherever it is sold, like the trader she was.
+    if (duty.kind === 'raid' && ship.owner.kind === 'personal' && !ship.lyingOff) {
+      const price = fuelPrice(here.profile.starport)
+      while (price !== null && ship.fuel < SHIP_CLASSES[ship.type].tanks && captain.purse >= price + 500) {
+        captain.purse -= price
+        ship.fuel += 1
+      }
+    }
     if (home && !ship.lyingOff) {
       ship.fuel = SHIP_CLASSES[ship.type].tanks
       if (ship.damage > 0) ship.damage = Math.max(0, ship.damage - 1)

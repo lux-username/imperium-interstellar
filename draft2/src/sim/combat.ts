@@ -51,7 +51,8 @@ export function quarrel(state: GameState, hunter: Ship, prey: Ship): boolean {
     // Never a friend; an enemy gladly; a countryman only with reluctance.
     if (regard >= 1) return false
     if (regard <= -1) return true
-    if (p.empire === h.empire) return traitsOf(h).loyalty <= 0.3
+    // A countryman: only a captain of slight loyalty will, and not a guild-fellow.
+    if (p.empire === h.empire) return traitsOf(h).loyalty <= 0.5 && !(h.guild && h.guild === p.guild)
     return true
   }
   if (p?.outlaw) return true
