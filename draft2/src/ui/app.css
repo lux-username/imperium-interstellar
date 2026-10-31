@@ -89,3 +89,6 @@ section.captive { border-color: #6a5a2a; }
 ul.log li { color: var(--muted); }
 ul.log li:last-child { color: var(--fg); }
 .warn { color: #e0a070; }
+.selllot { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.selllot input[type='range'] { width: 90px; vertical-align: middle; }
+.selllot .quote { font-size: 11px; white-space: nowrap; }

@@ -16,7 +16,7 @@ import { captivityTick, landCaptives, payRansom, ransomFor } from './captivity'
 import { postNewsItem } from './news'
 import { hexLabel } from './hex'
 import { route } from './chart'
-import { buy, dutyRate, FINE_TIMES_DUTY, GOODS, inspectionChance, sell, tickMarkets, type Good } from './economy'
+import { buy, dutyRate, FINE_TIMES_DUTY, GOODS, inspectionChance, lotPrice, sell, tickMarkets, type Good } from './economy'
 import { trade } from './agents'
 import { generateSubsector } from './generate'
 import { characterLocation, copyDeclaration, deliverHeld, observe, postLetter, postNews, pruneMail, snapshotWorld } from './mail'
@@ -430,6 +430,17 @@ function inspected(state: GameState, at: World, good: Good, tons: number, value:
   me.body = { kind: 'world', world: at.id }
   postNewsItem(state, at.id, `${me.name} of the ${playerShip(state)?.name ?? 'a trader'} was arrested for smuggling ${good}.`)
   return { kind: 'caught', tons, fine, arrested: true }
+}
+
+/** What a sale of `tons` of a good would fetch here, a ton and in all, duty off: the brokers' own sum, without making it. */
+export function quoteSale(state: GameState, good: Good, tons: number, smuggle = false): { price: number; duty: number; credits: number } | null {
+  const h = ownHullHere(state)
+  if (!h || tons <= 0) return null
+  const me = state.characters[state.player]
+  const e = h.at.market[good]
+  const price = lotPrice(h.at, good, e.mood, e.stock, tons)
+  const duty = smuggle ? 0 : Math.round(tons * price * dutyRate(h.at, me.empire))
+  return { price, duty, credits: tons * price - duty }
 }
 
 /** Buy at the brokers: as many tons as asked, the hold allows and the purse covers. Off the books there is no duty and the customs house may look. */

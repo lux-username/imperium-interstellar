@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buy, consumption, demandLevel, dutyRate, GOODS, inspectionChance, newMarket, priceOf, sell, supplyLevel, targetStock, tickMarket, tradeCodes } from './economy'
-import { advanceWeek, buyGoods, newGame, playerShip, refuel, sail, sellGoods, STARTING_PURSE, takeFreight } from './game'
+import { advanceWeek, buyGoods, newGame, playerShip, quoteSale, refuel, sail, sellGoods, STARTING_PURSE, takeFreight } from './game'
 import { characterLocation } from './mail'
 import { createRng } from './rng'
 import type { WorldId, WorldProfile } from './types'
@@ -151,5 +151,21 @@ describe('the trader at the brokers', () => {
     advanceWeek(state)
     expect(state.beliefs[state.player].prices[here].grain!.observed).toBe(0)
     expect(state.beliefs[state.player].prices[to]?.grain?.observed).toBe(2)
+  })
+})
+
+describe('the sale quote', () => {
+  it('says exactly what the brokers then pay', () => {
+    const state = newGame(24)
+    const here = characterLocation(state, state.player)!
+    const good = GOODS.find((g) => state.worlds[here].market[g].stock >= 30)!
+    buyGoods(state, good, 30)
+    const q = quoteSale(state, good, 17)!
+    expect(q.credits).toBe(17 * q.price - q.duty)
+    const purse = state.characters[state.player].purse
+    const s = sellGoods(state, good, 17)
+    expect(s.kind).toBe('ok')
+    if (s.kind === 'ok') expect(s.credits).toBe(q.credits)
+    expect(state.characters[state.player].purse).toBe(purse + q.credits)
   })
 })

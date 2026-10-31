@@ -5,11 +5,11 @@
  * development only.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { advanceWeek, askCaptain, buyGoods, goAshore, hail, lieOff, maintain, newGame, ransomSelf, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
+import { advanceWeek, askCaptain, buyGoods, goAshore, hail, lieOff, maintain, newGame, quoteSale, ransomSelf, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
-import { stanceKey, type EmpireId, type PlayerView, type WorldId } from '../sim/view'
+import { stanceKey, type EmpireId, type Good, type PlayerView, type WorldId } from '../sim/view'
 import { Map } from './Map'
 import { ago, empireClass, empireName, profileString, TYPE_WORDS } from './format'
 import type { Overlay } from './geometry'
@@ -325,6 +325,23 @@ function Docks({ view, state, act }: PaneProps) {
   )
 }
 
+/** The sell row: a slider for how much, and what that lot would fetch a ton and in all. */
+function SellLot({ good, tons, state, act, smuggle, tell }: { good: Good; tons: number; state: GameState; act: PaneProps['act']; smuggle: boolean; tell: (o: ReturnType<typeof sellGoods>) => void }) {
+  const [n, setN] = useState(tons)
+  const want = Math.min(n, tons)
+  const q = quoteSale(state, good, want, smuggle)
+  return (
+    <span className="selllot">
+      <input type="range" min={1} max={tons} step={1} value={want} onChange={(e) => setN(Number(e.target.value))} />
+      <span className="quote">
+        {want} t{q ? ` at ${cr(q.price)}/t → ${cr(q.credits)}` : ''}
+        {q && q.duty > 0 ? <span className="muted"> (duty {cr(q.duty)})</span> : null}
+      </span>
+      <button onClick={act(() => tell(sellGoods(state, good, want, smuggle)))}>sell</button>
+    </span>
+  )
+}
+
 function Brokers({ view, state, act }: PaneProps) {
   const here = view.here!
   const ship = view.ship
@@ -371,12 +388,7 @@ function Brokers({ view, state, act }: PaneProps) {
                     <button disabled={r.stock === 0} onClick={act(() => tell(buyGoods(state, r.good, 999, smuggle || here.closed)))}>
                       fill
                     </button>
-                    <button disabled={!r.holding} onClick={act(() => tell(sellGoods(state, r.good, 10, smuggle || here.closed)))}>
-                      sell 10
-                    </button>
-                    <button disabled={!r.holding} onClick={act(() => tell(sellGoods(state, r.good, 999, smuggle || here.closed)))}>
-                      sell all
-                    </button>
+                    {r.holding && <SellLot key={`${r.good}-${r.holding.tons}`} good={r.good} tons={r.holding.tons} state={state} act={act} smuggle={smuggle || here.closed} tell={tell} />}
                   </>
                 )}
               </td>
