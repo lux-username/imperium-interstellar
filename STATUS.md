@@ -1,34 +1,36 @@
-> Generated 2026-09-21 by /end-session at commit 27ea057.
+> Generated 2026-10-31 by /end-session at commit 4484153.
 
 # STATUS
 
 ## Where things stand
 
-**The 1b playtest (`#34`) is in its second and third rounds, and everything from them is on branch `worktree-playtest-2` as PR #60, ready for review but not merged.** The user played on `main` after #58, came back with a page of notes, and then kept playing on the branch as it grew, ruling on each question as it came up. Sixteen commits. The big pieces: **belief is now a fold over reports** (`src/sim/belief.ts`) — an event in a letter is a sighting of that hull *on the week it happened*, the same fold serves the sim's `learn()` and the UI, and Government House's own observations are kept as mail so the **map can be turned back to any week** and show what is now known of it. **Pirates** were reworked around havens: they keep the peace at a haven they know, a corrupt governor never mentions them, a pirate docking unseized (or found lying there) is a `pirates_harboured` event that captains always write home about and that marks the world a known haven until the governor changes; pirates pool their haven lists when they meet and listen to the docks for new ones; a bold corrupt governor touts the port; pirates raid any world on the lanes. **Ports**: C fuels, B+ rebuilds a knocked-out hull (a hulk), guns halved to A 2 / B 1. **Packets** never fight — the port's batteries do, and the record and the letters say so. **Scouts** have unnamed crews, never fight, are ignored by pirates, and are the only hulls that can lie off and watch (patrol greyed out for them). **Rumours** obey the speed limit, have no good/bad preference, and travel by how good the story is. Governors no longer shade unrest. **Worldgen**: ~22 worlds, rolled until the layout has a chokepoint, a far corner and a reachable chart. **The player's seat is Government House** (was "the desk"). **UI**: hulls drawn per ship in faction colours and clickable, a hull dossier with orders drawn on the map, a week scrubber, Officers and Enemy-hulls tabs.
+**The project forked.** The root is **alpha draft 1** (tag `alpha-draft-1`, PR #60 merged, untouched since): the Government House game, kept runnable as a quarry. **Draft 2** lives in `draft2/` as its own package with its own `spec.md`, `decisions.md`, `vision.md` and `carryover.md`: a captain's career on a borderland subsector shared by three empires (Wessmere Crown, Castellar Throne, Vauclair Concord), Pirates-and-Crusader-Kings-shaped, one life, week-per-turn, information only as fast as ships. Forty-seven commits since the last STATUS, all draft 2, all on `main`.
 
-Current thinking: **merge #60, then keep playtesting on `main`** — the user is continuing in another session. Open design threads from this session are filed: the misjump price of unrefined fuel (`#61`), A-port shipyards (`#62`), too many havens (`#63`), legacy id prefixes (`#64`), wordier letters after the rename (`#65`). `#59` (phrasing by personality) is still the next inbox pass once the standard phrasing has been read a while. Then 1c.
+**What draft 2 has now.** The keel (worldgen, lanes, chart, mail with the addressee as a body, belief fold per reader, scouts on packets, stance clock, save/load, a map that reads belief). The free trader (a physical market of stock, production and consumption; duty, smuggling, inspection and arrest; ports as place lists: docks, brokers, factor, port captain, bar, yard, Government House; the mortgage, fuel, twice-yearly maintenance; whole tons; sliders and quotes). NPC captains as agents trading on their own beliefs (expected prices, leg memory, two legs beyond, reserves, the register, danger belief), dock talk, the guild's book, bribes and leaks. People: traits, regard, trust, esteem, notes, greetings, route requests, standing together, ransoming another, nine degrees of standing, the Book. Robbery as a decision, armed traders and patrol boats, nine navy patrols on station by danger, outlaw raiders and havens, encounters with a round or two of choices, captivity and the lender, prizes sailed to the seat and condemned. Guilds: membership, dues, bulk lines as a tree rooted at the seat, strongboxes and cash walking home, fleets bought from the purse. Famous worlds, seats on the edge, the imperial trade. This session's last commit: the yard, the court's prizes for sale, the letter of marque and the guild's ticket for the player, captains arriving from the core, esteem spreading, wars most of the time.
+
+**Current thinking.** The next batch the user named was built; what is left in the free trader / guild / navy milestones is politics around the marque and the guild, patrols and raids on the guilds' lines (`#83`), two small captain-AI gaps (`#84`), and the sim's slowdown over a long run (`#82`), which should be profiled before more population is added. The first fun test (`#73`) is still the real question.
 
 ## Derived facts
 
-| Fact | Value |
-|---|---|
-| Test status | 364 passed (364) |
-| Typecheck | ok |
-| Version | 0.0.1 |
-| Sim modules | `belief.ts`, `characters.ts`, `chart.ts`, `combat.ts`, `events.ts`, `factions.ts`, `fleet.ts`, `game.ts`, `generate.ts`, `governors.ts`, `ground.ts`, `hex.ts`, `lanes.ts`, `letters.ts`, `mail.ts`, `names.ts`, `orders.ts`, `pirates.ts`, `player.ts`, `rng.ts`, `rumours.ts`, `save.ts`, `scouts.ts`, `ships.ts`, `troops.ts`, `types.ts`, `view.ts`, `warlord.ts`, `world.ts` |
-| Order types implemented | `courier`, `hold`, `move`, `patrol`, `scout`, `transport` |
-| Culture files | 31 in `src/sim/data/names/` |
-| Ship name pools | patrol 130, escort 150, transport 130, scout 130, raider 130, packet 120 |
-| Open issues | 21 (`#11`, `#34`–`#40`, `#44`–`#46`, `#50`, `#51`, `#55`, `#57`, `#59`, `#61`–`#65`) |
-| HEAD | 27ea057 — Orders: patrol is greyed out for a scout; a scout's default task is the watch (`worktree-playtest-2`, pushed; PR #60 against `main` at `d208b06`, ready for review) |
+| Fact | Draft 1 (root) | Draft 2 (`draft2/`) |
+|---|---|---|
+| Test status | 364 passed (364) | 305 passed (305) |
+| Typecheck | ok | ok |
+| Version | 0.0.1 | 0.1.0 |
+| Sim modules | 29 | `agents`, `belief`, `captivity`, `chart`, `combat`, `economy`, `game`, `generate`, `guild`, `hex`, `imperial`, `lanes`, `mail`, `names`, `navy`, `news`, `people`, `player`, `prizes`, `register`, `rng`, `save`, `scouts`, `ships`, `types`, `view` (26) |
+| Order types implemented | 6 | n/a (no order system; the player acts in port) |
+| Culture files | 31 | n/a (quarried from the root at build time) |
+| Ship name pools | patrol 130, escort 150, transport 130, scout 130, raider 130, packet 120 | same pools, same file |
+| Save format | 7 | 11 |
+| Open issues | 26 (`#11`, `#34`–`#40`, `#44`–`#46`, `#50`, `#51`, `#55`, `#57`, `#59`, `#61`–`#65`, `#73`–`#77`, `#82`–`#84`) | |
+| HEAD | 4484153 — Draft 2: yards build hulls to order and the court sells prizes … (`main`, pushed) | |
 
 ## Active milestone
 
-[Phase 1b — Trouble](https://github.com/lux-username/imperium-interstellar/milestone/3) — 4 open / 10 closed. The playtest (`#34`), the economy (`#35`) and the packet-line issues (`#44`–`#46`). This session's work is unmilestoned playtest response, as #58's was.
+[Draft 2 — The free trader](https://github.com/lux-username/imperium-interstellar/milestone/6) — 3 open / 4 closed (`#73`, `#82`, `#84`). Keel is closed (0 / 7). People (`#74`), The guild (`#75`), The navy (`#76`, `#83`), The flag (`#77`) follow.
 
 ## Blockers / open questions
 
-- PR #60 is sixteen commits on its own worktree branch; `main` is untouched since #58. Merge it before the next round of notes, or they land on a branch that keeps diverging.
-- Save format is 7. Autosaves from before PR #60 will not load (a fresh game starts); autosaves from mid-branch load, thanks to the legacy id prefixes (`#64`).
-- Two dev servers may be running: the user's from `main` and this session's on port 5199 from the worktree. Kill the latter (`lsof -ti:5199 -sTCP:LISTEN | xargs kill`) once #60 is merged.
-- Pirates from the probe still show odd movement now and then — a raider bouncing between two worlds because she is driven off each time (`breakOff` costs no fuel). Not filed; watch for it in play.
+- `#82`: a year of sim takes about six times longer by the tenth year of a run than in the first, with only modest population growth. Profile before adding more people.
+- Autosaves from before save format 11 do not load (a fresh game starts).
+- Draft 1 issues (`#11`–`#65`) are still open against the root; most are moot for draft 2 and should be triaged at the next /weekly-reconciliation.
