@@ -10,7 +10,7 @@
  */
 import { askCaptain, captainsAct, dockTalk, guildPost, listenAtBar, noticeUndercut, seedTraderKnowledge, settleTip, spawnTraders } from './agents'
 import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, type Hail } from './combat'
-import { huntersAct, spawnHunters } from './navy'
+import { huntersAct, patrolAt, spawnHunters } from './navy'
 import { GUILD_PURSE, guildsPlan, haulersAct, spawnHaulers } from './guild'
 import { captivityTick, landCaptives, payRansom, ransomAnother, ransomFor } from './captivity'
 import { joinEncounter, possibleAllies, willStand } from './combat'
@@ -325,6 +325,8 @@ export function repossess(state: GameState): void {
       ship.passengers = []
       if (c.body.kind === 'aboard' && c.body.ship === ship.id) c.body = { kind: 'world', world: at.id }
       c.debt = null
+      // A hail that stood with this hull in it is over: the lender's men have her.
+      if (state.pending && (state.pending.attacker === ship.id || state.pending.defender === ship.id)) state.pending = null
       postNewsItem(state, at.id, `The lender's men took the ${ship.name} off ${c.name} for the arrears on her.`)
       break
     }
@@ -342,6 +344,21 @@ export function approaches(state: GameState, landed: Ship[]): void {
     (Object.keys(state.ships).sort() as ShipId[])
       .map((id) => state.ships[id])
       .filter((s) => s.lyingOff && s.location.kind === 'world' && s.location.world === at && (!s.captain || !state.characters[s.captain]?.captive))
+  // A patrol lying off a port where a robber lies off goes for her: the deterrent with teeth.
+  for (const id of Object.keys(state.ships).sort() as ShipId[]) {
+    const patrol = state.ships[id]
+    if (patrol.duty?.kind !== 'patrol' || !patrol.lyingOff || patrol.location.kind !== 'world' || state.pending) continue
+    const at = patrol.location.world
+    const robber = lying(at).find((s) => s.id !== patrol.id && s.duty?.kind === 'raid' && quarrel(state, patrol, s))
+    if (!robber) continue
+    const e = beginEncounter(state, patrol, robber, at)
+    if (robber.captain === state.player) {
+      state.pending = e
+      continue
+    }
+    while (!e.outcome) resolveRound(state, e, npcChoice(state, e))
+    postNewsItem(state, at, settle(state, e))
+  }
   for (const ship of landed) {
     if (ship.location.kind !== 'world' || state.pending) continue
     const at = ship.location.world
@@ -356,7 +373,10 @@ export function approaches(state: GameState, landed: Ship[]): void {
         state.pending = e
         break
       }
-      for (const ally of possibleAllies(state, e)) if (willStand(state, ally, e)) { joinEncounter(state, e, ally); break }
+      // A patrol at the port stands with anyone a robber hails; otherwise whoever will.
+      const patrol = hunter.duty?.kind === 'raid' || (hunter.captain && state.characters[hunter.captain]?.outlaw) ? patrolAt(state, at) : null
+      if (patrol && patrol.id !== ship.id) joinEncounter(state, e, patrol)
+      else for (const ally of possibleAllies(state, e)) if (willStand(state, ally, e)) { joinEncounter(state, e, ally); break }
       while (!e.outcome) resolveRound(state, e, npcChoice(state, e))
       postNewsItem(state, at, settle(state, e))
       break
@@ -605,6 +625,11 @@ export function sail(state: GameState, to: WorldId | null): boolean {
 /** The player's answer to a hail when they are the one hailed. Resolves a round; settles the meeting when it ends. */
 export function respond(state: GameState, choice: Choice): void {
   const e = state.pending
+  if (e && !playerShip(state)) {
+    // No hull of the player's in it any more: nothing to answer.
+    state.pending = null
+    return
+  }
   if (!e || e.defender !== playerShip(state)?.id) return
   resolveRound(state, e, choice)
   if (e.outcome) {
@@ -616,6 +641,10 @@ export function respond(state: GameState, choice: Choice): void {
 /** The player's decision when they are the one lying off: attack, and the other captain answers round by round, or let her pass. */
 export function hail(state: GameState, decision: Hail): void {
   const e = state.pending
+  if (e && !playerShip(state)) {
+    state.pending = null
+    return
+  }
   if (!e || e.attacker !== playerShip(state)?.id) return
   if (decision === 'let_pass') {
     e.outcome = 'let_pass'

@@ -18,7 +18,7 @@ import { fuelPrice, MAINTENANCE_EVERY, maintenanceCost, newShip, reachable, setC
 import { SHIP_CLASSES, type Character, type CharacterId, type Duty, type EmpireId, type GameState, type Ship, type ShipId, type WorldId } from './types'
 
 /** Corvettes each empire keeps in the subsector. */
-const CORVETTES = 2
+const CORVETTES = 4
 
 /** Outlaw hulls at the start. */
 const OUTLAWS = 0
@@ -124,11 +124,25 @@ function nextStation(state: GameState, captain: Character, ship: Ship, at: World
   return top[nextInt(state.rng, 0, top.length - 1)]
 }
 
+/** Whether a patrol lies off or in port at a world. */
+export function patrolAt(state: GameState, at: WorldId): Ship | null {
+  for (const id of Object.keys(state.ships).sort() as ShipId[]) {
+    const s = state.ships[id]
+    if (s.duty?.kind === 'patrol' && s.location.kind === 'world' && s.location.world === at && s.captain && !state.characters[s.captain]?.captive) return s
+  }
+  return null
+}
+
 /** The hunters act: refuel, sell plunder at a haven, lie off, move on. */
 export function huntersAct(state: GameState): void {
   for (const { captain, ship, at } of hunters(state)) {
     const duty = ship.duty as Hunt
     const here = state.worlds[at]
+    // A robber lying off a port a patrol has come to does not wait to be found: she moves on.
+    if (duty.kind === 'raid' && ship.lyingOff && patrolAt(state, at)) {
+      ship.duty = { ...duty, until: state.week }
+      ship.lyingOff = false
+    }
     // The navy fuels and mends at any of its own ports; an outlaw only at a haven, and pays.
     const home = duty.kind === 'patrol' ? here.empire === ship.empire : at === duty.haven
     // A robber on her own account buys fuel wherever it is sold, like the trader she was.

@@ -117,3 +117,10 @@
 - **Who turns**: the desperate and brave as before; and the greedy (≥ 0.7) and bold (≤ 0.3) when a ground rates well and trade does not; and one whose standing is already burned, at a lower bar.
 - **Whom she will rob**: a countryman only if her loyalty is at most half, and never a guild-fellow.
 - Two-year runs now show one to three captains turning robber on every map, three to seventeen hails, one to three hulls taken, and the navy's boats sent to the trouble. A vise turned slightly, as asked; the next turn is a playtest matter.
+
+## 2026-10-31 — patrols with teeth, four boats, clean holds, far traders
+
+- **Deterrence**: a patrol lying off a port goes for any robber lying off the same port; a patrol at a port stands with whoever a robber hails there; a robber lying off a port a patrol comes to moves on; a navy hull takes a hull lying off on the raid whether or not her standing is burned yet. **Four patrol boats** a navy, not two.
+- **A navy hull takes no cargo**: what a prize carried stays on the prize, which is the navy's; patrols' holds stay empty, and a test says so.
+- **Far traders** are a fifth of merchants (was a twelfth). Their planner rates a leg longer than two parsecs, which a free trader cannot run, at 1.3, and when looking for somewhere to go they prefer worlds off the lanes and beyond a free trader's reach. About half their legs are now over two parsecs.
+- Two-year runs: with four boats a navy, piracy fell on the two richer maps to nothing and held on the poorer two. Deterrence works; whether it works too well is a playtest matter.

@@ -90,6 +90,8 @@ describe('what captains do with the register', () => {
     if (!trader) throw new Error('no captain with a plan in forty weeks')
     const c = state.characters[trader.captain!]
     const at = (trader.location as { world: WorldId }).world
+    // Start from a captain who knows of no line anywhere, or the before and after would be the same.
+    state.beliefs[c.id].lines = {}
     const before = bestPlan(state, c, trader, at)!
     state.beliefs[c.id].lines[lineKey(at, before.to)] = { line: { from: at, to: before.to, empire: c.empire }, observed: state.week, report: 'r' as never }
     const after = bestPlan(state, c, trader, at)

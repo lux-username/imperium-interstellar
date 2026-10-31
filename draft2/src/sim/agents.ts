@@ -73,7 +73,7 @@ export function spawnTraders(state: GameState, taken: Set<string>): void {
       state.characters[cid] = captain
       // Most sail free traders; some a far trader; a quarter an armed trader, dearer and smaller-holded, with two guns.
       const r = roll(rng)
-      state.ships[sid] = newShip(rng, sid, r >= 11 ? 'far_trader' : r >= 8 ? 'armed_trader' : 'free_trader', empire, { kind: 'personal', character: cid }, id, taken, cid)
+      state.ships[sid] = newShip(rng, sid, r >= 10 ? 'far_trader' : r >= 8 ? 'armed_trader' : 'free_trader', empire, { kind: 'personal', character: cid }, id, taken, cid)
     }
   }
 }
@@ -275,6 +275,8 @@ export function bestPlan(state: GameState, captain: Character, ship: Ship, at: W
     let profit = freightProfit + cargo.reduce((s, l) => s + l.profit, 0)
     // Danger weighs on the careful far more than on the bold, and on the unarmed more than the armed.
     profit = Math.round(profit * dangerFactor(state, belief, captain, ship, to))
+    // A leg longer than two parsecs is one the common free trader cannot run: a far trader's own, with fewer rivals on it.
+    if (SHIP_CLASSES[ship.type].jump >= 3 && hexDistance(here.hex, state.worlds[to].hex) > 2) profit = Math.round(profit * 1.3)
     // Every rival in port is after the same lots and the same markets; and every hull seen sailing for the same port
     // with the same goods these last two weeks got there first. A proud captain contests a rival's leg rather than yield it;
     // anyone else gives a rival a wider berth than a stranger.
@@ -329,11 +331,14 @@ function somewhereToLook(state: GameState, captain: Character, ship: Ship, at: W
       origins[k.movement.from] = (origins[k.movement.from] ?? 0) + k.movement.sold.reduce((sum, x) => sum + x.tons * x.price, 0)
     }
   }
+  const far = SHIP_CLASSES[ship.type].jump >= 3
   const score = (w: WorldId) => {
     const e = belief.worlds[w]?.snapshot.kind === 'world' ? belief.worlds[w].snapshot.world.empire : state.worlds[w].empire
     const port = state.worlds[w].profile.starport
     const lead = origins[w] ? Math.min(20, Math.round(origins[w] / 5000)) : 0
-    return Math.min(age(w), 52) + (e === captain.empire ? 10 : 0) + (port === 'A' || port === 'B' ? 6 : port === 'C' ? 2 : -20) + lead
+    // A far trader's living is the worlds off the lanes that nobody else calls at: she goes to look where a free trader cannot.
+    const off = far ? (state.worlds[w].isolation === 2 ? 12 : state.worlds[w].isolation === 1 ? 6 : 0) + (hexDistance(state.worlds[at].hex, state.worlds[w].hex) > 2 ? 8 : 0) : 0
+    return Math.min(age(w), 52) + (e === captain.empire ? 10 : 0) + (port === 'A' || port === 'B' ? 6 : port === 'C' ? 2 : -20) + lead + off
   }
   options.sort((a, b) => score(b) - score(a) || (a < b ? -1 : 1))
   // A little whim, so a crowd of captains does not all go the same way.

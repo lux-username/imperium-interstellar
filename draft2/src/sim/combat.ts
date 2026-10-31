@@ -55,6 +55,8 @@ export function quarrel(state: GameState, hunter: Ship, prey: Ship): boolean {
     if (p.empire === h.empire) return traitsOf(h).loyalty <= 0.5 && !(h.guild && h.guild === p.guild)
     return true
   }
+  // A navy hull takes an outlaw, and a hull lying off on the raid whoever she is.
+  if (hunter.duty?.kind === 'patrol' && (p?.outlaw || prey.duty?.kind === 'raid')) return true
   if (p?.outlaw) return true
   if (hunter.empire === prey.empire) return false
   const belief = h ? state.beliefs[h.id] : null
@@ -208,9 +210,11 @@ export function settle(state: GameState, e: Encounter): string {
     d.lyingOff = false
     return outcome === 'driven_off' ? `${d.name} drove off ${a.name} in the approaches.` : outcome === 'escaped' ? `${d.name} ran in from ${a.name} under the guns.` : `${a.name} let ${d.name} pass.`
   }
-  // Plunder: the hold and the purse aboard.
-  for (const lot of d.hold) a.hold.push({ kind: 'cargo', good: lot.good, tons: lot.tons, paid: 0, from: at, week })
-  d.hold = []
+  // Plunder: the hold and the purse aboard. A navy hull takes no cargo: it stays on the prize, which is the navy's now.
+  if (a.duty?.kind !== 'patrol') {
+    for (const lot of d.hold) a.hold.push({ kind: 'cargo', good: lot.good, tons: lot.tons, paid: 0, from: at, week })
+    d.hold = []
+  }
   const captor = a.captain ? state.characters[a.captain] : null
   const victim = d.captain ? state.characters[d.captain] : null
   if (victim && captor) {
