@@ -1,84 +1,210 @@
 /**
- * Keel-phase shell: a seed, the generated subsector drawn in god view, and
- * the list of worlds by empire. This is a developer's view of ground truth
- * and nothing in it survives into the game proper, where the UI reads only
- * the player's belief.
+ * The keel shell. The map pane draws the player's belief; the side pane
+ * shows where their body is, what lies in port, the notices as they know
+ * them, and the mail. One button advances the week. The god view is the
+ * single sanctioned look at ground truth, for development only.
  */
-import { useMemo, useState } from 'react'
-import { generateSubsector } from '../sim/generate'
-import { hexLabel, SUBSECTOR_COLS, SUBSECTOR_ROWS, type Hex } from '../sim/hex'
-import { createRng } from '../sim/rng'
-import { profileString } from '../sim/generate'
+import { useEffect, useMemo, useState } from 'react'
+import { advanceWeek, goAshore, newGame, takePassage } from '../sim/game'
+import { buildPlayerView } from '../sim/player'
+import { deserialize, serialize } from '../sim/save'
+import type { GameState } from '../sim/types'
+import { stanceKey, type EmpireId, type WorldId } from '../sim/view'
+import { Map } from './Map'
+import { ago, empireClass, empireName, profileString, TYPE_WORDS } from './format'
+import type { Overlay } from './geometry'
 
-const R = 28
-const H = Math.sqrt(3) * R
+const AUTOSAVE = 'imperium-interstellar-draft2/autosave'
 
-/** Flat-top hexes, odd columns shoved half a hex down, as ./sim/hex.ts assumes. */
-function centre({ col, row }: Hex): [number, number] {
-  return [R + (col - 1) * 1.5 * R, H / 2 + (row - 1) * H + (col % 2 === 1 ? H / 2 : 0) + H / 2]
+function loadAutosave(): GameState | null {
+  try {
+    const json = localStorage.getItem(AUTOSAVE)
+    return json ? deserialize(json) : null
+  } catch {
+    return null
+  }
 }
 
-const COLOURS = ['var(--e0)', 'var(--e1)', 'var(--e2)']
+function godOverlay(state: GameState): Overlay {
+  const ships: Overlay['ships'] = []
+  for (const s of Object.values(state.ships)) {
+    const at = s.location.kind === 'world' ? s.location.world : s.location.to
+    ships.push({ hex: state.worlds[at].hex, label: `${s.name} (${s.type}) ${s.location.kind === 'transit' ? `in jump from ${state.worlds[s.location.from].name}` : 'in port'}`, inTransit: s.location.kind === 'transit', empire: s.empire })
+  }
+  const empires: Record<string, string> = {}
+  for (const w of Object.values(state.worlds)) empires[w.id] = w.empire
+  return { ships, empires }
+}
 
 export function App() {
-  const [seed, setSeed] = useState(1)
-  const g = useMemo(() => generateSubsector(createRng(seed)), [seed])
-  const empires = Object.values(g.empires)
-  const colour = (empire: string) => COLOURS[empires.findIndex((e) => e.id === empire)] ?? 'white'
-  const width = R + (SUBSECTOR_COLS - 1) * 1.5 * R + R
-  const height = (SUBSECTOR_ROWS + 1) * H + H / 2
+  const [state, setState] = useState<GameState>(() => loadAutosave() ?? newGame(1))
+  const [tick, setTick] = useState(0)
+  const [selected, setSelected] = useState<WorldId | null>(null)
+  const [god, setGod] = useState(false)
+  const [seed, setSeed] = useState(state.seed)
+
+  // The sim mutates in place; `tick` is the version of `state` and is what the memos key on.
+  const versioned = useMemo(() => ({ state, tick }), [state, tick])
+  const view = useMemo(() => buildPlayerView(versioned.state), [versioned])
+  const overlay = useMemo(() => (god ? godOverlay(versioned.state) : null), [versioned, god])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(AUTOSAVE, serialize(versioned.state))
+    } catch {
+      /* no storage: play on without it */
+    }
+  }, [versioned])
+
+  const bump = () => setTick((t) => t + 1)
+  const here = view.here ? view.chart[view.here.world] : null
+  const hereReport = view.here ? view.known.worlds[view.here.world] : null
+  const hereSnap = hereReport?.snapshot.kind === 'world' ? hereReport.snapshot.world : null
+  const chosen = selected ? view.chart[selected] : null
+  const chosenReport = selected ? view.known.worlds[selected] : null
+  const chosenSnap = chosenReport?.snapshot.kind === 'world' ? chosenReport.snapshot.world : null
+  const eids = Object.keys(view.empires).sort() as EmpireId[]
 
   return (
     <>
       <header>
-        <h1>Imperium Interstellar — draft 2, keel</h1>
-        <label>
-          seed <input type="number" value={seed} onChange={(e) => setSeed(Number(e.target.value) || 0)} />
-        </label>
-        <span className="note">god view: ground truth, for development only · layout took {g.tries} {g.tries === 1 ? 'try' : 'tries'}</span>
+        <h1>Imperium Interstellar</h1>
+        <span className="who">
+          {view.player.name}, a subject of {empireName(view, view.player.empire)} · week {view.week}
+        </span>
+        <span className="where">
+          {view.body.kind === 'world' ? `at ${view.chart[view.body.world].name}` : `aboard ${view.body.shipName}, in jump for ${view.chart[view.body.to].name}`}
+        </span>
+        <button
+          className="advance"
+          onClick={() => {
+            advanceWeek(state)
+            bump()
+          }}
+        >
+          Advance week
+        </button>
+        <span className="dev">
+          <label>
+            <input type="checkbox" checked={god} onChange={(e) => setGod(e.target.checked)} /> god view
+          </label>
+          <label>
+            seed <input type="number" value={seed} onChange={(e) => setSeed(Number(e.target.value) || 0)} />
+          </label>
+          <button
+            onClick={() => {
+              setState(newGame(seed))
+              setSelected(null)
+            }}
+          >
+            New game
+          </button>
+        </span>
       </header>
       <main>
-        <svg viewBox={`0 0 ${width} ${height}`}>
-          {Object.values(g.lanes).map((l) => {
-            const [x1, y1] = centre(g.worlds[l.ends[0]].hex)
-            const [x2, y2] = centre(g.worlds[l.ends[1]].hex)
-            return <line key={l.id} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--lane)" strokeWidth={l.jumpDistance === 3 ? 1 : 2} strokeDasharray={l.jumpDistance === 3 ? '4 3' : undefined} />
-          })}
-          {Object.values(g.worlds).map((w) => {
-            const [x, y] = centre(w.hex)
-            const seat = empires.some((e) => e.seat === w.id)
-            return (
-              <g key={w.id}>
-                <circle cx={x} cy={y} r={seat ? 8 : 5} fill={colour(w.empire)} stroke={seat ? 'white' : 'none'} strokeWidth={2} />
-                <text x={x} y={y + 18} textAnchor="middle" fontSize={9} fill="var(--fg)">
-                  {w.name}
-                </text>
-                <text x={x} y={y - 11} textAnchor="middle" fontSize={7} fill="var(--muted)">
-                  {w.profile.starport}
-                </text>
-              </g>
-            )
-          })}
-        </svg>
-        <div className="worlds">
-          {empires.map((e, i) => (
-            <section key={e.id}>
-              <h2 style={{ color: COLOURS[i], fontSize: 14, fontWeight: 'normal' }}>
-                {e.name} · seat {g.worlds[e.seat].name} · capital {e.capitalWeeks} weeks away
-              </h2>
-              <ul style={{ padding: 0, margin: 0 }}>
-                {Object.values(g.worlds)
-                  .filter((w) => w.empire === e.id)
-                  .sort((a, b) => (a.id < b.id ? -1 : 1))
-                  .map((w) => (
-                    <li key={w.id}>
-                      {w.name} <code>{hexLabel(w.hex)} {profileString(w.profile)}</code>
+        <Map view={view} selected={selected} onSelect={setSelected} overlay={overlay} />
+        <aside>
+          <section>
+            <h2>Here</h2>
+            {here && view.here ? (
+              <>
+                <p>
+                  <b>{here.name}</b>, {empireName(view, hereSnap?.empire ?? view.player.empire)}
+                  {view.body.kind === 'world' ? '' : ' (aboard, in port)'}
+                </p>
+                <ul className="hulls">
+                  {view.here.hulls.map((h) => (
+                    <li key={h.id} className={empireClass(view, h.empire)}>
+                      <span className="dot" /> <b>{h.name}</b>, {TYPE_WORDS[h.type]} of {empireName(view, h.empire)}
+                      {h.sailsTo && h.sailsOn !== null && (
+                        <>
+                          {' '}
+                          · for {view.chart[h.sailsTo].name}, {h.sailsOn - view.week <= 1 ? 'sails next week' : `sails in ${h.sailsOn - view.week} wk`}
+                          {view.body.kind === 'world' && (
+                            <button
+                              onClick={() => {
+                                takePassage(state, h.id)
+                                bump()
+                              }}
+                            >
+                              take passage
+                            </button>
+                          )}
+                        </>
+                      )}
                     </li>
                   ))}
-              </ul>
+                  {view.here.hulls.length === 0 && <li>Nothing in port.</li>}
+                </ul>
+                {view.body.kind === 'world' ? null : (
+                  <button
+                    onClick={() => {
+                      goAshore(state)
+                      bump()
+                    }}
+                  >
+                    go ashore
+                  </button>
+                )}
+              </>
+            ) : (
+              <p>In jump. Nothing to see but the inside of the hull.</p>
+            )}
+          </section>
+
+          <section>
+            <h2>Notices</h2>
+            <ul>
+              {eids.flatMap((a, i) =>
+                eids.slice(i + 1).map((b) => {
+                  const d = view.known.stances[stanceKey(a, b)]
+                  return (
+                    <li key={`${a}${b}`}>
+                      {empireName(view, a)} and {empireName(view, b)}: {d ? <b className={d.stance}>{d.stance}</b> : 'at peace'}
+                      {d ? ` since week ${d.week}` : ', as far as you know'}
+                    </li>
+                  )
+                }),
+              )}
+            </ul>
+          </section>
+
+          {chosen && (
+            <section>
+              <h2>{chosen.name}</h2>
+              {chosenSnap && chosenReport ? (
+                <>
+                  <p>
+                    {profileString(chosenSnap.profile)} · {empireName(view, chosenSnap.empire)} · as of {ago(view.week, chosenReport.observed)} ({chosenReport.observerName})
+                  </p>
+                  <ul className="hulls">
+                    {chosenSnap.ships.map((s) => (
+                      <li key={s.id} className={empireClass(view, s.empire)}>
+                        <span className="dot" /> {s.name}, {TYPE_WORDS[s.type]}
+                      </li>
+                    ))}
+                    {chosenSnap.ships.length === 0 && <li>No hulls were lying there.</li>}
+                  </ul>
+                  <p className="muted">Settled by {chosen.cultures.join(', ')}.</p>
+                </>
+              ) : (
+                <p>Nothing is known of it.</p>
+              )}
             </section>
-          ))}
-        </div>
+          )}
+
+          <section>
+            <h2>Mail</h2>
+            <ul className="mail">
+              {view.inbox.slice(0, 20).map((r) => (
+                <li key={r.id}>
+                  <b>{r.subject}</b> — {r.observerName}, seen {ago(view.week, r.observed)}, arrived {ago(view.week, r.delivered ?? view.week)}
+                </li>
+              ))}
+              {view.inbox.length === 0 && <li className="muted">No letters have reached you.</li>}
+            </ul>
+          </section>
+        </aside>
       </main>
     </>
   )
