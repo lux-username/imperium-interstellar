@@ -1,0 +1,203 @@
+/**
+ * What a reader is allowed to see.
+ *
+ * The UI imports from this file (and the grid geometry in ./hex.ts) and
+ * nothing else in src/sim. Everything exported here is either a delivered
+ * report, something the player wrote, or public knowledge like the lane
+ * chart. A report carries a *snapshot* of what an observer saw, never the
+ * ground-truth record itself, so a stale or self-serving report is a
+ * first-class object rather than a lie about the real thing.
+ *
+ * The same shapes serve every reader: an NPC's belief is folded from the
+ * same reports, and the sim never hands an NPC ground truth either.
+ */
+import type { Hex } from './hex'
+import type { CharacterId, Declaration, DispatchId, EmpireId, Lane, LaneId, ReportId, ShipId, ShipType, Stance, StarportClass, Week, WorldId, WorldProfile } from './types'
+
+export { expectedArrival, hexRoute, nextDeparture, route } from './chart'
+export { beliefFrom, stanceKnown } from './belief'
+export { stanceKey, stancePair } from './types'
+
+export type { CharacterId, Declaration, DispatchId, EmpireId, Hex, Lane, LaneId, ReportId, ShipId, ShipType, Stance, StarportClass, Week, WorldId, WorldProfile }
+
+// ---------------------------------------------------------------------------
+// Snapshots: an entity as it appeared to someone, somewhere, once.
+
+export interface ShipSnapshot {
+  id: ShipId
+  name: string
+  type: ShipType
+  empire: EmpireId
+  /** The world it was seen at. A ship in jump is seen by nobody. */
+  at: WorldId
+  captain: CharacterId | null
+}
+
+/** A person as they were seen: at a world, or aboard a hull lying there. */
+export interface PersonSnapshot {
+  id: CharacterId
+  name: string
+  empire: EmpireId
+  at: WorldId
+  aboard: ShipId | null
+}
+
+export interface WorldSnapshot {
+  id: WorldId
+  name: string
+  hex: Hex
+  profile: WorldProfile
+  empire: EmpireId
+  /** Hulls in port when the observation was made. One report carries the world and its traffic together. */
+  ships: ShipSnapshot[]
+  /** People seen about the port: passengers waiting, captains ashore. */
+  people: PersonSnapshot[]
+  /** The port's notice board as it stood: the newest declaration it had heard of, per pair. */
+  board: Declaration[]
+}
+
+export type Snapshot = { kind: 'world'; world: WorldSnapshot } | { kind: 'ship'; ship: ShipSnapshot }
+
+// ---------------------------------------------------------------------------
+// Mail
+
+export interface Envelope {
+  /** Where it was handed to a carrier. */
+  origin: WorldId
+  /** The world it is addressed to: where the sender believed the addressee would be. */
+  destination: WorldId
+  sent: Week
+  /** The worlds it was planned to pass through, origin first. */
+  route: WorldId[]
+  /** When it was expected to arrive, if anyone could say. */
+  eta: Week | null
+}
+
+/**
+ * How a report came. There is no reliability score — distortion is baked
+ * into the content when the report is written and never recorded on it.
+ */
+export type Channel =
+  /** A letter from a named person. */
+  | 'official'
+  /** The harbourmaster's port list, or a reader's own eyes. */
+  | 'port'
+  /** A trader's word at a port. */
+  | 'merchant'
+  /** Talk nobody will put a name to. */
+  | 'docks'
+
+export function isRumour(channel: Channel): boolean {
+  return channel === 'merchant' || channel === 'docks'
+}
+
+export interface Report {
+  id: ReportId
+  channel: Channel
+  /** The person who wrote it, or null for a port's own list. */
+  observer: CharacterId | null
+  observerName: string
+  /** What the letter is about, in a few words, as the writer put it. */
+  subject: string
+  /** Where the observation was made. */
+  observedAt: WorldId
+  observed: Week
+  snapshot: Snapshot
+  envelope: Envelope
+  /** Set when it reaches its reader. Age at reading is `week - observed`. */
+  delivered: Week | null
+}
+
+export interface Dispatch {
+  id: DispatchId
+  sender: CharacterId
+  recipient: CharacterId
+  text: string
+  envelope: Envelope
+}
+
+// ---------------------------------------------------------------------------
+// Belief: the fold
+
+/** The newest word of a ship: where and when it was seen, and by which report. */
+export interface Sighting {
+  ship: ShipSnapshot
+  observed: Week
+  report: ReportId
+}
+
+/** The newest word of a person. The seed of the Book. */
+export interface PersonKnown {
+  person: PersonSnapshot
+  observed: Week
+  report: ReportId
+}
+
+export interface Belief {
+  /** Newest delivered report about each world. */
+  worlds: Record<WorldId, Report>
+  /** Newest sighting of each ship, drawn from world reports (hulls in port) and any report about the ship itself. */
+  ships: Record<ShipId, Sighting>
+  /** Newest sighting of each person. */
+  people: Record<CharacterId, PersonKnown>
+  /** The newest declaration heard of for each pair of empires, keyed as `stanceKey`. */
+  stances: Record<string, Declaration>
+  /**
+   * Last-known prices per world and good. Empty until the economy lands;
+   * the slot is here so the fold has one shape from the start.
+   */
+  prices: Record<WorldId, Record<string, { price: number; observed: Week }>>
+}
+
+// ---------------------------------------------------------------------------
+// The player's view
+
+/** A world's entry on the star chart: where it is, what it is called and who settled it. Public, like the lanes. */
+export interface ChartEntry {
+  id: WorldId
+  name: string
+  hex: Hex
+  cultures: string[]
+}
+
+/** An empire as the chart names it. Public: everyone knows where the three seats are. */
+export interface EmpireEntry {
+  id: EmpireId
+  name: string
+  seat: WorldId
+}
+
+/** A hull lying in the same port as the player, seen directly. */
+export interface HullHere {
+  id: ShipId
+  name: string
+  type: ShipType
+  empire: EmpireId
+  /** For a scout on the packets: where she sails to next and when. */
+  sailsTo: WorldId | null
+  sailsOn: Week | null
+}
+
+/**
+ * The player's whole picture, rebuilt each week from their belief and their
+ * own mail. This is the only thing the UI renders.
+ */
+export interface PlayerView {
+  week: Week
+  player: { id: CharacterId; name: string; empire: EmpireId }
+  /** Where the player's body is: a world, or aboard a hull between worlds. */
+  body: { kind: 'world'; world: WorldId } | { kind: 'aboard'; ship: ShipId; shipName: string; from: WorldId; to: WorldId; arrives: Week }
+  /** The lane chart is public knowledge and never stale. */
+  lanes: Lane[]
+  chart: Record<WorldId, ChartEntry>
+  empires: Record<EmpireId, EmpireEntry>
+  known: Belief
+  /** What the player sees for themselves where they are this week. Null in jump. */
+  here: { world: WorldId; hulls: HullHere[] } | null
+  /** Every letter that has reached the player, newest arrival first. */
+  inbox: Report[]
+  /** What the player saw with their own eyes each week. Not mail, but reports all the same. */
+  observations: Report[]
+  /** Letters the player has sent, newest first. */
+  outgoing: Dispatch[]
+}

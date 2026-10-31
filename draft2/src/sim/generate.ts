@@ -102,6 +102,7 @@ function newWorld(rng: Rng, hex: Hex, taken: Set<string>): World {
     cultures,
     profile: generateProfile(rng),
     empire: '' as EmpireId,
+    board: {},
   }
 }
 
