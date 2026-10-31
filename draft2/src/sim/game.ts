@@ -11,6 +11,8 @@
 import { askAround, captainsAct, dockTalk, seedTraderKnowledge, spawnTraders } from './agents'
 import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, type Hail } from './combat'
 import { huntersAct, spawnHunters } from './navy'
+import { captivityTick, landCaptives, payRansom, ransomFor } from './captivity'
+import { postNewsItem } from './news'
 import { hexLabel } from './hex'
 import { route } from './chart'
 import { buy, GOODS, sell, tickMarkets, type Good } from './economy'
@@ -251,15 +253,6 @@ export function collectDebts(state: GameState): void {
   }
 }
 
-/** Weeks a port keeps a piece of news on its board. */
-export const NEWS_WEEKS = 8
-
-export function postNewsItem(state: GameState, at: WorldId, text: string): void {
-  const world = state.worlds[at]
-  world.news.push({ week: state.week, text })
-  world.news = world.news.filter((n) => state.week - n.week <= NEWS_WEEKS)
-}
-
 /**
  * The approaches: every hull that landed this week meets whoever lies
  * off the port with a quarrel against her. An NPC's meeting is resolved
@@ -297,6 +290,8 @@ export function advanceWeek(state: GameState): void {
   state.week += 1
   const landed = landShips(state)
   approaches(state, landed)
+  landCaptives(state, landed)
+  captivityTick(state)
   deliverHeld(state)
   stanceClock(state)
   tickMarkets(state)
@@ -459,6 +454,39 @@ export function lieOff(state: GameState, on: boolean): boolean {
   const ship = playerShip(state)
   if (!ship || ship.location.kind !== 'world') return false
   ship.lyingOff = on
+  return true
+}
+
+/** The player ransoms themselves, if held ashore and able. */
+export function ransomSelf(state: GameState): boolean {
+  return payRansom(state, state.characters[state.player])
+}
+
+/** What the player's captor asks. */
+export function ransomAsked(state: GameState): number {
+  return ransomFor(state.characters[state.player])
+}
+
+/** Terms a lender offers a captain without a hull: a free trader, nothing down, on top of whatever is still owed. */
+export const LENDER = { payment: 3000, every: 4 }
+
+/**
+ * A captain with no hull can go to a lender at a port of their own empire
+ * with a dockyard and come away with a free trader on a heavy mortgage.
+ * Whatever was owed on the last hull is still owed.
+ */
+export function seeLender(state: GameState): boolean {
+  const me = state.characters[state.player]
+  const at = playerWorld(state)
+  if (playerShip(state) || !at || me.captive || at.empire !== me.empire || !['A', 'B'].includes(at.profile.starport)) return false
+  const taken = new Set(Object.values(state.ships).map((s) => s.name))
+  const id = `s-player-${state.nextId++}` as ShipId
+  const hull = newShip(state.rng, id, 'free_trader', me.empire, { kind: 'personal', character: me.id }, at.id, taken, me.id)
+  hull.maintained = state.week
+  state.ships[id] = hull
+  me.body = { kind: 'aboard', ship: id }
+  const owed = me.debt?.balance ?? 0
+  me.debt = { balance: owed + SHIP_PRICE, payment: LENDER.payment, every: LENDER.every, nextDue: state.week + LENDER.every, arrears: me.debt?.arrears ?? 0 }
   return true
 }
 

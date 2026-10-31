@@ -147,9 +147,11 @@ export function settle(state: GameState, e: Encounter): string {
   const captor = a.captain ? state.characters[a.captain] : null
   const victim = d.captain ? state.characters[d.captain] : null
   if (victim) {
-    if (captor) {
-      captor.purse += Math.max(0, victim.purse)
-      victim.purse = Math.min(0, victim.purse)
+    // The cash aboard is the captor's; the rest is at home, and is what a ransom comes out of.
+    if (captor && victim.purse > 0) {
+      const aboard = Math.round(victim.purse / 2)
+      captor.purse += aboard
+      victim.purse -= aboard
     }
     victim.captive = { by: a.id, of: captor?.outlaw ? null : a.empire, since: week, at: null }
     victim.body = { kind: 'aboard', ship: a.id }

@@ -305,6 +305,8 @@ export interface Captivity {
   since: Week
   /** Where they are held once landed; null while still aboard the captor. */
   at: WorldId | null
+  /** The week they go free if nothing else frees them first. Set when landed. */
+  term?: Week
 }
 
 /** A mortgage: a payment falls due every `every` weeks; missed payments pile up as arrears. */

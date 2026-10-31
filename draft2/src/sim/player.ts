@@ -7,6 +7,7 @@
 import { hexDistance } from './hex'
 import { route } from './chart'
 import { GOODS, tariffFor } from './economy'
+import { ransomFor } from './captivity'
 import { quarrel } from './combat'
 import { playerShip } from './game'
 import { beliefOf, characterLocation, readerOf, shipsAt } from './mail'
@@ -84,7 +85,8 @@ export function buildPlayerView(state: GameState): PlayerView {
     ? { attacker: hull(pend.attacker), defender: hull(pend.defender), mine: (pend.attacker === own?.id ? 'attacker' : 'defender') as 'attacker' | 'defender', round: pend.round, log: [...pend.log], quarrel: own ? quarrel(state, state.ships[pend.attacker], state.ships[pend.defender]) : false }
     : null
   const cap = me.captive ?? null
-  const captive = cap ? { of: cap.of, since: cap.since, at: cap.at, aboard: cap.at ? null : (state.ships[cap.by]?.name ?? null) } : null
+  const captive = cap ? { of: cap.of, since: cap.since, at: cap.at, aboard: cap.at ? null : (state.ships[cap.by]?.name ?? null), ransom: ransomFor(me), term: cap.term ?? null } : null
+  const lenderHere = !own && !cap && world !== null && world.empire === me.empire && ['A', 'B'].includes(world.profile.starport)
 
   return {
     week: state.week,
@@ -101,6 +103,7 @@ export function buildPlayerView(state: GameState): PlayerView {
     pending,
     lyingOff: own?.lyingOff ?? false,
     captive,
+    lenderHere,
     inbox,
     observations,
     outgoing,

@@ -253,8 +253,10 @@ export interface PlayerView {
   pending: { attacker: { id: ShipId; name: string; type: ShipType; empire: EmpireId; guns: number }; defender: { id: ShipId; name: string; type: ShipType; empire: EmpireId; guns: number }; mine: 'attacker' | 'defender'; round: number; log: string[]; quarrel: boolean } | null
   /** Whether the player's hull lies off the port rather than docked. */
   lyingOff: boolean
-  /** The player is a prisoner: whose, since when, and where held if landed. */
-  captive: { of: EmpireId | null; since: Week; at: WorldId | null; aboard: string | null } | null
+  /** The player is a prisoner: whose, since when, where held if landed, and what is asked. */
+  captive: { of: EmpireId | null; since: Week; at: WorldId | null; aboard: string | null; ransom: number; term: Week | null } | null
+  /** Whether a lender here would set the player up with a hull. */
+  lenderHere: boolean
   /** Every letter that has reached the player, newest arrival first. */
   inbox: Report[]
   /** What the player saw with their own eyes each week. Not mail, but reports all the same. */

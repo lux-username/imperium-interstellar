@@ -5,7 +5,7 @@
  * development only.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { advanceWeek, buyGoods, goAshore, hail, lieOff, maintain, newGame, refuel, repair, respond, sail, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
+import { advanceWeek, buyGoods, goAshore, hail, lieOff, maintain, newGame, ransomSelf, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
@@ -117,6 +117,15 @@ export function App() {
                 Taken {ago(view.week, view.captive.since)}, {view.captive.of ? `a prisoner of ${empireName(view, view.captive.of)}` : "an outlaw's prisoner"}
                 {view.captive.at ? `, held at ${view.chart[view.captive.at].name}` : view.captive.aboard ? `, aboard the ${view.captive.aboard}` : ''}.
               </p>
+              {view.captive.at && (
+                <p>
+                  They ask {cr(view.captive.ransom)}.{' '}
+                  <button disabled={view.purse < view.captive.ransom} onClick={act(() => ransomSelf(state))}>
+                    pay the ransom
+                  </button>
+                  {view.captive.term !== null && <span className="muted"> Failing that, {view.captive.of ? 'parole' : 'they will tire of you'} about week {view.captive.term}, or sooner at a peace.</span>}
+                </p>
+              )}
             </section>
           )}
           {here && !view.pending ? (
@@ -272,7 +281,18 @@ function Docks({ view, state, act }: PaneProps) {
           </p>
         </>
       ) : (
-        <p>You have no hull of your own.</p>
+        <p>
+          You have no hull of your own.
+          {view.lenderHere ? (
+            <>
+              {' '}
+              A lender here would set you up with a free trader, nothing down, on top of what you still owe.{' '}
+              <button onClick={act(() => seeLender(state))}>see the lender</button>
+            </>
+          ) : (
+            <span className="muted"> A lender would want a dockyard port of your own empire.</span>
+          )}
+        </p>
       )}
       <h3>In port</h3>
       <ul className="hulls">
