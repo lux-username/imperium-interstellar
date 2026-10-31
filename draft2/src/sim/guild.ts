@@ -9,7 +9,7 @@
  * trader no longer makes money on. Haulers are few; the guild runs the
  * lucrative lines first and drops a line that stops paying.
  */
-import { buy, dutyRate, easing, GOODS, marketDepth, pressureFactor, production, sell, type Good } from './economy'
+import { buy, consumption, dutyRate, GOODS, levelOf, production, sell, targetStock, type Good } from './economy'
 import { hexRoute } from './chart'
 import { hexDistance } from './hex'
 import { fuelPrice } from './ships'
@@ -49,10 +49,10 @@ export function spawnHaulers(state: GameState, taken: Set<string>): void {
   }
 }
 
-/** How much of a good a market moves a round without its price running away: the brokers' own depth, as every factor knows it. */
-function absorbs(state: GameState, world: WorldId, good: Good): number {
-  const w = state.worlds[world]
-  return Math.round(1.2 * marketDepth(w.profile, good, w.isolation))
+/** How much of a good a market takes in a round without heaping up: what it eats in the round, and half of what it likes to hold. */
+function absorbs(state: GameState, world: WorldId, good: Good, round: number): number {
+  const p = state.worlds[world].profile
+  return Math.round(consumption(p, good) * round + targetStock(p, good) / 2)
 }
 
 interface Lot {
@@ -62,25 +62,24 @@ interface Lot {
 }
 
 /**
- * Running a line every `round` weeks, the pressure of its own loads
- * settles at a multiple of one load: what a one-off sale knocks, a
- * standing line knocks harder and keeps knocked. This is the multiple,
- * by how fast the world shrugs trade off.
+ * The price a good settles to at the far end under a standing line
+ * delivering `tons` every `round` weeks: what the world has not eaten
+ * since the last delivery heaps up, three rounds' worth of it by the
+ * time the line has run a while, and the lot sells at the midpoint of
+ * the heap it makes.
  */
-function steadyFactor(isolation: number, round: number): number {
-  return 1 / (1 - easing(isolation) ** round)
+function steadySale(state: GameState, world: WorldId, good: Good, price: number, stockSeen: number, tons: number, round: number): number {
+  const p = state.worlds[world].profile
+  const leftover = Math.max(0, tons - consumption(p, good) * round)
+  const before = Math.max(0, Math.min(stockSeen, targetStock(p, good))) + 3 * leftover
+  return (price * levelOf(p, good, before + tons / 2)) / levelOf(p, good, stockSeen)
 }
 
-/** The price a good settles to at a world under a standing line selling `tons` every `round` weeks. */
-function steadySale(state: GameState, world: WorldId, good: Good, price: number, tons: number, round: number): number {
-  const w = state.worlds[world]
-  return price * pressureFactor(steadyFactor(w.isolation, round) * tons, marketDepth(w.profile, good, w.isolation))
-}
-
-/** The price a good settles to at a world under a standing line buying `tons` every `round` weeks. */
-function steadyCost(state: GameState, world: WorldId, good: Good, price: number, tons: number, round: number): number {
-  const w = state.worlds[world]
-  return price * pressureFactor(-steadyFactor(w.isolation, round) * tons, marketDepth(w.profile, good, w.isolation))
+/** The price a good settles to at the loading end under a standing line taking `tons` every `round` weeks: what has been made since the last load, less the lot, at the midpoint. */
+function steadyCost(state: GameState, world: WorldId, good: Good, price: number, stockSeen: number, tons: number, round: number): number {
+  const p = state.worlds[world].profile
+  const before = Math.min(targetStock(p, good) * 3, Math.max(stockSeen, production(p, good) * round))
+  return (price * levelOf(p, good, Math.max(0.5, before - tons / 2))) / levelOf(p, good, stockSeen)
 }
 
 /** The freshest word the guild or the captain has of a price at a world. */
@@ -102,8 +101,8 @@ function freshest(state: GameState, g: Guild, captain: CharacterId | null, world
 function manifest(state: GameState, g: Guild, captain: CharacterId | null, from: WorldId, to: WorldId, hold: number, round: number, dock: { price: (good: Good) => number | null; stock: (good: Good) => number } | null): Lot[] {
   const toWorld = state.worlds[to]
   const fromWorld = state.worlds[from]
-  const dutyIn = dutyRate(fromWorld, g.empire) / 2
-  const dutyOut = dutyRate(toWorld, g.empire) / 2
+  const dutyIn = dutyRate(fromWorld, g.empire)
+  const dutyOut = dutyRate(toWorld, g.empire)
   const lots: Lot[] = []
   for (const good of GOODS) {
     const far = freshest(state, g, captain, to, good)
@@ -114,14 +113,14 @@ function manifest(state: GameState, g: Guild, captain: CharacterId | null, from:
     // The guild does not stop where its profit peaks, as a monopolist would: it carries on until the margin
     // on the last five tons is down to a sliver. That is what saturating a route means, and what leaves the
     // free trader nothing on it.
-    const most = Math.min(absorbs(state, to, good) * 2, near.stock)
+    const most = Math.min(absorbs(state, to, good, round) * 2, near.stock)
     let best: Lot | null = null
     for (let tons = 5; tons <= most; tons += 5) {
-      const sale = steadySale(state, to, good, far.price, tons, round) * (1 - dutyOut)
-      const cost = steadyCost(state, from, good, near.price, tons, round) * (1 + dutyIn)
+      const sale = steadySale(state, to, good, far.price, far.stock, tons, round) * (1 - dutyOut)
+      const cost = steadyCost(state, from, good, near.price, near.stock, tons, round) * (1 + dutyIn)
       const profit = Math.round((sale - cost) * tons)
-      const marginalSale = steadySale(state, to, good, far.price, tons + 5, round) * (1 - dutyOut)
-      const marginalCost = steadyCost(state, from, good, near.price, tons + 5, round) * (1 + dutyIn)
+      const marginalSale = steadySale(state, to, good, far.price, far.stock, tons + 5, round) * (1 - dutyOut)
+      const marginalCost = steadyCost(state, from, good, near.price, near.stock, tons + 5, round) * (1 + dutyIn)
       if (profit <= 0 || marginalSale - marginalCost < 0.03 * cost) break
       best = { good, tons, profit }
     }
@@ -209,20 +208,32 @@ export function guildsPlan(state: GameState): void {
     }
     // A running line is judged on what it earns a week per hauler, not on a book its own loads have depressed.
     const earning = (l: Line) => l.earned / Math.max(1, state.week - l.since) / Math.max(1, l.haulers)
-    const failed = (l: Line) => state.week - l.since >= 16 && earning(l) < WORTH_A_HAULER / 2
+    const standing = (l: Line) => (state.week - l.since >= 8 ? Math.round(earning(l) * 2) : l.reckoned)
     const lines: Line[] = []
     for (const l of g.lines) {
-      if (failed(l) || closedTo(state, g, l.from) || closedTo(state, g, l.to)) {
-        postNewsItem(state, g.seat, `The guild has taken its bulk line off ${state.worlds[l.from].name} to ${state.worlds[l.to].name}.`)
+      if (closedTo(state, g, l.from) || closedTo(state, g, l.to)) {
+        postNewsItem(state, g.seat, `The guild has taken its bulk line off ${state.worlds[l.from].name} to ${state.worlds[l.to].name}: the war.`)
         continue
       }
-      const c = candidates.find((x) => x.from === l.from && x.to === l.to)
-      // Its standing for new haulers is the better of what the book reckons and what it has shown.
-      l.reckoned = Math.max(c?.reckoned ?? 0, state.week - l.since >= 8 ? Math.round(earning(l) * 2) : l.reckoned)
+      l.reckoned = standing(l)
       l.haulers = 0
       lines.push(l)
     }
-    for (const c of candidates) if (!lines.some((l) => l.from === c.from && l.to === c.to)) lines.push(c)
+    // A line is dropped only for a better one: while a known route beats the least profitable running line
+    // by half again, and every hauler is spoken for, the worst line goes and the better route takes its place.
+    const fleetSize = Object.values(state.ships).filter((s) => s.duty?.kind === 'haul' && s.owner.kind === 'organisation' && s.owner.empire === g.empire).length
+    const fresh = candidates.filter((c) => !lines.some((l) => l.from === c.from && l.to === c.to)).sort((a, b) => b.reckoned - a.reckoned)
+    for (const c of fresh) {
+      if (lines.length < fleetSize) {
+        if (c.reckoned >= WORTH_A_HAULER) lines.push(c)
+        continue
+      }
+      const worst = [...lines].sort((a, b) => a.reckoned - b.reckoned)[0]
+      if (!worst || c.reckoned < worst.reckoned * 1.5) break
+      postNewsItem(state, g.seat, `The guild has taken its bulk line off ${state.worlds[worst.from].name} to ${state.worlds[worst.to].name} for a better one.`)
+      lines.splice(lines.indexOf(worst), 1)
+      lines.push(c)
+    }
     // Assign every hauler to the line with the most value left.
     const haulers = Object.values(state.ships).filter((s) => s.duty?.kind === 'haul' && s.owner.kind === 'organisation' && s.owner.empire === g.empire).sort((a, b) => (a.id < b.id ? -1 : 1))
     const value = (l: Line) => l.reckoned / 2 ** l.haulers
@@ -263,7 +274,7 @@ export function haulersAct(state: GameState): void {
     for (const lot of [...ship.hold]) {
       const n = unload(ship, lot.good as Good, lot.tons)
       if (n > 0) {
-        const deal = sell(here, lot.good as Good, n, g.empire, { guild: true })
+        const deal = sell(here, lot.good as Good, n, g.empire)
         g.purse += deal.credits
         state.empires[here.empire].treasury += deal.duty
         if (d.line) d.line.earned += deal.credits - (lot.kind === 'cargo' ? lot.paid * n : 0)
@@ -309,7 +320,7 @@ export function haulersAct(state: GameState): void {
     for (const l of lots) {
       const tons = Math.min(l.tons, Math.floor(g.purse / Math.max(1, here.market[l.good].price * 1.3)))
       if (tons <= 0) continue
-      const deal = buy(here, l.good, tons, g.empire, { guild: true })
+      const deal = buy(here, l.good, tons, g.empire)
       if (!deal) continue
       g.purse -= deal.credits
       state.empires[here.empire].treasury += deal.duty

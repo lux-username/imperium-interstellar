@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { codeStrength, isolationOf, priceOf } from './economy'
+import { codeStrength, isolationOf, priceOf, targetStock } from './economy'
 import { advanceWeek, newGame, PLAYER, playerShip } from './game'
 import { characterLocation } from './mail'
 import type { WorldId, WorldProfile } from './types'
@@ -12,9 +12,10 @@ describe('gems and milk runs', () => {
     expect(isolationOf(1)).toBe(1)
     expect(isolationOf(0)).toBe(2)
     expect(codeStrength(2)).toBeGreaterThan(codeStrength(0))
-    const flat = { mood: 1, pressure: 0 }
-    expect(priceOf(farm, 'grain', flat, 2)).toBeLessThan(priceOf(farm, 'grain', flat, 0))
-    expect(priceOf(farm, 'machinery', flat, 2)).toBeGreaterThan(priceOf(farm, 'machinery', flat, 0))
+    const g = { mood: 1, stock: targetStock(farm, 'grain') }
+    const m = { mood: 1, stock: targetStock(farm, 'machinery') }
+    expect(priceOf(farm, 'grain', g, 2)).toBeLessThan(priceOf(farm, 'grain', g, 0))
+    expect(priceOf(farm, 'machinery', m, 2)).toBeGreaterThan(priceOf(farm, 'machinery', m, 0))
   })
 
   it('worldgen sets isolation from the chart', () => {

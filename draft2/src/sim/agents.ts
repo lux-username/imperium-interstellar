@@ -10,7 +10,7 @@
  */
 import { expectedArrival, route } from './chart'
 import { hexDistance } from './hex'
-import { buy, demandLevel, dutyRate, GOOD_SPECS, GOODS, marketDepth, marketScale, pressureFactor, sell, supplyLevel, valueScale, type Good } from './economy'
+import { buy, demandLevel, dutyRate, GOOD_SPECS, GOODS, levelOf, marketScale, production, sell, supplyLevel, valueScale, type Good } from './economy'
 import { beliefOf, characterLocation } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { nextFloat, nextInt, roll, type Rng } from './rng'
@@ -123,14 +123,9 @@ function expectedPrice(state: GameState, belief: Belief, world: WorldId, good: G
   return { price: known.price * trust + prior * (1 - trust), age }
 }
 
-/** How far a sale of `tons` at a world knocks the price: the same curve the brokers use, as every captain knows it. */
-function afterSelling(profile: WorldProfile, good: Good, isolation: number, price: number, tons: number): number {
-  return price * pressureFactor(tons, marketDepth(profile, good, isolation))
-}
-
-/** A world's isolation as the chart has it: the lanes are public. */
-function isolationOf_(state: GameState, _belief: Belief, world: WorldId): number {
-  return state.worlds[world].isolation
+/** How far a sale of `tons` onto a dock believed to hold `stock` knocks the price: the brokers' own rule, as every captain knows it. */
+function afterSelling(profile: WorldProfile, good: Good, price: number, stock: number, tons: number): number {
+  return (price * levelOf(profile, good, stock + tons)) / levelOf(profile, good, stock)
 }
 
 /** The profile a captain believes a world has: from the chart, which never lies about a profile. */
@@ -180,13 +175,14 @@ function lotsFor(state: GameState, belief: Belief, captain: Character, here: Wor
   const toEmpire = belief.worlds[to]?.snapshot.kind === 'world' ? belief.worlds[to].snapshot.world.empire : state.worlds[to].empire
   const dutyOut = dutyRate({ profile: toProfile, empire: toEmpire }, captain.empire)
   const dutyIn = dutyRate(here, captain.empire)
-  const margins: { good: Good; cost: number; sale: number }[] = []
+  const margins: { good: Good; cost: number; sale: number; stockThere: number }[] = []
   for (const good of GOODS) {
     const exp = expectedPrice(state, belief, to, good)
     if (!exp) continue
     const cost = (buyHere ? here.market[good].price : expectedPrice(state, belief, here.id, good)?.price ?? here.market[good].price) * (1 + dutyIn)
     const sale = exp.price * (1 - dutyOut)
-    if (sale > cost) margins.push({ good, cost, sale })
+    const stockThere = belief.prices[to]?.[good]?.stock ?? 0
+    if (sale > cost) margins.push({ good, cost, sale, stockThere })
   }
   margins.sort((a, b) => b.sale - b.cost - (a.sale - a.cost) || (a.good < b.good ? -1 : 1))
   const lots: Lot[] = []
@@ -198,7 +194,7 @@ function lotsFor(state: GameState, belief: Belief, captain: Character, here: Wor
     // Size the lot where the next ten tons would no longer pay.
     let best: Lot | null = null
     for (let n = 10; n <= most; n += 10) {
-      const avg = (afterSelling(toProfile, m.good, isolationOf_(state, belief, to), m.sale, n) + m.sale) / 2
+      const avg = (afterSelling(toProfile, m.good, m.sale, m.stockThere, n) + m.sale) / 2
       const profit = Math.round((avg - m.cost) * n)
       if (!best || profit > best.profit) best = { good: m.good, tons: n, profit }
     }
@@ -360,7 +356,6 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
         if (deal) {
           // Put it back: the purse would not stretch.
           here.market[lot.good].stock += deal.tons
-          here.market[lot.good].pressure += deal.tons
         }
         continue
       }
@@ -372,7 +367,7 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
     return
   }
   // Nothing worth carrying. If the dock is merely picked over, wait a week for it to fill; else go and look, taking any freight that happens to be going that way.
-  const pickedOver = GOODS.some((g) => here.market[g].pressure < -10) && rivalsAt(state, ship, at) <= 2
+  const pickedOver = GOODS.some((g) => production(here.profile, g) > 0 && here.market[g].stock < production(here.profile, g) * 2) && rivalsAt(state, ship, at) <= 2
   if (pickedOver && roll(state.rng) >= 5) return
   const to = somewhereToLook(state, captain, ship, at)
   if (to) {

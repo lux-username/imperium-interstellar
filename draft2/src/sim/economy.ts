@@ -9,7 +9,7 @@
  * can take. Prices are ground truth here; what anyone trades on is the
  * price they last saw or heard, in their belief.
  */
-import { nextFloat, nextInt, type Rng } from './rng'
+import { nextFloat, type Rng } from './rng'
 import type { EmpireId, GameState, World, WorldId, WorldProfile } from './types'
 
 export type Good = 'grain' | 'textiles' | 'timber' | 'ore' | 'metals' | 'machinery' | 'instruments' | 'medicines' | 'luxuries' | 'spirits'
@@ -77,7 +77,7 @@ export function demandLevel(p: WorldProfile, good: Good): number {
   return Math.min(2, GOOD_SPECS[good].wanted.filter((c) => codes.includes(c)).length)
 }
 
-/** How big a market the world is: tons a week the whole place moves, as a multiplier. */
+/** How big a market the world is: a multiplier on what it makes and eats a week. */
 export function marketScale(p: WorldProfile): number {
   if (p.population === 0) return 0
   if (p.population <= 4) return 0.5
@@ -86,117 +86,102 @@ export function marketScale(p: WorldProfile): number {
   return 3
 }
 
+/**
+ * A world's market in a good: what lies on the dock, and the price it
+ * makes. The dock is a physical stock: production adds to it, consumption
+ * draws it down, trade moves it, and the price follows how far the stock
+ * sits from what the world would like to hold.
+ */
 export interface MarketEntry {
-  /** Tons on the dock a buyer can take. */
+  /** Tons on the dock. */
   stock: number
   /** Credits per ton this week. */
   price: number
   /** Slow random walk in [0.85, 1.2]. */
   mood: number
-  /** Net tons sold here lately (negative: bought). Decays. */
-  pressure: number
 }
 
 export type Market = Record<Good, MarketEntry>
-
-const WEEKS_OF_STOCK = 8
 
 /** Dear goods move in small lots: tonnage scales down with the square root of the base price. */
 export function valueScale(good: Good): number {
   return Math.sqrt(1000 / GOOD_SPECS[good].base)
 }
 
-/** Tons a week a world produces of a good. */
+/** Tons a week a world makes of a good. */
 export function production(p: WorldProfile, good: Good): number {
   const s = supplyLevel(p, good)
   return s === 0 ? 0 : Math.max(1, Math.round(10 * s * marketScale(p) * valueScale(good)))
 }
 
-/**
- * How far from the lanes a world lies: 0 on two or more lanes, 1 on a
- * spur, 2 dark. Set by worldgen once the chart is laid. Isolation makes a
- * world's wants dearer and its surplus cheaper, since nobody comes: that
- * is where the gems are.
- */
+/** Tons a week a world eats of a good: what it wants, by its size; and a little of anything, if anyone lives there. */
+export function consumption(p: WorldProfile, good: Good): number {
+  const d = demandLevel(p, good)
+  const scale = marketScale(p) * valueScale(good)
+  if (scale === 0) return 0
+  return Math.max(d > 0 ? 1 : 0, Math.round((d > 0 ? 6 * d : 0.5) * scale * 10) / 10)
+}
+
+/** The stock a world would like to hold: a month of what it makes and eats, and a little besides. */
+export function targetStock(p: WorldProfile, good: Good): number {
+  return Math.max(1, Math.round(4 * (production(p, good) + consumption(p, good)) + 5 * marketScale(p) * valueScale(good)))
+}
+
+/** How the price stands against the stock: dear when the dock is bare, cheap when it is heaped, within bounds. */
+export function levelOf(p: WorldProfile, good: Good, stock: number): number {
+  return Math.min(1.4, Math.max(0.7, Math.sqrt(targetStock(p, good) / Math.max(0.5, stock))))
+}
+
+/** The strength of a world's trade codes on its prices beyond what its stock says: a little more where nobody comes. */
+export function codeStrength(isolation: number): number {
+  return isolation === 0 ? 0.1 : isolation === 1 ? 0.15 : 0.2
+}
+
+/** How far from the lanes a world lies: 0 on two or more lanes, 1 on a spur, 2 dark. */
 export function isolationOf(laneCount: number): number {
   return laneCount >= 2 ? 0 : laneCount === 1 ? 1 : 2
 }
 
-/** The strength of a world's supply and demand on its prices: a hub's are shaved by traffic, a dark world's are not. */
-export function codeStrength(isolation: number): number {
-  return isolation === 0 ? 0.15 : isolation === 1 ? 0.3 : 0.4
-}
-
-/**
- * How many tons of trade it takes to move a world's price: the market's
- * depth. Deep at a hub on the lanes, where a hold of grain is nothing;
- * shallow at a dark world, where your own eighty tons crash the price.
- * Scaled down for dear goods, which move in small lots.
- */
-export function marketDepth(p: WorldProfile, good: Good, isolation: number): number {
-  const reach = isolation === 0 ? 2 : isolation === 1 ? 1.4 : 1
-  return 40 * Math.max(0.5, marketScale(p)) * valueScale(good) * reach
-}
-
-/**
- * How far net selling of `pressure` tons moves a price: down to 0.6 of
- * it under a flood; up to 1.25 under a run on the dock, since a world
- * that makes a good keeps making it.
- */
-export function pressureFactor(pressure: number, depth: number): number {
-  return pressure >= 0 ? 1 - 0.4 * Math.tanh(pressure / depth) : 1 + 0.25 * Math.tanh(-pressure / depth)
-}
-
-/** How much of the week's pressure is left the week after: a hub shrugs trade off, a backwater remembers it. */
-export function easing(isolation: number): number {
-  return isolation === 0 ? 0.8 : isolation === 1 ? 0.88 : 0.93
-}
-
-/** What the price of a good comes to at a world this week, before anyone trades. */
-export function priceOf(p: WorldProfile, good: Good, entry: Pick<MarketEntry, 'mood' | 'pressure'>, isolation = 0): number {
+/** What the price of a good comes to at a world, from its stock, its codes and its mood. */
+export function priceOf(p: WorldProfile, good: Good, entry: Pick<MarketEntry, 'mood' | 'stock'>, isolation = 0): number {
   const spec = GOOD_SPECS[good]
   const k = codeStrength(isolation)
   const factor = 1 + k * demandLevel(p, good) - k * supplyLevel(p, good)
-  const press = pressureFactor(entry.pressure, marketDepth(p, good, isolation))
-  return Math.max(1, Math.round(spec.base * factor * entry.mood * press))
+  return Math.max(1, Math.round(spec.base * factor * entry.mood * levelOf(p, good, entry.stock)))
 }
 
-/** Weeks of production a dock holds before the rest is lost: longer where nobody comes to buy. */
-export function stockWeeks(isolation: number): number {
-  return WEEKS_OF_STOCK + 4 * isolation
-}
-
-/** A fresh market for a world: a few weeks of stock already on the dock, a mood of its own. */
+/** A fresh market for a world: makers hold more than they want, wanters less, and everyone has a mood. */
 export function newMarket(rng: Rng, p: WorldProfile, isolation = 0): Market {
   const m = {} as Market
   for (const good of GOODS) {
     const mood = 0.85 + nextFloat(rng) * 0.35
-    const entry: MarketEntry = { stock: Math.round(production(p, good) * nextInt(rng, 2, stockWeeks(isolation))), price: 0, mood, pressure: 0 }
+    const target = targetStock(p, good)
+    const made = production(p, good) > 0
+    const wanted = demandLevel(p, good) > 0
+    const share = made ? 0.8 + nextFloat(rng) * 0.8 : wanted ? 0.1 + nextFloat(rng) * 0.6 : nextFloat(rng) * 0.5
+    const entry: MarketEntry = { stock: Math.round(target * share), price: 0, mood }
     entry.price = priceOf(p, good, entry, isolation)
     m[good] = entry
   }
   return m
 }
 
-/** Set every price afresh from the world's profile, mood and pressure: after worldgen settles isolation. */
+/** Set every price afresh from the world's stock, codes and mood: after worldgen settles isolation. */
 export function reprice(world: World): void {
   for (const good of GOODS) world.market[good].price = priceOf(world.profile, good, world.market[good], world.isolation)
 }
 
-/**
- * A week passes at a world: stock accrues where goods are made, pressure
- * eases (slowly: a route run every month stays depressed, which is what
- * makes a milk run pay less), moods wander, prices are set.
- */
+/** A week passes at a world: the dock gains what is made, loses what is eaten, spoils a little, and is repriced. Moods wander. */
 export function tickMarket(rng: Rng, world: World): void {
   const p = world.profile
   for (const good of GOODS) {
     const e = world.market[good]
-    const made = production(p, good)
-    e.stock = Math.min(made * stockWeeks(world.isolation), e.stock + made)
-    if (made === 0 && e.stock > 0) e.stock = Math.max(0, e.stock - Math.ceil(e.stock * 0.2))
-    e.pressure *= easing(world.isolation)
-    if (Math.abs(e.pressure) < 0.5) e.pressure = 0
+    e.stock = Math.max(0, e.stock + production(p, good) - consumption(p, good))
+    // What nobody makes or eats here slowly goes off, so a heap left by passing trade does not last forever.
+    if (production(p, good) === 0) e.stock = Math.max(0, e.stock - Math.ceil(e.stock * 0.03))
+    // A maker never heaps more than three months of output: the rest is not brought to the dock.
+    const cap = targetStock(p, good) * 3
+    if (e.stock > cap) e.stock = cap
     e.mood = Math.min(1.2, Math.max(0.85, e.mood + (nextFloat(rng) - 0.5) * 0.04))
     e.price = priceOf(p, good, e, world.isolation)
   }
@@ -253,8 +238,11 @@ export interface Deal {
 export interface Terms {
   /** Off the books: no duty, and the customs house may look. */
   smuggle?: boolean
-  /** The guild's own hulls pay half: it collects the duty for the governor. */
-  guild?: boolean
+}
+
+/** The price a lot of `tons` fetches or costs, a ton, as the dock's stock moves from `from` by `delta`: the price at the midpoint. */
+export function lotPrice(world: Pick<World, 'profile' | 'isolation'>, good: Good, mood: number, from: number, delta: number): number {
+  return Math.round(priceOf(world.profile, good, { mood, stock: Math.max(0, from + delta / 2) }, world.isolation))
 }
 
 /**
@@ -266,11 +254,11 @@ export function buy(world: World, good: Good, tons: number, trader: EmpireId, te
   const e = world.market[good]
   const n = Math.max(0, Math.min(tons, e.stock))
   if (n === 0) return null
-  const price = e.price
-  const rate = terms.smuggle ? 0 : dutyRate(world, trader) * (terms.guild ? 0.5 : 1)
+  // Each ton dearer than the last as the dock empties: the lot is priced at its midpoint.
+  const price = lotPrice(world, good, e.mood, e.stock, -n)
+  const rate = terms.smuggle ? 0 : dutyRate(world, trader)
   const duty = Math.round(n * price * rate)
   e.stock -= n
-  e.pressure -= n
   e.price = priceOf(world.profile, good, e, world.isolation)
   return { tons: n, credits: n * price + duty, price, duty }
 }
@@ -282,11 +270,11 @@ export function buy(world: World, good: Good, tons: number, trader: EmpireId, te
  */
 export function sell(world: World, good: Good, tons: number, trader: EmpireId, terms: Terms = {}): Deal {
   const e = world.market[good]
-  const price = e.price
-  const rate = terms.smuggle ? 0 : dutyRate(world, trader) * (terms.guild ? 0.5 : 1)
+  // Each ton cheaper than the last as the dock heaps up: the lot is priced at its midpoint. All of it goes on the dock; what the world eats, it eats in time.
+  const price = lotPrice(world, good, e.mood, e.stock, tons)
+  const rate = terms.smuggle ? 0 : dutyRate(world, trader)
   const duty = Math.round(tons * price * rate)
-  e.pressure += tons
-  if (demandLevel(world.profile, good) === 0) e.stock += Math.round(tons / 2)
+  e.stock += tons
   e.price = priceOf(world.profile, good, e, world.isolation)
   return { tons, credits: tons * price - duty, price, duty }
 }

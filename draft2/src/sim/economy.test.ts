@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buy, demandLevel, dutyRate, GOODS, inspectionChance, newMarket, priceOf, sell, supplyLevel, tickMarket, tradeCodes } from './economy'
+import { buy, consumption, demandLevel, dutyRate, GOODS, inspectionChance, newMarket, priceOf, sell, supplyLevel, targetStock, tickMarket, tradeCodes } from './economy'
 import { advanceWeek, buyGoods, newGame, playerShip, refuel, sail, sellGoods, STARTING_PURSE, takeFreight } from './game'
 import { characterLocation } from './mail'
 import { createRng } from './rng'
@@ -20,9 +20,10 @@ describe('trade codes and prices', () => {
   it('a world sells what it makes cheap and pays for what it wants', () => {
     expect(supplyLevel(farm, 'grain')).toBeGreaterThan(0)
     expect(demandLevel(hive, 'grain')).toBeGreaterThan(0)
-    const flat = { mood: 1, pressure: 0 }
-    expect(priceOf(farm, 'grain', flat)).toBeLessThan(priceOf(hive, 'grain', flat))
-    expect(priceOf(hive, 'machinery', flat)).toBeLessThan(priceOf(farm, 'machinery', flat))
+    // At the stock each would like to hold, the codes alone decide; on a real dock the maker's heap and the wanter's bare dock widen it.
+    const at = (p: WorldProfile, g: 'grain' | 'machinery') => priceOf(p, g, { mood: 1, stock: targetStock(p, g) })
+    expect(at(farm, 'grain')).toBeLessThan(at(hive, 'grain'))
+    expect(at(hive, 'machinery')).toBeLessThan(at(farm, 'machinery'))
     expect(supplyLevel(farm, 'instruments')).toBe(0)
   })
 
@@ -37,31 +38,36 @@ describe('trade codes and prices', () => {
     expect(dutyRate(world, 'e-b' as never)).toBe(0.2)
     const d = buy(world, 'grain', 20, 'e-a' as never)!
     expect(d.tons).toBe(20)
-    expect(d.duty).toBe(Math.round(20 * before * home))
-    expect(d.credits).toBe(20 * before + d.duty)
+    // Each ton dearer than the last: the lot costs a little over the price on the board.
+    expect(d.price).toBeGreaterThanOrEqual(before)
+    expect(d.duty).toBe(Math.round(20 * d.price * home))
+    expect(d.credits).toBe(20 * d.price + d.duty)
     expect(world.market.grain.stock).toBe(stock - 20)
     expect(world.market.grain.price).toBeGreaterThan(before)
     const mid = world.market.grain.price
     const s = sell(world, 'grain', 40, 'e-b' as never)
-    expect(s.duty).toBe(Math.round(40 * mid * 0.2))
-    expect(s.credits).toBe(40 * mid - s.duty)
+    expect(s.price).toBeLessThanOrEqual(mid)
+    expect(s.duty).toBe(Math.round(40 * s.price * 0.2))
+    expect(s.credits).toBe(40 * s.price - s.duty)
     expect(world.market.grain.price).toBeLessThan(mid)
     expect(sell(world, 'grain', 10, 'e-b' as never, { smuggle: true }).duty).toBe(0)
     tickMarket(rng, world)
     expect(world.market.grain.stock).toBeGreaterThan(stock - 20)
   })
 
-  it('goods a world does not want go on the dock for resale; goods it wants are consumed', () => {
+  it('what is sold goes on the dock; what the world wants it eats week by week, and what it does not want slowly goes off', () => {
     const rng = createRng(2)
     const world = { id: 'w' as WorldId, name: 'w', hex: { col: 1, row: 1 }, cultures: [], profile: farm, empire: 'e-a' as never, board: {}, market: newMarket(rng, farm), freight: [], news: [], gossip: {}, isolation: 0 }
     expect(demandLevel(farm, 'metals')).toBeGreaterThan(0)
+    expect(consumption(farm, 'metals')).toBeGreaterThan(consumption(farm, 'luxuries'))
     const metals = world.market.metals.stock
     sell(world, 'metals', 40, 'e-a' as never)
-    expect(world.market.metals.stock).toBe(metals)
-    expect(demandLevel(farm, 'luxuries')).toBe(0)
-    const luxuries = world.market.luxuries.stock
-    sell(world, 'luxuries', 40, 'e-a' as never)
-    expect(world.market.luxuries.stock).toBe(luxuries + 20)
+    expect(world.market.metals.stock).toBe(metals + 40)
+    const before = world.market.metals.stock
+    tickMarket(rng, world)
+    expect(world.market.metals.stock).toBeLessThan(before)
+    // Eaten, and a little gone off besides.
+    expect(world.market.metals.stock).toBeGreaterThanOrEqual(before - consumption(farm, 'metals') - Math.ceil(before * 0.03) - 1)
   })
 
   it('the customs house looks harder at strict, big, foreign and wartime trade', () => {
@@ -79,9 +85,11 @@ describe('the trader at the brokers', () => {
     const ship = playerShip(state)!
     const here = characterLocation(state, state.player)!
     const good = GOODS.find((g) => state.worlds[here].market[g].stock >= 10)!
-    const price = state.worlds[here].market[good].price
-    expect(buyGoods(state, good, 10)).toMatchObject({ kind: 'ok', tons: 10 })
-    expect(state.characters[state.player].purse).toBe(STARTING_PURSE - 10 * price - Math.round(10 * price * dutyRate(state.worlds[here], state.characters[state.player].empire)))
+    const bought = buyGoods(state, good, 10)
+    expect(bought).toMatchObject({ kind: 'ok', tons: 10 })
+    if (bought.kind !== 'ok') throw new Error('refused')
+    expect(bought.duty).toBeGreaterThan(0)
+    expect(state.characters[state.player].purse).toBe(STARTING_PURSE - bought.credits)
     expect(state.empires[state.worlds[here].empire].treasury).toBeGreaterThan(0)
     expect(ship.hold[0]).toMatchObject({ kind: 'cargo', good, tons: 10 })
     const to = Object.keys(state.worlds).find((w) => w !== here && sail(state, w as WorldId)) as WorldId
