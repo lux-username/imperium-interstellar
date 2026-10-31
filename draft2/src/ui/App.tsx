@@ -153,6 +153,7 @@ export function App() {
             </section>
           )}
           {selected && <Dossier view={view} world={selected} />}
+          <Book view={view} />
         </aside>
       </main>
     </>
@@ -549,6 +550,66 @@ function Bar({ view, state, act }: PaneProps) {
         {captains.length === 0 && <li className="muted">{here.hulls.length > 0 ? "Only scouts' crews, who go unnamed and say nothing." : 'Nobody in from anywhere.'}</li>}
       </ul>
     </div>
+  )
+}
+
+/** The Book: everyone you have dealt with or watched. */
+function Book({ view }: { view: PlayerView }) {
+  const [open, setOpen] = useState<string | null>(null)
+  const [all, setAll] = useState(false)
+  const pages = all ? view.book : view.book.slice(0, 8)
+  return (
+    <section className="book">
+      <h2>
+        The Book <span className="muted">· {view.book.length} people</span>{' '}
+        {view.book.length > 8 && (
+          <button className="tiny" onClick={() => setAll(!all)}>
+            {all ? 'fewer' : 'all'}
+          </button>
+        )}
+      </h2>
+      {view.book.length === 0 && <p className="muted">Nobody yet. Ask at the bar; watch the docks.</p>}
+      <ul>
+        {pages.map((p) => (
+          <li key={p.id} className={empireClass(view, p.empire)}>
+            <span className="dot" />{' '}
+            <button className="link" onClick={() => setOpen(open === p.id ? null : p.id)}>
+              <b>{p.name}</b>
+            </button>{' '}
+            <span className="muted">
+              {p.hull ? `of the ${p.hull}, ` : ''}
+              {empireName(view, p.empire)}
+              {p.guild ? ', guild' : ''}
+              {p.outlaw ? ', outlaw' : ''} · {p.standing}
+              {p.impression.length ? ` · ${p.impression.join(', ')}` : ''}
+            </span>
+            {open === p.id && (
+              <div className="page">
+                {p.lastSeen && (
+                  <p className="muted">
+                    Last seen at {view.chart[p.lastSeen.world].name}, {ago(view.week, p.lastSeen.week)}. Their word has proved {p.trust >= 0.7 ? 'good' : p.trust <= 0.3 ? 'bad' : 'neither here nor there'}.
+                  </p>
+                )}
+                {p.notes.length > 0 && (
+                  <ul className="notes">
+                    {p.notes.map((n, i) => (
+                      <li key={i}>{n}</li>
+                    ))}
+                  </ul>
+                )}
+                {p.seenTrading.length > 0 && (
+                  <ul className="notes">
+                    {p.seenTrading.map((n, i) => (
+                      <li key={i}>{n}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

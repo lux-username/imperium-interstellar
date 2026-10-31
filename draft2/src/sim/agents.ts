@@ -11,8 +11,10 @@
 import { expectedArrival, route } from './chart'
 import { recordTrade } from './register'
 import { hexDistance } from './hex'
-import { buy, demandLevel, dutyRate, GOOD_SPECS, GOODS, levelOf, marketScale, production, sell, supplyLevel, valueScale, type Good } from './economy'
+import { buy, demandLevel, dutyRate, FINE_TIMES_DUTY, GOOD_SPECS, GOODS, inspectionChance, levelOf, marketScale, production, sell, supplyLevel, valueScale, type Good } from './economy'
+import { postNewsItem } from './news'
 import { learnTraffic } from './belief'
+import { deal, regardOf, rollTraits, traitsOf } from './people'
 import { beliefOf, characterLocation } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { nextFloat, nextInt, roll, type Rng } from './rng'
@@ -63,7 +65,7 @@ export function spawnTraders(state: GameState, taken: Set<string>): void {
       const core = state.empires[empire].core
       const culture = officerCulture(rng, core)
       const sex = rollSex(rng)
-      const captain: Character = { id: cid, name: personName(rng, culture, sex), culture, sex, empire, body: { kind: 'aboard', ship: sid }, purse: TRADER_PURSE + nextInt(rng, -5000, 10000), debt: null }
+      const captain: Character = { id: cid, name: personName(rng, culture, sex), culture, sex, empire, body: { kind: 'aboard', ship: sid }, purse: TRADER_PURSE + nextInt(rng, -5000, 10000), debt: null, traits: rollTraits(rng) }
       // About half carry the guild's ticket.
       if (roll(rng) >= 7) captain.guild = empire
       state.characters[cid] = captain
@@ -242,7 +244,7 @@ export function bestPlan(state: GameState, captain: Character, ship: Ship, at: W
     if (ship.fuel - 1 < 1 && !fuelAt(state, belief, to)) continue
     const freight = here.freight.filter((f) => f.to === to)
     // Freight first where it pays better a ton than the best cargo margin would.
-    const spend = Math.max(0, captain.purse - reserve(ship))
+    const spend = Math.max(0, captain.purse - reserve(ship) * (0.5 + traitsOf(captain).caution))
     const lots = lotsFor(state, belief, captain, here, to, room, spend, true)
     const cargoPerTon = lots.length > 0 ? lots[0].profit / lots[0].tons : 0
     let left = room
@@ -256,10 +258,18 @@ export function bestPlan(state: GameState, captain: Character, ship: Ship, at: W
     }
     const cargo = taken.length > 0 ? lotsFor(state, belief, captain, here, to, left, spend, true) : lots
     let profit = freightProfit + cargo.reduce((s, l) => s + l.profit, 0)
-    if (dangerous(state, belief, to)) profit = Math.round(profit * 0.6)
+    // Danger weighs on the careful far more than on the bold.
+    if (dangerous(state, belief, to)) profit = Math.round(profit * (0.9 - 0.6 * traitsOf(captain).caution))
     // Every rival in port is after the same lots and the same markets; and every hull seen sailing for the same port
-    // with the same goods these last two weeks got there first.
-    const crowd = (belief.traffic[at] ?? []).filter((k) => k.movement.ship !== ship.id && k.movement.to === to && state.week - k.movement.week <= 2 && k.movement.bought.some((b) => cargo.some((l) => l.good === b.good))).length
+    // with the same goods these last two weeks got there first. A proud captain contests a rival's leg rather than yield it;
+    // anyone else gives a rival a wider berth than a stranger.
+    const t = traitsOf(captain)
+    let crowd = 0
+    for (const k of belief.traffic[at] ?? []) {
+      if (k.movement.ship === ship.id || k.movement.to !== to || state.week - k.movement.week > 2 || !k.movement.bought.some((b) => cargo.some((l) => l.good === b.good))) continue
+      const rival = k.movement.captain !== null && regardOf(state, captain.id, k.movement.captain) <= -1
+      crowd += rival ? (t.pride >= 0.6 ? 0.3 : 1.5) : 1
+    }
     // A guild line on this pair means a bulk hauler is already carrying whatever pays: the route is theirs. A captain who knows of it halves their hopes.
     const lined = belief.lines[lineKey(at, to)] !== undefined && state.week - belief.lines[lineKey(at, to)].observed <= 26
     profit = Math.round(profit / ((1 + 0.15 * rivalsAt(state, ship, at) + 0.3 * crowd) * (lined ? 2 : 1)))
@@ -267,7 +277,8 @@ export function bestPlan(state: GameState, captain: Character, ship: Ship, at: W
     const score = profit + Math.round(onward / 2)
     if (!best || score > best.score) best = { to, lots: cargo, freight: taken, profit, score }
   }
-  return best && best.profit >= WORTH_IT ? best : null
+  // A grasping captain sails for a sliver; a content one wants a margin worth the week.
+  return best && best.profit >= WORTH_IT * (1.5 - traitsOf(captain).greed) ? best : null
 }
 
 /** Whether some reachable world is believed to pay better for a lot than this port does now. */
@@ -315,6 +326,20 @@ function somewhereToLook(state: GameState, captain: Character, ship: Ship, at: W
   return top[nextInt(state.rng, 0, top.length - 1)]
 }
 
+/**
+ * A captain carrying a good into a port where someone else sold the same
+ * good this week or last, and now finds the price under what they paid,
+ * knows who got there first. It is not forgotten.
+ */
+export function noticeUndercut(state: GameState, me: Character, ship: Ship, here: World, good: Good, paid: number): void {
+  const net = here.market[good].price * (1 - dutyRate(here, me.empire))
+  if (net >= paid) return
+  for (const m of here.register) {
+    if (m.ship === ship.id || !m.captain || state.week - m.week > 1 || !m.sold.some((x) => x.good === good)) continue
+    deal(state, me.id, m.captain, -0.4, `${m.captainName} undercut me on ${good} at ${here.name}`)
+  }
+}
+
 /** One captain's week in port. */
 function captainActs(state: GameState, captain: Character, ship: Ship, at: WorldId): void {
   const here = state.worlds[at]
@@ -323,6 +348,7 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
   // Sell what pays here, in tranches, while the price still beats what was paid; hold the rest for a port believed to pay more, unless it has been aboard too long.
   for (const lot of [...ship.hold]) {
     if (lot.kind !== 'cargo') continue
+    noticeUndercut(state, captain, ship, here, lot.good, lot.paid)
     const stale = state.week - lot.week >= PATIENCE
     const net = here.market[lot.good].price * (1 - duty)
     if (stale && !betterElsewhere(state, belief, captain, ship, at, lot.good, net)) {
@@ -350,7 +376,7 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
   }
   if (ship.fuel < 1) return
   // Maintenance when due, if this is a dockyard and the purse allows; a captain lets it slide a while if short.
-  if (state.week - ship.maintained >= 24 && ['A', 'B'].includes(here.profile.starport) && captain.purse >= maintenanceCost(ship) + 5000 && (overdue(ship, state.week) > 0 || roll(state.rng) >= 7)) {
+  if (state.week - ship.maintained >= 26 - 4 * traitsOf(captain).caution && ['A', 'B'].includes(here.profile.starport) && captain.purse >= maintenanceCost(ship) + 5000 && (overdue(ship, state.week) > 0 || roll(state.rng) >= 7)) {
     if (layUp(state, ship, here)) return
   }
   // Buy for the best believed plan, or go and look.
@@ -367,7 +393,10 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
     for (const lot of plan.lots) {
       const n = Math.min(lot.tons, holdFree(ship))
       if (n <= 0) break
-      const deal = buy(here, lot.good, n, captain.empire)
+      const t2 = traitsOf(captain)
+      const dodge = dutyRate(here, captain.empire) >= 0.15 && t2.greed >= 0.7 && t2.caution <= 0.4
+      const deal = buy(here, lot.good, n, captain.empire, { smuggle: dodge })
+      if (deal && dodge && customsCatch(state, here, captain, ship, lot.good, deal.tons, deal.tons * deal.price)) continue
       if (!deal || deal.credits > captain.purse) {
         if (deal) {
           // Put it back: the purse would not stretch.
@@ -396,6 +425,31 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
   }
 }
 
+/**
+ * The customs house looks into a trade off the books, as it does for the
+ * player: caught, the goods are seized and a fine of three times the duty
+ * dodged is due; a purse that cannot pay means arrest, and the hull waits.
+ * Returns whether they were caught.
+ */
+export function customsCatch(state: GameState, here: World, captain: Character, ship: Ship, good: Good, tons: number, value: number): boolean {
+  const atWar = here.empire !== captain.empire && here.board[stanceKey(here.empire, captain.empire)]?.stance === 'war'
+  if (nextInt(state.rng, 1, 100) > inspectionChance(here, captain.empire, atWar) * 100) return false
+  const fine = Math.round(value * dutyRate(here, captain.empire) * FINE_TIMES_DUTY)
+  here.market[good].stock += tons
+  state.empires[here.empire].treasury += Math.min(fine, Math.max(0, captain.purse))
+  if (captain.purse >= fine) {
+    captain.purse -= fine
+    postNewsItem(state, here.id, `The customs house seized ${tons} t of ${good} off the ${ship.name} and fined her master, ${captain.name}.`)
+    return true
+  }
+  captain.purse = Math.max(0, captain.purse - fine)
+  captain.captive = { by: null, of: here.empire, since: state.week, at: here.id, term: state.week + nextInt(state.rng, 8, 16) }
+  captain.body = { kind: 'world', world: here.id }
+  ship.course = null
+  postNewsItem(state, here.id, `${captain.name} of the ${ship.name} was arrested for smuggling ${good}.`)
+  return true
+}
+
 /** Every captain in port acts. */
 export function captainsAct(state: GameState): void {
   for (const { captain, ship, at } of tradingCaptains(state)) captainActs(state, captain, ship, at)
@@ -408,7 +462,7 @@ export function captainsAct(state: GameState): void {
 export const BRIBE = 500
 
 /** Prices one book holds that are newer than another's, copied across; `heard` marks hearsay. Returns how many entries were news. */
-export function tellPrices(from: PriceBook, to: PriceBook, heard = true): number {
+export function tellPrices(from: PriceBook, to: PriceBook, heard = true, teller?: CharacterId): number {
   let news = 0
   for (const w of Object.keys(from) as WorldId[]) {
     const mine = (to[w] ??= {})
@@ -417,7 +471,7 @@ export function tellPrices(from: PriceBook, to: PriceBook, heard = true): number
       if (!theirs) continue
       const known = mine[g]
       if (!known || theirs.observed > known.observed) {
-        mine[g] = { ...theirs, heard: heard || theirs.heard }
+        mine[g] = { ...theirs, heard: heard || theirs.heard, from: teller ?? theirs.from }
         news += 1
       }
     }
@@ -433,13 +487,18 @@ export function tellPrices(from: PriceBook, to: PriceBook, heard = true): number
  * rival guild less. Between 0.3 and 0.7 a captain is on the fence, and a
  * round of drinks moves them.
  */
-export function willingness(teller: Character, asker: Character): number {
+export function willingness(teller: Character, asker: Character, state?: GameState): number {
   if (teller.id === asker.id) return 1
-  if (teller.outlaw || asker.outlaw) return 0.1
-  if (teller.guild && asker.guild) return teller.guild === asker.guild ? 0.8 : 0.1
-  if (teller.guild || asker.guild) return 0.25
-  if (teller.empire === asker.empire) return 0.65
-  return 0.5
+  let w: number
+  if (teller.outlaw || asker.outlaw) w = 0.1
+  else if (teller.guild && asker.guild) w = teller.guild === asker.guild ? 0.8 : 0.1
+  else if (teller.guild || asker.guild) w = 0.25
+  else if (teller.empire === asker.empire) w = 0.65
+  else w = 0.5
+  // An open-handed captain tells more, a close-mouthed one less; and a friend is told what a stranger is not.
+  w += (traitsOf(teller).openness - 0.5) * 0.3
+  if (state) w += 0.15 * regardOf(state, teller.id, asker.id)
+  return Math.max(0.02, Math.min(0.98, w))
 }
 
 export function onTheFence(w: number): boolean {
@@ -522,15 +581,19 @@ export function dockTalk(state: GameState): void {
         // Everyone asks: more known is better than less. Only a captain whose knowledge is thin pays for it.
         const ship = state.ships[(b.body as { ship: ShipId }).ship]
         if (!ship) continue
-        const w = willingness(a, b)
+        const w = willingness(a, b, state)
         const r = nextFloat(state.rng)
         let told = r < w
         if (!told && onTheFence(w) && r < w + 0.3 && wantsInfo(state, b, ship, port) && b.purse >= BRIBE + reserve(ship) + 2000) {
           b.purse -= BRIBE
           a.purse += BRIBE
+          deal(state, a.id, b.id, 0.3, `${b.name} stood me a round at ${here.name}`)
           told = true
         }
-        if (told) tellAll(state, a.id, b.id)
+        if (told) {
+          tellAll(state, a.id, b.id)
+          deal(state, b.id, a.id, 0.2, `${a.name} told me what they knew at ${here.name}`)
+        } else deal(state, b.id, a.id, -0.1, `${a.name} would not talk at ${here.name}`)
       }
     }
     // The guild's offices: at the seat the book itself; at any other dockyard port of the empire a factor who takes
@@ -618,7 +681,7 @@ export function listenAtBar(state: GameState): number {
 export function tellAll(state: GameState, from: CharacterId, to: CharacterId): number {
   const a = beliefOf(state, from)
   const b = beliefOf(state, to)
-  let n = tellPrices(a.prices, b.prices)
+  let n = tellPrices(a.prices, b.prices, true, from)
   for (const w of Object.keys(a.traffic) as WorldId[]) n += learnTraffic(b, w, a.traffic[w].filter((k) => state.week - k.movement.week <= 12).map((k) => k.movement), 'heard', state.week)
   return n
 }
@@ -629,7 +692,7 @@ export type Answer = 'told' | 'refused' | 'already' | 'absent' | 'no_use'
 export function roundWouldHelp(state: GameState, who: CharacterId): boolean {
   const a = state.asked[who]
   if (!a || a.week !== state.week || a.told) return false
-  const w = willingness(state.characters[who], state.characters[state.player])
+  const w = willingness(state.characters[who], state.characters[state.player], state)
   return onTheFence(w) && a.roll < w + 0.3
 }
 
@@ -644,6 +707,7 @@ export function askCaptain(state: GameState, who: CharacterId, bribe = false): A
   const them = state.characters[who]
   const at = characterLocation(state, state.player)
   if (!them || at === null || characterLocation(state, who) !== at) return 'absent'
+  const where = state.worlds[at].name
   const prior = state.asked[who]
   if (bribe) {
     if (!prior || prior.week !== state.week) return 'already'
@@ -652,16 +716,23 @@ export function askCaptain(state: GameState, who: CharacterId, bribe = false): A
     me.purse -= BRIBE
     them.purse += BRIBE
     prior.told = true
+    deal(state, who, state.player, 0.3, `${me.name} stood me a round at ${where}`)
+    deal(state, state.player, who, 0.1, `came round for a drink at ${where}`)
     tellAll(state, who, state.player)
     return 'told'
   }
   if (prior && prior.week === state.week) return 'already'
-  const w = willingness(them, me)
+  const w = willingness(them, me, state)
   const roll = nextFloat(state.rng)
   const told = roll < w
   state.asked[who] = { week: state.week, roll, told }
-  if (!told) return 'refused'
-  tellPrices(beliefOf(state, who).prices, beliefOf(state, state.player).prices)
+  if (!told) {
+    deal(state, state.player, who, -0.1, `would not talk at ${where}`)
+    return 'refused'
+  }
+  deal(state, state.player, who, 0.2, `told me what they knew at ${where}`)
+  deal(state, who, state.player, 0.1, `${me.name} asked civilly at ${where}`)
+  tellAll(state, who, state.player)
   return 'told'
 }
 

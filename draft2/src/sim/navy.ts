@@ -10,6 +10,7 @@ import { GOODS, sell } from './economy'
 import { hexDistance } from './hex'
 import { beliefOf } from './mail'
 import { officerCulture, personName, rollSex } from './names'
+import { rollTraits } from './people'
 import { nextInt, roll } from './rng'
 import { MAINTENANCE_EVERY, maintenanceCost, newShip, reachable, setCourse, unload } from './ships'
 import { SHIP_CLASSES, type Character, type CharacterId, type Duty, type EmpireId, type GameState, type Ship, type ShipId, type WorldId } from './types'
@@ -24,7 +25,7 @@ function newCaptain(state: GameState, id: CharacterId, empire: EmpireId, ship: S
   const core = state.empires[empire].core
   const culture = outlaw ? officerCulture(state.rng) : officerCulture(state.rng, core)
   const sex = rollSex(state.rng)
-  const c: Character = { id, name: personName(state.rng, culture, sex), culture, sex, empire, body: { kind: 'aboard', ship }, purse, debt: null }
+  const c: Character = { id, name: personName(state.rng, culture, sex), culture, sex, empire, body: { kind: 'aboard', ship }, purse, debt: null, traits: rollTraits(state.rng) }
   if (outlaw) c.outlaw = true
   return c
 }

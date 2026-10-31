@@ -9,13 +9,14 @@ import { route } from './chart'
 import { dutyRate, GOODS, inspectionChance } from './economy'
 import { onTheFence, roundWouldHelp, willingness } from './agents'
 import { ransomFor } from './captivity'
+import { remarkable, standingWord, traitsOf } from './people'
 import { quarrel } from './combat'
 import { playerShip, portClosed } from './game'
 import { beliefOf, characterLocation, readerOf, shipsAt } from './mail'
 import { sailsOn, otherEnd } from './scouts'
 import { fuelPrice, holdUsed, holding, MAINTENANCE_EVERY, maintenanceCost, reachable } from './ships'
-import { SHIP_CLASSES, type GameState } from './types'
-import type { ChartEntry, Dispatch, EmpireEntry, HullHere, OwnShip, PlayerView, Report } from './view'
+import { SHIP_CLASSES, type CharacterId, type GameState, type WorldId } from './types'
+import type { BookEntry, ChartEntry, Dispatch, EmpireEntry, HullHere, OwnShip, PlayerView, Report } from './view'
 
 export function buildPlayerView(state: GameState): PlayerView {
   const chart: Record<string, ChartEntry> = {}
@@ -42,6 +43,7 @@ export function buildPlayerView(state: GameState): PlayerView {
   outgoing.sort((a, b) => b.envelope.sent - a.envelope.sent || (a.id < b.id ? 1 : -1))
 
   const me = state.characters[state.player]
+  const known = beliefOf(state, state.player)
   const at = characterLocation(state, state.player)
   let body: PlayerView['body']
   if (me.body.kind === 'world') body = { kind: 'world', world: me.body.world }
@@ -93,6 +95,55 @@ export function buildPlayerView(state: GameState): PlayerView {
   const captive = cap ? { of: cap.of, since: cap.since, at: cap.at, aboard: cap.at || !cap.by ? null : (state.ships[cap.by]?.name ?? null), ransom: ransomFor(me), term: cap.term ?? null } : null
   const lenderHere = !own && !cap && world !== null && world.empire === me.empire && ['A', 'B'].includes(world.profile.starport)
 
+  // The Book: a page for everyone the player has dealt with, been told of, or watched trade.
+  const pages = new Map<string, BookEntry>()
+  const pageFor = (id: CharacterId): BookEntry | null => {
+    const c = state.characters[id]
+    if (!c || id === state.player) return null
+    let p = pages.get(id)
+    if (p) return p
+    const r = state.relations[`${state.player}|${id}`]
+    const seen = known.people[id]
+    const dealings = r?.dealings ?? 0
+    const words = remarkable(traitsOf(c))
+    const impression = dealings >= 9 ? words : dealings >= 5 ? words.slice(0, 2) : dealings >= 2 ? words.slice(0, 1) : []
+    p = {
+      id,
+      name: c.name,
+      empire: c.empire,
+      guild: !!c.guild,
+      outlaw: !!c.outlaw,
+      hull: seen?.person.aboard ? (state.ships[seen.person.aboard]?.name ?? null) : null,
+      lastSeen: seen ? { world: seen.person.at, week: seen.observed } : null,
+      standing: standingWord(r?.regard ?? 0),
+      regard: r?.regard ?? 0,
+      trust: r?.trust ?? 0.5,
+      dealings,
+      notes: r ? [...r.notes].reverse() : [],
+      impression,
+      seenTrading: [],
+    }
+    pages.set(id, p)
+    return p
+  }
+  for (const key of Object.keys(state.relations)) {
+    const [a, b] = key.split('|') as [CharacterId, CharacterId]
+    if (a === state.player) pageFor(b)
+  }
+  for (const id of Object.keys(known.people) as CharacterId[]) pageFor(id)
+  for (const w of Object.keys(known.traffic) as WorldId[]) {
+    for (const k of known.traffic[w]) {
+      const m = k.movement
+      if (!m.captain) continue
+      const p = pageFor(m.captain)
+      if (!p || p.seenTrading.length >= 5) continue
+      const what = [...m.sold.map((x) => `sold ${x.tons}t ${x.good}`), ...m.bought.map((x) => `bought ${x.tons}t ${x.good}`)]
+      if (what.length) p.seenTrading.push(`wk ${m.week} at ${state.worlds[w].name}: ${what.join(', ')} [${k.source}]`)
+      if (!p.hull) p.hull = m.shipName
+    }
+  }
+  const book = [...pages.values()].sort((a, b) => b.dealings - a.dealings || (b.lastSeen?.week ?? -1) - (a.lastSeen?.week ?? -1) || (a.name < b.name ? -1 : 1))
+
   return {
     week: state.week,
     player: { id: me.id, name: me.name, empire: me.empire },
@@ -100,7 +151,7 @@ export function buildPlayerView(state: GameState): PlayerView {
     lanes: Object.values(state.lanes).sort((a, b) => (a.id < b.id ? -1 : 1)),
     chart,
     empires,
-    known: beliefOf(state, state.player),
+    known,
     here,
     purse: me.purse,
     debt: me.debt ? { ...me.debt } : null,
@@ -109,6 +160,7 @@ export function buildPlayerView(state: GameState): PlayerView {
     lyingOff: own?.lyingOff ?? false,
     captive,
     lenderHere,
+    book,
     inbox,
     observations,
     outgoing,

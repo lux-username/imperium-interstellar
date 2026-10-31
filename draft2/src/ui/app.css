@@ -101,3 +101,8 @@ button.tiny { padding: 0 4px; font-size: 10px; }
 .map .guildlines .age { font-size: 7px; text-anchor: middle; fill: var(--muted); }
 table.market tr.heard td { color: #b9bcc6; font-style: italic; }
 .traffic li { font-size: 12px; }
+button.link { background: none; border: none; padding: 0; color: var(--fg); font: inherit; cursor: pointer; }
+button.link:hover { text-decoration: underline; }
+.book .page { margin: 4px 0 8px 14px; font-size: 12px; }
+.book ul.notes { margin: 2px 0; padding-left: 12px; list-style: disc; }
+.book ul.notes li { color: var(--muted); font-size: 11px; }

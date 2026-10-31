@@ -113,7 +113,7 @@ export interface Movement {
 }
 
 /** Prices by world and good, with when each was seen. The shape of a guild's book, a port's gossip, and the price slice of a belief. */
-export type PriceBook = Record<WorldId, Partial<Record<string, { price: number; stock: number; observed: Week; heard?: boolean }>>>
+export type PriceBook = Record<WorldId, Partial<Record<string, { price: number; stock: number; observed: Week; heard?: boolean; from?: CharacterId }>>>
 
 /** A bulk line the guild runs between two worlds. What is carried each way is whatever pays, sized to the markets, decided at the dock. */
 export interface Line {
@@ -353,6 +353,8 @@ export interface Character {
   debt: Debt | null
   /** A member of their empire's merchant guild, if so. Members share freely among themselves and keep the guild's book. */
   guild?: EmpireId
+  /** What kind of person they are. Rolled at birth; absent only on seats that are not rolled people. */
+  traits?: Traits
   /** An outlaw has burned their standing with every empire: fair game for any navy, and welcome only at a haven. */
   outlaw?: boolean
   /** Held by a captor: where, and since when. Null when free. */
@@ -369,6 +371,33 @@ export interface Captivity {
   at: WorldId | null
   /** The week they go free if nothing else frees them first. Set when landed. */
   term?: Week
+}
+
+/**
+ * Five dials from 0 to 1, each scaling a threshold the sim already uses.
+ * Greed: how thin a margin they will carry, and whether they dodge duty.
+ * Caution: how soon they strike, lay up, and shy from danger. Openness:
+ * how readily they tell what they know. Pride: how long they hold a
+ * slight, and whether they contest a crowded leg or yield it. Loyalty:
+ * how much their own guild and empire count for.
+ */
+export interface Traits {
+  greed: number
+  caution: number
+  openness: number
+  pride: number
+  loyalty: number
+}
+
+/** How one person stands to another: regard from −3 to 3, trust in their word from 0 to 1, and the lines of their dealings. */
+export interface Relation {
+  regard: number
+  trust: number
+  dealings: number
+  since: Week
+  last: Week
+  /** The last few things that passed between them, as the Book will show them. */
+  notes: string[]
 }
 
 /** A mortgage: a payment falls due every `every` weeks; missed payments pile up as arrears. */
@@ -425,6 +454,8 @@ export interface GameState {
   /** An encounter waiting on the player's choice. The week cannot advance while it stands. */
   pending: Encounter | null
   guilds: Record<EmpireId, Guild>
+  /** How people stand to one another, keyed `a|b` for a's regard of b. Made on first dealing. */
+  relations: Record<string, Relation>
   /** Captains the player has asked this week: the week, and the roll their answer turned on, so a round is offered only where it would have tipped it. */
   asked: Record<CharacterId, { week: Week; roll: number; told: boolean }>
 }

@@ -8,7 +8,7 @@
  * lanes with mail and news, every body at a port seeing the port, and a
  * player who can take passage. Nothing trades or fights yet.
  */
-import { askCaptain, captainsAct, dockTalk, guildPost, listenAtBar, seedTraderKnowledge, spawnTraders } from './agents'
+import { askCaptain, captainsAct, dockTalk, guildPost, listenAtBar, noticeUndercut, seedTraderKnowledge, spawnTraders } from './agents'
 import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, type Hail } from './combat'
 import { huntersAct, spawnHunters } from './navy'
 import { GUILD_PURSE, guildsPlan, haulersAct, spawnHaulers } from './guild'
@@ -23,8 +23,9 @@ import { generateSubsector } from './generate'
 import { beliefOf, characterLocation, copyDeclaration, deliverHeld, observe, postLetter, postNews, pruneMail, snapshotWorld } from './mail'
 import { learnTraffic } from './belief'
 import { officerCulture, personName, rollSex } from './names'
+import { plainTraits, proved } from './people'
 import { createRng, nextInt, roll } from './rng'
-import { departOnAccount, fuelPrice, holdFree, MAINTENANCE_WEEKS, maintenanceCost, newShip, reachable, setCourse, unload } from './ships'
+import { departOnAccount, fuelPrice, holdFree, holding, MAINTENANCE_WEEKS, maintenanceCost, newShip, reachable, setCourse, unload } from './ships'
 import { departScouts, landShips, packetScouts } from './scouts'
 import { SHIP_CLASSES, stanceKey, stancePair, type CharacterId, type Declaration, type EmpireId, type FreightOffer, type GameState, type Mail, type ReportId, type Ship, type ShipId, type Week, type World, type WorldId } from './types'
 import type { Report } from './view'
@@ -89,7 +90,19 @@ export function observeAll(state: GameState): void {
       envelope: { origin: id, destination: id, sent: state.week, route: [id], eta: state.week },
       delivered: state.week,
     }
-    for (const reader of readers) observe(state, reader, report)
+    for (const reader of readers) {
+      // What someone told the reader of this port is now tested against the dock: their word proves good or bad.
+      const known = state.beliefs[reader]?.prices[id]
+      if (known) {
+        for (const g of Object.keys(known) as (keyof typeof known)[]) {
+          const e = known[g]
+          if (!e?.from || !e.heard || state.week - e.observed > 12) continue
+          const actual = world.market[g as keyof typeof world.market].price
+          proved(state, reader, e.from, Math.abs(actual - e.price) <= 0.2 * actual)
+        }
+      }
+      observe(state, reader, report)
+    }
   }
 }
 
@@ -179,6 +192,7 @@ export function newGame(seed: number): GameState {
         body: { kind: 'world', world: home },
         purse: STARTING_PURSE,
         debt: { balance: SHIP_PRICE - 10000, payment: MORTGAGE.payment, every: MORTGAGE.every, nextDue: MORTGAGE.every, arrears: 0 },
+        traits: plainTraits(),
       },
     },
     mail: {},
@@ -186,6 +200,7 @@ export function newGame(seed: number): GameState {
     player: PLAYER,
     pending: null,
     guilds: {},
+    relations: {},
     asked: {},
   }
   for (const e of Object.values(empires)) state.guilds[e.id] = { empire: e.id, seat: e.seat, book: {}, danger: {}, purse: GUILD_PURSE, lines: [], planned: 0, post: [] }
@@ -516,6 +531,8 @@ export function sellGoods(state: GameState, good: Good, tons: number, smuggle = 
   if (!h) return { kind: 'refused' }
   const me = state.characters[state.player]
   if (portClosed(state, h.at) && !smuggle) return { kind: 'refused' }
+  const paidFor = holding(h.ship, good)
+  if (paidFor) noticeUndercut(state, me, h.ship, h.at, good, paidFor.paid)
   const n = unload(h.ship, good, tons)
   if (n === 0) return { kind: 'refused' }
   const deal = sell(h.at, good, n, me.empire, { smuggle })

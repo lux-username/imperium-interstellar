@@ -7,6 +7,7 @@
  * scene waits for the People phase; this is the plumbing it will sit on.
  */
 import { postNewsItem } from './news'
+import { deal } from './people'
 import { nextInt } from './rng'
 import { stanceKey, type Character, type CharacterId, type GameState, type Ship, type WorldId } from './types'
 
@@ -52,6 +53,8 @@ export function landCaptives(state: GameState, landed: Ship[]): void {
 /** Set free where they stand. */
 export function release(state: GameState, c: Character, why: string): void {
   const at = c.captive?.at
+  const captor = c.captive?.by ? state.ships[c.captive.by]?.captain : null
+  if (captor) deal(state, c.id, captor, why === 'paroled' ? 0.5 : why === 'ransomed' ? 0 : 0.3, `${state.characters[captor]?.name ?? 'my captor'} let me go: ${why}`)
   c.captive = null
   if (at !== null && at !== undefined) {
     c.body = { kind: 'world', world: at }

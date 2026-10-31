@@ -170,7 +170,7 @@ export interface Belief {
   /** What the reader knows of who came and went at each port, newest first, each line stamped with how they know it. */
   traffic: Record<WorldId, TrafficKnown[]>
   /** Last-known price and stock per world and good, from the newest sight of that market. */
-  prices: Record<WorldId, Partial<Record<Good, { price: number; stock: number; observed: Week; heard?: boolean }>>>
+  prices: Record<WorldId, Partial<Record<Good, { price: number; stock: number; observed: Week; heard?: boolean; from?: CharacterId }>>>
 }
 
 // ---------------------------------------------------------------------------
@@ -258,6 +258,31 @@ export interface FreightRow {
   rate: number
 }
 
+/** A page of the Book: one person the player has dealt with or watched. */
+export interface BookEntry {
+  id: CharacterId
+  name: string
+  empire: EmpireId
+  guild: boolean
+  outlaw: boolean
+  /** The hull they were last seen aboard, if known. */
+  hull: string | null
+  /** Where and when last seen, if ever. */
+  lastSeen: { world: WorldId; week: Week } | null
+  /** How the player stands to them, in a word, and the number behind it. */
+  standing: string
+  regard: number
+  /** How far their word has proved good. */
+  trust: number
+  dealings: number
+  /** The last few things that passed between you. */
+  notes: string[]
+  /** What you have made of their character so far: a word or two, more with acquaintance. */
+  impression: string[]
+  /** Trades of theirs you have seen or heard of, newest first, a few. */
+  seenTrading: string[]
+}
+
 /**
  * The player's whole picture, rebuilt each week from their belief and their
  * own mail. This is the only thing the UI renders.
@@ -287,6 +312,8 @@ export interface PlayerView {
   captive: { of: EmpireId | null; since: Week; at: WorldId | null; aboard: string | null; ransom: number; term: Week | null } | null
   /** Whether a lender here would set the player up with a hull. */
   lenderHere: boolean
+  /** The Book: everyone the player has dealt with or watched, most dealt-with first. */
+  book: BookEntry[]
   /** Every letter that has reached the player, newest arrival first. */
   inbox: Report[]
   /** What the player saw with their own eyes each week. Not mail, but reports all the same. */

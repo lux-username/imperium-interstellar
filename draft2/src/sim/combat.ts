@@ -8,6 +8,7 @@
  * The player's encounters stand as `state.pending` until they choose; an
  * NPC's are resolved on the spot with the same rules and the same menu.
  */
+import { deal, traitsOf } from './people'
 import { roll } from './rng'
 import { SHIP_CLASSES, stanceKey, type Encounter, type EncounterOutcome, type GameState, type Ship, type Week, type WorldId } from './types'
 
@@ -120,8 +121,11 @@ export function npcChoice(state: GameState, e: Encounter): Choice {
   const d = state.ships[e.defender]
   const ga = SHIP_CLASSES[a.type].guns
   const gd = SHIP_CLASSES[d.type].guns
+  const caution = traitsOf(d.captain ? state.characters[d.captain] : undefined).caution
   if (SHIP_CLASSES[d.type].jump > SHIP_CLASSES[a.type].jump && e.round === 0) return 'run'
-  if (ga >= 3 * Math.max(1, gd)) return e.round === 0 && roll(state.rng) >= 9 ? 'run' : 'strike'
+  // A careful captain strikes at two to one; a bold one not before four.
+  const odds = 2 + 2 * (1 - caution)
+  if (ga >= odds * Math.max(1, gd)) return e.round === 0 && roll(state.rng) >= 9 - Math.round(2 * caution) ? 'run' : 'strike'
   if (!afloat(d)) return 'strike'
   return 'fight'
 }
@@ -146,6 +150,10 @@ export function settle(state: GameState, e: Encounter): string {
   d.hold = []
   const captor = a.captain ? state.characters[a.captain] : null
   const victim = d.captain ? state.characters[d.captain] : null
+  if (victim && captor) {
+    deal(state, victim.id, captor.id, -3, `${captor.name} took the ${d.name} from me off ${state.worlds[at].name}`)
+    deal(state, captor.id, victim.id, 0.2, `took ${victim.name}'s ${d.name} off ${state.worlds[at].name}`)
+  }
   if (victim) {
     // The cash aboard is the captor's; the rest is at home, and is what a ransom comes out of.
     if (captor && victim.purse > 0) {

@@ -15,6 +15,7 @@ import { hexDistance } from './hex'
 import { fuelPrice } from './ships'
 import { recordTrade } from './register'
 import { officerCulture, personName, rollSex } from './names'
+import { rollTraits } from './people'
 import { postNewsItem } from './news'
 import { newShip, unload } from './ships'
 import { stanceKey, SHIP_CLASSES, type Character, type CharacterId, type GameState, type Guild, type Line, type ShipId, type WorldId } from './types'
@@ -41,7 +42,7 @@ export function spawnHaulers(state: GameState, taken: Set<string>): void {
       const core = state.empires[g.empire].core
       const culture = officerCulture(state.rng, core)
       const sex = rollSex(state.rng)
-      const c: Character = { id: cid, name: personName(state.rng, culture, sex), culture, sex, empire: g.empire, body: { kind: 'aboard', ship: sid }, purse: 1000, debt: null, guild: g.empire }
+      const c: Character = { id: cid, name: personName(state.rng, culture, sex), culture, sex, empire: g.empire, body: { kind: 'aboard', ship: sid }, purse: 1000, debt: null, guild: g.empire, traits: rollTraits(state.rng) }
       state.characters[cid] = c
       const ship = newShip(state.rng, sid, 'bulk_freighter', g.empire, { kind: 'organisation', empire: g.empire, arm: 'guild' }, g.seat, taken, cid)
       ship.duty = { kind: 'haul', line: null, waited: 0 }
@@ -173,7 +174,7 @@ function growFleet(state: GameState, g: Guild, work: boolean): void {
   const core = state.empires[g.empire].core
   const culture = officerCulture(state.rng, core)
   const sex = rollSex(state.rng)
-  state.characters[cid] = { id: cid, name: personName(state.rng, culture, sex), culture, sex, empire: g.empire, body: { kind: 'aboard', ship: sid }, purse: 1000, debt: null, guild: g.empire }
+  state.characters[cid] = { id: cid, name: personName(state.rng, culture, sex), culture, sex, empire: g.empire, body: { kind: 'aboard', ship: sid }, purse: 1000, debt: null, guild: g.empire, traits: rollTraits(state.rng) }
   const ship = newShip(state.rng, sid, 'bulk_freighter', g.empire, { kind: 'organisation', empire: g.empire, arm: 'guild' }, g.seat, taken, cid)
   ship.duty = { kind: 'haul', line: null, waited: 0 }
   state.ships[sid] = ship
