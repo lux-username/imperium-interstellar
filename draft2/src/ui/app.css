@@ -1,0 +1,22 @@
+:root {
+  color-scheme: dark;
+  --bg: #10131a;
+  --fg: #d8dbe2;
+  --muted: #7d8494;
+  --lane: #3a4254;
+  --e0: #d9a441;
+  --e1: #5aa9d6;
+  --e2: #c25b5b;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+body { margin: 0; background: var(--bg); color: var(--fg); }
+header { padding: 12px 16px; border-bottom: 1px solid var(--lane); display: flex; gap: 16px; align-items: baseline; }
+header h1 { font-size: 18px; margin: 0; font-weight: normal; }
+header .note { color: var(--muted); font-size: 13px; }
+input { background: #1b202b; color: var(--fg); border: 1px solid var(--lane); padding: 4px 8px; width: 6em; font: inherit; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; padding: 16px; }
+svg { width: 100%; height: auto; display: block; }
+.worlds { font-size: 13px; line-height: 1.5; }
+.worlds li { list-style: none; }
+.worlds code { color: var(--muted); }
+@media (max-width: 800px) { main { grid-template-columns: 1fr; } }

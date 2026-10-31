@@ -6,6 +6,10 @@ Read at the start of every session. This is "how we work here," not what the pro
 
 Imperium Interstellar — a solo, week-per-turn grand-strategy game of governing a subsector for a distant Empire, where information travels only as fast as ships and you rule through delegation and a courier-borne inbox.
 
+## Two drafts
+
+The repository root is **alpha draft 1** (tag `alpha-draft-1`): the Government House game, kept runnable and untouched as a quarry. **Draft 2** lives in `draft2/` as its own package (`cd draft2 && npm test` etc.) with its own `spec.md`, `decisions.md`, `vision.md` and `carryover.md`. New work goes in `draft2/`; the root changes only to fix something draft 2 wants to quarry. The Derived Facts commands below are run from the root for draft 1 and from `draft2/` for draft 2.
+
 ## Stack
 
 TypeScript. Vite 8 + React 19 for the UI (SVG hex map). Pure-TypeScript simulation core in `src/sim/` with a seeded PRNG — no DOM, no `Math.random`, fully serializable. Vitest for tests, oxlint for lint. No server; the game runs entirely in the browser and builds to a static site.

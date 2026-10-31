@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const yoruba: Culture = {
+  name: 'Yoruba',
+  group: 'African',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "Lagos, Abeokuta and Ibadan in the mission and Colony decades. `family` is the lineage name (Ade-, Ogun-, Ola-), with the English surnames of the Saro — returnees from Sierra Leone who led the Lagos professions — at about a sixth. Many Yoruba given names are used for either sex; the split below follows the commoner usage.",
+  given: {
+    m: [
+      'Adebayo', 'Adewale', 'Adeyemi', 'Oladipo', 'Olufemi', 'Babatunde', 'Kehinde', 'Taiwo', 'Idowu', 'Ayodele',
+      'Akinola', 'Akintola', 'Akinwande', 'Adekunle', 'Adeniyi', 'Bamgbose', 'Dosunmu', 'Fagbemi', 'Fadipe', 'Ogundipe',
+      'Ogunbiyi', 'Ogunmola', 'Ojo', 'Oke', 'Oladele', 'Olaniyan', 'Olatunde', 'Oluwole', 'Osuntokun', 'Oyelaran',
+      'Oyewole', 'Sowande', 'Shodeinde', 'Bankole', 'Durojaiye', 'Ekundayo', 'Folarin', 'Gbadamosi', 'Ige', 'Jibowu',
+      'Kolawole', 'Kosoko', 'Lawal', 'Ladipo', 'Moshood', 'Ogunmefun', 'Olusegun', 'Oyekan', 'Salako', 'Salami',
+      'Sanusi', 'Tijani', 'Tunde', 'Wahab', 'Yesufu', 'Abiodun', 'Adetokunbo', 'Adegboyega', 'Adeyinka', 'Ajibade',
+      'Akanbi', 'Akinyele', 'Alabi', 'Amusa', 'Ayinde', 'Bello', 'Ibikunle', 'Iyanda', 'Kasali', 'Lasisi',
+      'Momodu', 'Ogunlana', 'Oladimeji', 'Olawale', 'Oshodi', 'Raji', 'Sule', 'Thanni', 'Samuel', 'Josiah',
+    ],
+    f: [
+      'Abeni', 'Abike', 'Adunni', 'Aina', 'Ajoke', 'Alake', 'Amoke', 'Asake', 'Awero', 'Ayoka',
+      'Bisi', 'Bola', 'Bunmi', 'Dupe', 'Efunroye', 'Efunsetan', 'Fadeke', 'Fola', 'Folake', 'Funke',
+      'Funmilayo', 'Ibironke', 'Iyabo', 'Kikelomo', 'Labake', 'Lola', 'Modupe', 'Mojisola', 'Monisola', 'Morenike',
+      'Motunrayo', 'Ojuolape', 'Olabisi', 'Olufunke', 'Olusola', 'Omolade', 'Omolara', 'Omotola', 'Omowunmi', 'Opeyemi',
+      'Oyinkan', 'Remilekun', 'Ronke', 'Sade', 'Shola', 'Simisola', 'Subulade', 'Titilayo', 'Tinuke', 'Tolani',
+      'Toyin', 'Wuraola', 'Yejide', 'Yemisi', 'Yetunde', 'Abosede', 'Adeola', 'Adetoun', 'Ajike', 'Arike',
+      'Asabi', 'Bamidele', 'Bukola', 'Doyin', 'Ebun', 'Eniola', 'Feyisara', 'Foluke', 'Ireti', 'Jumoke',
+      'Kemi', 'Moradeke', 'Nike', 'Omobola', 'Oyindamola', 'Susannah', 'Hannah', 'Sarah', 'Abigail', 'Comfort',
+    ],
+  },
+  family: [
+    'Ajayi', 'Ogunlade', 'Ogundipe', 'Ogunbiyi', 'Ogunmola', 'Ogunlana', 'Ogunmefun', 'Oyelaran', 'Oyewole', 'Oyekan',
+    'Adebayo', 'Adewale', 'Adeyemi', 'Adekunle', 'Adeniyi', 'Adeoye', 'Adeyinka', 'Adegboyega', 'Akinola', 'Akintola',
+    'Akinwande', 'Akinyele', 'Akanbi', 'Oladipo', 'Oladele', 'Olaniyan', 'Olatunde', 'Olawale', 'Oladimeji', 'Olusegun',
+    'Babatunde', 'Bamgbose', 'Dosunmu', 'Fagbemi', 'Fadipe', 'Fashola', 'Osuntokun', 'Sowande', 'Shodeinde', 'Bankole',
+    'Durojaiye', 'Ekundayo', 'Folarin', 'Gbadamosi', 'Ibikunle', 'Jibowu', 'Kolawole', 'Kosoko', 'Ladipo', 'Oshodi',
+    'Salako', 'Alabi', 'Ajibade', 'Ayinde', 'Iyanda', 'Lasisi', 'Raji', 'Sanusi', 'Tijani', 'Thanni',
+    'Sule', 'Bello', 'Lawal', 'Salami', 'Odunsi', 'Oyenuga', 'Sotunde', 'Crowther', 'Macaulay', 'Johnson',
+    'Williams', 'Coker', 'Savage', 'Pratt', 'Davies', 'Cole', 'Blaize', 'Randle', 'Sapara', 'Doherty',
+  ],
+  places: [
+    'Lagos', 'Eko', 'Abeokuta', 'Ibadan', 'Oyo', 'Ife', 'Ilesa', 'Ogbomoso', 'Osogbo', 'Iwo',
+    'Ede', 'Ijebu-Ode', 'Ondo', 'Owo', 'Akure', 'Ado-Ekiti', 'Ikere', 'Ikorodu', 'Badagry', 'Epe',
+    'Ota', 'Ilorin', 'Offa', 'Iseyin', 'Saki', 'Ikirun', 'Ila', 'Ikole', 'Ijero', 'Ilaro',
+    'Ilaje', 'Okitipupa', 'Idanre', 'Ikare', 'Owu', 'Ketu', 'Sabe', 'Egba', 'Egbado', 'Ijebu',
+    'Ekiti', 'Ijesa', 'Igbomina', 'Akoko', 'Yagba', 'Oke-Ogun', 'Ogun', 'Osun', 'Ona', 'Idi-Araba',
+    'Olokemeji', 'Oke-Odan', 'Ibokun', 'Otun', 'Ikoyi', 'Ikija', 'Igbeti', 'Kisi', 'Oyo-Ile', 'Ilobu',
+    'Erin', 'Modakeke',
+  ],
+}

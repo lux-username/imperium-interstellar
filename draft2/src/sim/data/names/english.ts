@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const english: Culture = {
+  name: 'English',
+  group: 'European',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  given: {
+    m: [
+      'William', 'John', 'George', 'Thomas', 'James', 'Henry', 'Charles', 'Frederick', 'Arthur', 'Edward',
+      'Alfred', 'Albert', 'Walter', 'Robert', 'Joseph', 'Ernest', 'Harry', 'Herbert', 'Francis', 'Samuel',
+      'Richard', 'Edwin', 'Frank', 'Sidney', 'Percy', 'Reginald', 'Horace', 'Leonard', 'Cecil', 'Bertram',
+      'Clifford', 'Ambrose', 'Augustus', 'Benjamin', 'Christopher', 'Daniel', 'David', 'Edmund', 'Edgar', 'Eli',
+      'Elijah', 'Ezra', 'Gilbert', 'Godfrey', 'Harold', 'Hubert', 'Hugh', 'Isaac', 'Jabez', 'Jesse',
+      'Josiah', 'Lawrence', 'Lionel', 'Matthew', 'Maurice', 'Nathaniel', 'Nicholas', 'Oliver', 'Oswald', 'Philip',
+      'Ralph', 'Reuben', 'Roland', 'Rowland', 'Septimus', 'Silas', 'Stanley', 'Stephen', 'Theodore', 'Victor',
+      'Vincent', 'Wilfred', 'Algernon', 'Archibald', 'Aubrey', 'Basil', 'Clarence', 'Cuthbert', 'Ebenezer', 'Enoch',
+    ],
+    f: [
+      'Mary', 'Elizabeth', 'Sarah', 'Ann', 'Emma', 'Alice', 'Edith', 'Florence', 'Ada', 'Annie',
+      'Ellen', 'Emily', 'Ethel', 'Margaret', 'Jane', 'Louisa', 'Harriet', 'Eliza', 'Hannah', 'Martha',
+      'Agnes', 'Amy', 'Beatrice', 'Bertha', 'Caroline', 'Catherine', 'Charlotte', 'Clara', 'Constance', 'Dorothy',
+      'Edna', 'Eleanor', 'Elsie', 'Esther', 'Eva', 'Fanny', 'Frances', 'Gertrude', 'Grace', 'Helen',
+      'Hilda', 'Ida', 'Isabella', 'Jessie', 'Julia', 'Kate', 'Laura', 'Lilian', 'Lucy', 'Mabel',
+      'Maud', 'May', 'Minnie', 'Nellie', 'Olive', 'Phoebe', 'Rebecca', 'Rose', 'Ruth', 'Selina',
+      'Sophia', 'Susan', 'Violet', 'Winifred', 'Adelaide', 'Amelia', 'Augusta', 'Blanche', 'Cecilia', 'Dinah',
+      'Eveline', 'Georgina', 'Henrietta', 'Jemima', 'Lavinia', 'Letitia', 'Matilda', 'Millicent', 'Priscilla', 'Rosalind',
+    ],
+  },
+  family: [
+    'Smith', 'Taylor', 'Brown', 'Wright', 'Walker', 'Robinson', 'Thompson', 'White', 'Hall', 'Green',
+    'Wood', 'Clarke', 'Jackson', 'Harris', 'Turner', 'Cooper', 'Hill', 'Ward', 'Baker', 'Carter',
+    'Bennett', 'Parker', 'Mitchell', 'Morris', 'Cook', 'Ellis', 'Chapman', 'Fisher', 'Hunt', 'Mason',
+    'Palmer', 'Webb', 'Pearson', 'Holmes', 'Gibson', 'Marshall', 'Bradley', 'Dixon', 'Fletcher', 'Hawkins',
+    'Spencer', 'Barnes', 'Harvey', 'Chambers', 'Ashworth', 'Whitfield', 'Pemberton', 'Ainsworth', 'Blackwood', 'Hargreaves',
+    'Thornton', 'Fairfax', 'Sheppard', 'Lister', 'Cavendish', 'Sutcliffe', 'Radcliffe', 'Winterbourne', 'Halliwell', 'Greenwood',
+    'Ackroyd', 'Pickering', 'Lockwood', 'Ridley', 'Attwood', 'Beaumont', 'Crompton', 'Dawson', 'Elliott', 'Farrow',
+    'Goodwin', 'Hartley', 'Ingram', 'Kendall', 'Latimer', 'Middleton', 'Norris', 'Osborne', 'Pratt', 'Sanderson',
+    'Tanner', 'Underwood', 'Vickers', 'Whitlock', 'Yates', 'Ramsden', 'Fenwick', 'Tremayne',
+  ],
+  places: [
+    'London', 'Bristol', 'York', 'Manchester', 'Liverpool', 'Birmingham', 'Leeds', 'Sheffield', 'Norwich', 'Exeter',
+    'Plymouth', 'Portsmouth', 'Southampton', 'Dover', 'Canterbury', 'Winchester', 'Salisbury', 'Bath', 'Gloucester', 'Worcester',
+    'Hereford', 'Shrewsbury', 'Chester', 'Lancaster', 'Carlisle', 'Durham', 'Newcastle', 'Hull', 'Lincoln', 'Nottingham',
+    'Derby', 'Leicester', 'Coventry', 'Oxford', 'Cambridge', 'Ipswich', 'Colchester', 'Reading', 'Guildford', 'Brighton',
+    'Hastings', 'Lewes', 'Truro', 'Falmouth', 'Penzance', 'Barnstaple', 'Taunton', 'Wells', 'Dorchester', 'Weymouth',
+    'Whitby', 'Scarborough', 'Richmond', 'Ripon', 'Kendal', 'Keswick', 'Ludlow', 'Warwick', 'Stamford', 'Ely',
+    'Tewkesbury', 'Malvern', 'Severn', 'Thames', 'Trent', 'Humber', 'Mersey', 'Tyne', 'Avon', 'Pennine',
+  ],
+}

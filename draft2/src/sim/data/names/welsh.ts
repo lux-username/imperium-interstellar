@@ -1,0 +1,52 @@
+import type { Culture } from './culture'
+
+export const welsh: Culture = {
+  name: 'Welsh',
+  group: 'European',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: 'Chapel Wales: Old Testament given names sit beside the revived Welsh ones. Patronymic surnames had already fixed into Jones, Davies, Evans and their kin.',
+  given: {
+    m: [
+      'David', 'John', 'William', 'Thomas', 'Evan', 'Owen', 'Rhys', 'Morgan', 'Griffith', 'Llewellyn',
+      'Hugh', 'Edward', 'Richard', 'Robert', 'Lewis', 'Howell', 'Ivor', 'Gwilym', 'Dafydd', 'Ieuan',
+      'Idris', 'Emrys', 'Aneurin', 'Caradog', 'Cadwaladr', 'Gruffydd', 'Iestyn', 'Iorwerth', 'Meredith', 'Maredudd',
+      'Rhodri', 'Tudor', 'Trevor', 'Vaughan', 'Watkin', 'Jenkin', 'Meurig', 'Madoc', 'Elis', 'Emlyn',
+      'Eifion', 'Gwyn', 'Gwynfor', 'Glyn', 'Geraint', 'Bleddyn', 'Cynan', 'Cadoc', 'Dewi', 'Einion',
+      'Ellis', 'Enoch', 'Gethin', 'Goronwy', 'Hywel', 'Ifor', 'Illtyd', 'Iolo', 'Ithel', 'Lloyd',
+      'Maldwyn', 'Mostyn', 'Pryce', 'Rees', 'Rhisiart', 'Siôn', 'Talfryn', 'Taliesin', 'Tegid', 'Teilo',
+      'Tomos', 'Tudur', 'Wyn', 'Alun', 'Benjamin', 'Daniel', 'Elias', 'Ebenezer', 'Isaac', 'Josiah',
+    ],
+    f: [
+      'Mary', 'Margaret', 'Ann', 'Elizabeth', 'Jane', 'Sarah', 'Catherine', 'Ellen', 'Gwen', 'Gwenllian',
+      'Angharad', 'Blodwen', 'Bronwen', 'Ceridwen', 'Dilys', 'Eluned', 'Enid', 'Glenys', 'Gladys', 'Gwladys',
+      'Gwyneth', 'Megan', 'Myfanwy', 'Nest', 'Nesta', 'Olwen', 'Rhiannon', 'Sioned', 'Siân', 'Mair',
+      'Mari', 'Morfudd', 'Mererid', 'Eirlys', 'Eirwen', 'Elin', 'Gwenda', 'Heledd', 'Lowri', 'Mairwen',
+      'Mallt', 'Nerys', 'Tegwen', 'Tangwystl', 'Rhian', 'Anwen', 'Arianwen', 'Branwen', 'Carys', 'Catrin',
+      'Delyth', 'Efa', 'Eleri', 'Ffion', 'Ffraid', 'Glesni', 'Gwawr', 'Hafwen', 'Heulwen', 'Llinos',
+      'Luned', 'Marged', 'Meinir', 'Morwen', 'Non', 'Rhonwen', 'Seren', 'Wenna', 'Winifred', 'Gwenfron',
+      'Hannah', 'Martha', 'Rachel', 'Esther', 'Dorothy', 'Lettice', 'Betsan', 'Elen', 'Alis', 'Leusa',
+    ],
+  },
+  family: [
+    'Jones', 'Williams', 'Davies', 'Evans', 'Thomas', 'Roberts', 'Lewis', 'Hughes', 'Morgan', 'Griffiths',
+    'Edwards', 'Owen', 'Jenkins', 'Rees', 'Price', 'Pritchard', 'Powell', 'Bowen', 'Vaughan', 'Lloyd',
+    'Parry', 'Probert', 'Prosser', 'Bevan', 'Howell', 'Howells', 'Beynon', 'Meredith', 'Llewellyn', 'Gwynne',
+    'Wynn', 'Watkins', 'Hopkins', 'Phillips', 'Morris', 'Humphreys', 'Pugh', 'Tudor', 'Trevor', 'Cadwallader',
+    'Ellis', 'Foulkes', 'Gethin', 'Gittins', 'Gwilliam', 'Harries', 'James', 'Jarman', 'Kyffin', 'Maddocks',
+    'Mathias', 'Meyrick', 'Nanney', 'Penry', 'Perkins', 'Prydderch', 'Rhydderch', 'Richards', 'Rowlands', 'Samuel',
+    'Wogan', 'Yorath', 'Bebb', 'Beddoe', 'Blayney', 'Cadogan', 'Craddock', 'Devonald', 'Eynon', 'Gough',
+    'Havard', 'Heycock', 'Ithell', 'Landeg', 'Lougher', 'Mostyn', 'Nicholas', 'Pennant', 'Pryce', 'Rhys',
+    'Roderick', 'Saer', 'Treharne', 'Voyle',
+  ],
+  places: [
+    'Cardiff', 'Swansea', 'Newport', 'Merthyr', 'Wrexham', 'Bangor', 'Caernarfon', 'Aberystwyth', 'Carmarthen', 'Pembroke',
+    'Haverfordwest', 'Tenby', 'Brecon', 'Abergavenny', 'Monmouth', 'Llandeilo', 'Llandovery', 'Llanelli', 'Neath', 'Bridgend',
+    'Cowbridge', 'Llantrisant', 'Pontypridd', 'Aberdare', 'Rhondda', 'Tredegar', 'Blaenavon', 'Newtown', 'Welshpool', 'Llanidloes',
+    'Machynlleth', 'Dolgellau', 'Barmouth', 'Harlech', 'Pwllheli', 'Criccieth', 'Beaumaris', 'Holyhead', 'Conwy', 'Llandudno',
+    'Denbigh', 'Ruthin', 'Mold', 'Flint', 'Bala', 'Llangollen', 'Corwen', 'Cardigan', 'Fishguard', 'St Davids',
+    'Lampeter', 'Tregaron', 'Rhayader', 'Builth', 'Presteigne', 'Chepstow', 'Usk', 'Caerphilly', 'Snowdon', 'Cadair Idris',
+    'Plynlimon', 'Preseli', 'Wye', 'Teifi', 'Towy', 'Dyfi', 'Clwyd', 'Gower', 'Anglesey', 'Lleyn',
+    'Powys', 'Gwynedd', 'Dyfed', 'Gwent', 'Morgannwg',
+  ],
+}

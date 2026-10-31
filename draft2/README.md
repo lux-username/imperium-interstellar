@@ -7,4 +7,9 @@ the quarry we pick parts from.
 Read `vision.md` first. Decisions about what to carry over from draft 1 are
 recorded in `carryover.md` as they are made.
 
-Nothing in here is code yet.
+This is its own package: `npm install`, then `npm test`, `npm run typecheck`,
+`npm run lint`, `npm run build`, `npm run dev`. The shell at `src/ui/App.tsx`
+is a developer's god view of the generated subsector and will become a
+dev-only toggle once the player's view exists.
+
+Phase 1, the Keel, is tracked on the GitHub milestone "Draft 2 — Keel".

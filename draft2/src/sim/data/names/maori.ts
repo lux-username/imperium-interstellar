@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const maori: Culture = {
+  name: 'Maori',
+  group: 'Pacific / misc.',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: "Aotearoa in the mission and Land War decades. Most given names are the Māori transliterations of scripture names (Wiremu, Hoani, Mere, Hera) that the generation took at baptism, with the older names beside them. Surnames were the father's or an ancestor's name and had mostly settled by the century's end; a few Pākehā-Māori family names sit among them. Macrons are omitted, as the period's own writing omitted them.",
+  given: {
+    m: [
+      'Hone', 'Wiremu', 'Hoani', 'Tamati', 'Hemi', 'Rawiri', 'Hori', 'Tamihana', 'Paora', 'Pita',
+      'Hakopa', 'Erueti', 'Arapeta', 'Rapata', 'Karauria', 'Hamiora', 'Matiu', 'Mohi', 'Noa', 'Petera',
+      'Piripi', 'Rutene', 'Taare', 'Tame', 'Tiaki', 'Tipene', 'Waata', 'Ihaia', 'Ihaka', 'Ropata',
+      'Raniera', 'Nopera', 'Meiha', 'Rewiti', 'Hakaraia', 'Heta', 'Hira', 'Aperahama', 'Eruera', 'Hoera',
+      'Hohepa', 'Iraia', 'Kingi', 'Manahi', 'Manuera', 'Mita', 'Nikorima', 'Pene', 'Perenara', 'Rewai',
+      'Ruka', 'Taituha', 'Taniora', 'Teira', 'Tiopira', 'Tokena', 'Wetere', 'Wiari', 'Riwai', 'Renata',
+      'Hamuera', 'Mokena', 'Paratene', 'Makarini', 'Nepia', 'Rangi', 'Kahu', 'Tane', 'Rewi', 'Wahanui',
+      'Tuhaere', 'Whitiora', 'Pomare', 'Hongi', 'Tawhiao', 'Potatau', 'Wi', 'Rangiheuea', 'Te Whiti', 'Taonui',
+    ],
+    f: [
+      'Mere', 'Hera', 'Ani', 'Rahera', 'Wikitoria', 'Ripeka', 'Ruiha', 'Hana', 'Meri', 'Roka',
+      'Hariata', 'Erana', 'Kiri', 'Aroha', 'Hinemoa', 'Marama', 'Moana', 'Ngaire', 'Huia', 'Rangimarie',
+      'Mihi', 'Atareta', 'Rina', 'Riria', 'Ema', 'Heni', 'Hine', 'Miriama', 'Maraea', 'Makareta',
+      'Akenehi', 'Amiria', 'Ahenata', 'Ihipera', 'Irihapeti', 'Katarina', 'Kararaina', 'Keita', 'Kuini', 'Maata',
+      'Materoa', 'Matire', 'Merehira', 'Ngahuia', 'Ngawini', 'Oriwa', 'Paea', 'Parehuia', 'Pare', 'Peti',
+      'Puhi', 'Raiha', 'Rawinia', 'Rihi', 'Rora', 'Ruta', 'Tangi', 'Taini', 'Tiria', 'Turuhira',
+      'Hinerangi', 'Hinewai', 'Kahurangi', 'Kura', 'Mahina', 'Puti', 'Pikihuia', 'Roimata', 'Te Paea', 'Te Aroha',
+      'Tui', 'Whetu', 'Wai', 'Hinekura', 'Rangi', 'Waikato', 'Erihapeti', 'Hohipera', 'Meretiana', 'Pirihira',
+    ],
+  },
+  family: [
+    'Ngata', 'Pomare', 'Te Heuheu', 'Kingi', 'Paraone', 'Paora', 'Rangihau', 'Tapsell', 'Tomoana', 'Ngawaka',
+    'Hemara', 'Hipango', 'Karaka', 'Kereama', 'Kohere', 'Kupa', 'Mahuika', 'Mahuta', 'Manihera', 'Marumaru',
+    'Mokomoko', 'Nepe', 'Ngaropo', 'Nikora', 'Ormsby', 'Parata', 'Parekura', 'Pene', 'Piripi', 'Pohatu',
+    'Pokaia', 'Puketapu', 'Rangihuna', 'Rangitauira', 'Rewi', 'Rikihana', 'Rongomai', 'Ropiha', 'Ruatapu', 'Tahiwi',
+    'Taiaroa', 'Taipari', 'Takarangi', 'Tamihana', 'Tapiata', 'Taumata', 'Taurima', 'Tawhai', 'Te Awe', 'Te Kani',
+    'Te Rangi', 'Tibble', 'Tipene', 'Tomairangi', 'Tuhiwai', 'Tukino', 'Tumataroa', 'Wahanui', 'Waititi', 'Waitere',
+    'Waretini', 'Wharepapa', 'Whatanui', 'Wihongi', 'Wineera', 'Winiata', 'Wiremu', 'Hemi', 'Hohepa', 'Hoani',
+    'Tamati', 'Rawiri', 'Hori', 'Matiu', 'Mohi', 'Paki', 'Pita', 'Rapata', 'Rutene', 'Wetere',
+  ],
+  places: [
+    'Waikato', 'Taranaki', 'Rotorua', 'Taupo', 'Tauranga', 'Whangarei', 'Whanganui', 'Waitangi', 'Kororareka', 'Hokianga',
+    'Kaipara', 'Manukau', 'Waitemata', 'Tamaki', 'Otaki', 'Porirua', 'Wairarapa', 'Wairoa', 'Turanga', 'Opotiki',
+    'Whakatane', 'Otorohanga', 'Te Awamutu', 'Te Kuiti', 'Taumarunui', 'Ohakune', 'Ruapehu', 'Tongariro', 'Ngauruhoe', 'Tararua',
+    'Ruahine', 'Kaikoura', 'Waimakariri', 'Rakaia', 'Waitaki', 'Otakou', 'Murihiku', 'Rakiura', 'Aoraki', 'Wakatipu',
+    'Wanaka', 'Hokitika', 'Arahura', 'Kawatiri', 'Whakatu', 'Motueka', 'Wairau', 'Waikanae', 'Kapiti', 'Mokoia',
+    'Waiheke', 'Rangitoto', 'Hauraki', 'Whitianga', 'Matamata', 'Ngaruawahia', 'Pukekohe', 'Waiuku', 'Whaingaroa', 'Kawhia',
+    'Mokau', 'Waitara', 'Hawera', 'Patea', 'Rangitikei', 'Manawatu', 'Ruamahanga', 'Te Ika-a-Maui', 'Te Waipounamu', 'Heretaunga',
+  ],
+}

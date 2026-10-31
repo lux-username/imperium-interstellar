@@ -1,0 +1,50 @@
+import type { Culture } from './culture'
+
+export const turkish: Culture = {
+  name: 'Turkish',
+  group: 'Middle Eastern',
+  order: 'family-given',
+  pattern: { m: '{family} {given}', f: '{family} {given}' },
+  notes: "Late Ottoman. No hereditary surnames: `family` holds the epithets, nisbas (-lı, 'from') and household names (-zade) that stood before the given name, as in Kara Mehmed or Bursalı Hasan. Titles by rank (Efendi, Bey, Ağa, Paşa; Hanım for women) go after the given name and are the generator's to add.",
+  given: {
+    m: [
+      'Mehmed', 'Ahmed', 'Mustafa', 'Ali', 'Hasan', 'Hüseyin', 'İbrahim', 'İsmail', 'Osman', 'Ömer',
+      'Süleyman', 'Halil', 'Yusuf', 'Abdullah', 'Mahmud', 'Murad', 'Selim', 'Bayezid', 'Orhan', 'Kemal',
+      'Rıza', 'Tevfik', 'Fuad', 'Midhat', 'Cevdet', 'Şevket', 'Enver', 'Talat', 'Cemal', 'Nazım',
+      'Namık', 'Ziya', 'Şinasi', 'Recep', 'Ramazan', 'Şaban', 'Bekir', 'Salih', 'Sadık', 'Sabri',
+      'Rüştü', 'Reşid', 'Fevzi', 'Refik', 'Nuri', 'Nihad', 'Kâzım', 'Kadri', 'Hakkı', 'Hilmi',
+      'Hayri', 'Hamdi', 'Galib', 'Faik', 'Emin', 'Edhem', 'Cemil', 'Bahaeddin', 'Şükrü', 'Zeki',
+      'Vehbi', 'Vasıf', 'Şerif', 'Sami', 'Rauf', 'Ragıp', 'Rahmi', 'Nazif', 'Naci', 'Muhtar',
+      'Lütfi', 'İzzet', 'İhsan', 'Hurşid', 'Hüsnü', 'Halid', 'Fahri', 'Ekrem', 'Derviş', 'Celal',
+    ],
+    f: [
+      'Fatma', 'Ayşe', 'Emine', 'Hatice', 'Zeynep', 'Hanife', 'Havva', 'Meryem', 'Rukiye', 'Şerife',
+      'Zehra', 'Nafia', 'Naciye', 'Nazife', 'Saliha', 'Sıdıka', 'Hafize', 'Hasibe', 'Hayriye', 'Fehime',
+      'Fitnat', 'Latife', 'Leyla', 'Mihri', 'Mihrimah', 'Nigar', 'Nimet', 'Nuriye', 'Rabia', 'Refika',
+      'Şükriye', 'Behice', 'Belkıs', 'Cemile', 'Dilber', 'Dürdane', 'Emsal', 'Fahriye', 'Feride', 'Gülsüm',
+      'Gülbahar', 'Gülizar', 'Güllü', 'Halide', 'Hamide', 'Hasene', 'Hüsniye', 'İkbal', 'Kadriye', 'Lütfiye',
+      'Makbule', 'Melek', 'Mükerrem', 'Münevver', 'Naile', 'Nakiye', 'Nesibe', 'Nezahat', 'Nezihe', 'Perihan',
+      'Piraye', 'Ruhsar', 'Sabiha', 'Safiye', 'Samiye', 'Seher', 'Servet', 'Şefika', 'Şehnaz', 'Seniha',
+      'Ülfet', 'Ümmühan', 'Vesile', 'Zübeyde', 'Zekiye', 'Ziynet', 'Adile', 'Afife', 'Aliye', 'Atiye',
+    ],
+  },
+  family: [
+    'Kara', 'Sarı', 'Deli', 'Koca', 'Küçük', 'Uzun', 'Kısa', 'Topal', 'Çolak', 'Hacı',
+    'Hafız', 'Molla', 'Seyyid', 'Şeyh', 'Derviş', 'Arap', 'Arnavut', 'Boşnak', 'Çerkes', 'Gürcü',
+    'Kürt', 'Laz', 'Tatar', 'Türkmen', 'Bursalı', 'İzmirli', 'Konyalı', 'Kayserili', 'Trabzonlu', 'Erzurumlu',
+    'Sivaslı', 'Amasyalı', 'Edirneli', 'Selanikli', 'Manastırlı', 'Üsküplü', 'Bağdatlı', 'Şamlı', 'Halepli', 'Mısırlı',
+    'Giritli', 'Kıbrıslı', 'Rumelili', 'Kastamonulu', 'Diyarbakırlı', 'Vanlı', 'Bitlisli', 'Harputlu', 'Ankaralı', 'Eskişehirli',
+    'Kütahyalı', 'Afyonlu', 'Ispartalı', 'Antalyalı', 'Adanalı', 'Maraşlı', 'Antepli', 'Urfalı', 'Tokatlı', 'Çorumlu',
+    'Samsunlu', 'Sinoplu', 'Bolulu', 'Topçu', 'Kalyoncu', 'Cebeci', 'Sipahi', 'Kadı', 'Müftü', 'Kâtip',
+    'Çelebi', 'Hacızade', 'Mollazade', 'Kadızade', 'Köprülüzade', 'Hocazade', 'Efendizade', 'Beyzade', 'Ağazade', 'Sarrafzade',
+  ],
+  places: [
+    'İstanbul', 'Edirne', 'Bursa', 'İzmir', 'Konya', 'Kayseri', 'Sivas', 'Trabzon', 'Erzurum', 'Ankara',
+    'Amasya', 'Tokat', 'Samsun', 'Sinop', 'Kastamonu', 'Bolu', 'İzmit', 'Eskişehir', 'Kütahya', 'Afyon',
+    'Isparta', 'Antalya', 'Adana', 'Tarsus', 'Maraş', 'Antep', 'Urfa', 'Diyarbakır', 'Mardin', 'Van',
+    'Bitlis', 'Erzincan', 'Harput', 'Malatya', 'Çanakkale', 'Gelibolu', 'Tekirdağ', 'Manisa', 'Aydın', 'Muğla',
+    'Denizli', 'Balıkesir', 'Üsküdar', 'Galata', 'Beşiktaş', 'Boğaziçi', 'Marmara', 'Ege', 'Karadeniz', 'Akdeniz',
+    'Rumeli', 'Anadolu', 'Toros', 'Uludağ', 'Erciyes', 'Ağrı', 'Kızılırmak', 'Sakarya', 'Menderes', 'Fırat',
+    'Dicle', 'Meriç', 'Kapadokya', 'Selanik', 'Manastır', 'Üsküp', 'Yanya', 'İşkodra', 'Filibe', 'Trakya',
+  ],
+}
