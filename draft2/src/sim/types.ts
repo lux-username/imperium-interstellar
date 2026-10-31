@@ -210,6 +210,12 @@ export interface Empire {
   /** The goods the empire exports in bulk and the ones it wants, as everyone knows. */
   exports: string[]
   imports: string[]
+  /** Condemned prizes lying at the seat for sale, and until when the court holds each before selling her off. */
+  prizesForSale: { ship: ShipId; until: Week }[]
+  /** Prize money owed to captains under letters of marque, to be claimed at the court. */
+  owed: Record<string, number>
+  /** The week the last captain came in from the core, for the pacing of the next. */
+  lastArrival: Week
 }
 
 /** Each pair of empires is at war or at peace; the three pairs change independently. */
@@ -348,7 +354,7 @@ export type Duty =
   /** An imperial freighter shuttling between the seat and the capital beyond the map. */
   | { kind: 'imperial' }
   /** A prize under a prize crew, bound for the captor's seat to be condemned and sold. */
-  | { kind: 'prize'; to: WorldId; taker: EmpireId }
+  | { kind: 'prize'; to: WorldId; taker: EmpireId; captor?: CharacterId | null }
 
 // ---------------------------------------------------------------------------
 // People
@@ -381,6 +387,10 @@ export interface Character {
   captive?: Captivity | null
   /** What each pair of worlds has earned them lately, keyed `from>to`: a running average of the profit a run, and when last run. */
   legs?: Record<string, { earned: number; runs: number; last: Week }>
+  /** A letter of marque from an empire: captures of its enemies and of outlaws are lawful prizes. */
+  marque?: { empire: EmpireId; since: Week } | null
+  /** A hull ordered from a yard: what, where, and when she is ready. */
+  hullOrder?: { type: ShipType; at: WorldId; ready: Week } | null
 }
 
 export interface Captivity {

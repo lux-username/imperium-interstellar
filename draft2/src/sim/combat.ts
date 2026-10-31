@@ -213,7 +213,10 @@ export function settle(state: GameState, e: Encounter): string {
   }
   const captor = a.captain ? state.characters[a.captain] : null
   const victim = d.captain ? state.characters[d.captain] : null
-  const lawful = a.duty?.kind === 'patrol'
+  const captorHasMarque = !!(captor?.marque && captor.marque.empire === a.empire)
+  const victimIsFairGame = !!victim?.outlaw || (victim !== null && captor !== null && victim.empire !== captor.empire && state.worlds[at].board[stanceKey(victim.empire, captor.empire)]?.stance === 'war')
+  // Lawful: a navy hull, or a private captain under her empire's letter of marque taking an outlaw or an enemy at war.
+  const lawful = a.duty?.kind === 'patrol' || (captorHasMarque && victimIsFairGame)
   const where = state.worlds[at].name
   // A robber who cannot use a bulk freighter robs her: the strongbox, and all the cargo she can carry, and lets her go.
   if (!lawful && d.type === 'bulk_freighter') {
@@ -265,7 +268,7 @@ export function settle(state: GameState, e: Encounter): string {
     // A prize crew sails her to the captor's seat, where the court will sell her.
     d.owner = { kind: 'organisation', empire: a.empire, arm: 'navy' }
     d.empire = a.empire
-    d.duty = { kind: 'prize', to: state.empires[a.empire].seat, taker: a.empire }
+    d.duty = { kind: 'prize', to: state.empires[a.empire].seat, taker: a.empire, captor: a.duty?.kind === 'patrol' ? null : (captor?.id ?? null) }
     return `${d.name} was taken in the approaches by ${a.name} and sent in as a prize${victim ? `; ${victim.name} is a prisoner` : ''}.`
   }
   // A robber takes a hull she can sail. If it is the better hull she moves into it and gives her old one to a loyal crewman; else the crewman has the prize.

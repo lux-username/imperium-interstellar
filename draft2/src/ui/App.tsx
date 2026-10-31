@@ -5,7 +5,7 @@
  * development only.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { advanceWeek, askCaptain, askForRoute, askToStand, buyGoods, buyRegister, goAshore, hail, lieOff, maintain, newGame, quoteBuy, quoteSale, ransomFor_, ransomSelf, registerFee, round, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
+import { advanceWeek, askCaptain, askForRoute, askToStand, buyGoods, buyPrize, buyRegister, claimPrizeMoney, consultBook, goAshore, GUILD_FEE, hail, joinGuild, lieOff, maintain, MARQUE_FEE, newGame, orderHull, payGuildDues, prizeMoneyOwed, prizesOffered, quoteBuy, quoteSale, ransomFor_, ransomSelf, registerFee, round, refuel, repair, respond, sail, seeLender, sellGoods, takeDelivery, takeFreight, takeMarque, takePassage, talkAtBar, yardOffers } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
@@ -16,13 +16,15 @@ import type { Overlay } from './geometry'
 
 const AUTOSAVE = 'imperium-interstellar-draft2/autosave'
 
-type Place = 'docks' | 'brokers' | 'factor' | 'captain' | 'bar'
+type Place = 'docks' | 'brokers' | 'factor' | 'captain' | 'bar' | 'yard' | 'house'
 const PLACES: { id: Place; name: string }[] = [
   { id: 'docks', name: 'The docks' },
   { id: 'brokers', name: 'The brokers' },
   { id: 'factor', name: 'The guild factor' },
   { id: 'captain', name: 'The port captain' },
   { id: 'bar', name: 'The bar' },
+  { id: 'yard', name: 'The yard' },
+  { id: 'house', name: 'Government House' },
 ]
 
 function loadAutosave(): GameState | null {
@@ -128,13 +130,20 @@ export function App() {
               )}
             </section>
           )}
+          {view.papers.guild && view.papers.duesDue !== null && (
+            <p className={view.papers.duesDue - view.week <= 8 ? 'warn' : 'muted'}>
+              Guild dues {cr(view.papers.dues)} set aside, due at the seat by week {view.papers.duesDue}
+              {view.papers.duesDue - view.week <= 8 ? ` — ${Math.max(0, view.papers.duesDue - view.week)} weeks left, or the guild strikes you off.` : '.'}
+            </p>
+          )}
+          {view.papers.hullOrder && <p className="muted">A {TYPE_WORDS[view.papers.hullOrder.type]} building at {view.chart[view.papers.hullOrder.at].name}, ready week {view.papers.hullOrder.ready}.</p>}
           {here && !view.pending ? (
             <section className="port">
               <h2>
                 {hereName} <span className="muted">· {empireName(view, here.empire)} · port {here.starport}</span>
               </h2>
               <nav className="places">
-                {PLACES.map((p) => (
+                {PLACES.filter((p) => (p.id !== 'yard' || here.starport === 'A') && (p.id !== 'house' || here.seatOf)).map((p) => (
                   <button key={p.id} className={place === p.id ? 'on' : ''} onClick={() => setPlace(p.id)}>
                     {p.name}
                   </button>
@@ -142,7 +151,9 @@ export function App() {
               </nav>
               {place === 'docks' && <Docks view={view} state={state} act={act} />}
               {place === 'brokers' && <Brokers view={view} state={state} act={act} />}
-              {place === 'factor' && <Factor view={view} />}
+              {place === 'factor' && <Factor view={view} state={state} act={act} />}
+              {place === 'yard' && here.starport === 'A' && <Yard view={view} state={state} act={act} />}
+              {place === 'house' && here.seatOf && <House view={view} state={state} act={act} />}
               {place === 'captain' && <Captain view={view} state={state} act={act} />}
               {place === 'bar' && <Bar view={view} state={state} act={act} />}
             </section>
@@ -476,13 +487,137 @@ function Brokers({ view, state, act }: PaneProps) {
   )
 }
 
-function Factor({ view }: { view: PlayerView }) {
+function Factor({ view, state, act }: PaneProps) {
   const here = view.here!
   const own = here.empire === view.player.empire
+  const seat = here.seatOf === view.player.empire
+  const p = view.papers
+  const [told, setTold] = useState<string | null>(null)
+  if (!own)
+    return (
+      <div className="scene">
+        <p>The guild factor's office of {empireName(view, here.empire)}.</p>
+        <p className="muted">A foreign guild. The clerk notes your name and nothing more.</p>
+      </div>
+    )
+  if (!p.guild)
+    return (
+      <div className="scene">
+        <p>The guild factor's office of {empireName(view, here.empire)}.</p>
+        {seat ? (
+          <p>
+            The guild's ticket is to be had here for {cr(GUILD_FEE)}: its book of prices at the seat, its fellows' good word on the docks, and dues of four parts in a hundred on all you sell, to be paid here at least once a year on pain of expulsion.{' '}
+            <button disabled={view.purse < GUILD_FEE || p.outlaw} onClick={act(() => joinGuild(state))}>
+              take the guild's ticket
+            </button>
+            {p.outlaw && <span className="muted"> The guild does not enrol a known robber.</span>}
+          </p>
+        ) : (
+          <p className="muted">You are no member. The factor has nothing for an outsider, and says so civilly; the ticket is sold only at the seat.</p>
+        )}
+      </div>
+    )
   return (
     <div className="scene">
-      <p>The guild factor's office of {empireName(view, here.empire)}.</p>
-      <p className="muted">{own ? 'You are no member. The factor has nothing for an outsider, and says so civilly.' : 'A foreign guild. The clerk notes your name and nothing more.'}</p>
+      <p>The guild factor's office of {empireName(view, here.empire)}. You are on the rolls.</p>
+      <p>
+        Dues set aside: <b>{cr(p.dues)}</b>, due at the seat by week {p.duesDue} <span className="muted">(week {view.week} now)</span>.
+        {seat ? (
+          <>
+            {' '}
+            <button disabled={p.dues <= 0 && view.week < (p.duesDue ?? 0) - 1} onClick={act(() => setTold(`Paid ${cr(payGuildDues(state))}.`))}>
+              pay the dues
+            </button>{' '}
+            <button onClick={act(() => setTold(`${consultBook(state)} prices you did not have.`))}>consult the guild's book</button>
+          </>
+        ) : (
+          <span className="muted"> They are paid only at the seat.</span>
+        )}
+      </p>
+      {told && <p className="muted">{told}</p>}
+    </div>
+  )
+}
+
+function Yard({ view, state, act }: PaneProps) {
+  const here = view.here!
+  const o = view.papers.hullOrder
+  const offers = yardOffers(state)
+  return (
+    <div className="scene">
+      <p>The yard at {here.name}: slips, cranes, and the smell of hot metal.</p>
+      {o && (
+        <p>
+          Your {TYPE_WORDS[o.type]} is building at {view.chart[o.at].name}, ready week {o.ready}.{' '}
+          {o.at === here.world && (
+            <button disabled={view.week < o.ready} onClick={act(() => takeDelivery(state))}>
+              take delivery
+            </button>
+          )}
+          <span className="muted"> Your present hull goes to the yard for half her price.</span>
+        </p>
+      )}
+      {!o && (
+        <>
+          <h3>Hulls to order</h3>
+          <ul>
+            {offers.map((f) => (
+              <li key={f.type}>
+                {TYPE_WORDS[f.type]}, {cr(f.price)}, {f.weeks} weeks.{' '}
+                <button disabled={!f.allowed || view.purse < f.price} onClick={act(() => orderHull(state, f.type))}>
+                  order
+                </button>
+                {!f.allowed && <span className="muted"> A warship: the yard sells her only under a letter of marque of this empire.</span>}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  )
+}
+
+function House({ view, state, act }: PaneProps) {
+  const here = view.here!
+  const own = here.seatOf === view.player.empire
+  const p = view.papers
+  const owed = prizeMoneyOwed(state)
+  const prizes = prizesOffered(state)
+  return (
+    <div className="scene">
+      <p>Government House of {empireName(view, here.empire)}: the governor's clerks, the prize court, the guard at the door.</p>
+      {owed > 0 && (
+        <p>
+          The court owes you {cr(owed)} in prize money. <button onClick={act(() => claimPrizeMoney(state))}>claim it</button>
+        </p>
+      )}
+      {own ? (
+        p.marque ? (
+          <p>You hold a letter of marque since week {p.marque.since}: every enemy at war with the Crown and every robber is yours to take and send in, for a third of her price at the court.</p>
+        ) : (
+          <p>
+            A letter of marque is to be had for {cr(MARQUE_FEE)} by a captain of clean record.{' '}
+            <button disabled={view.purse < MARQUE_FEE || p.outlaw || (view.debt?.arrears ?? 0) > 0} onClick={act(() => takeMarque(state))}>
+              take out a letter of marque
+            </button>
+            {(p.outlaw || (view.debt?.arrears ?? 0) > 0) && <span className="muted"> Not with your record.</span>}
+          </p>
+        )
+      ) : (
+        <p className="muted">A foreign court. Its clerks have no papers for you.</p>
+      )}
+      <h3>Prizes for sale</h3>
+      <ul>
+        {prizes.map((z) => (
+          <li key={z.ship}>
+            {z.name}, {TYPE_WORDS[z.type]}, {cr(z.price)}, sold off in {z.weeks} weeks.{' '}
+            <button disabled={view.purse < z.price} onClick={act(() => buyPrize(state, z.ship))}>
+              buy her
+            </button>
+          </li>
+        ))}
+        {prizes.length === 0 && <li className="muted">Nothing lies condemned at present.</li>}
+      </ul>
     </div>
   )
 }

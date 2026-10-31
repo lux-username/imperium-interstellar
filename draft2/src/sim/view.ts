@@ -315,6 +315,16 @@ export interface BookEntry {
 export interface PlayerView {
   week: Week
   player: { id: CharacterId; name: string; empire: EmpireId }
+  /** Papers and standing: a letter of marque, the guild's ticket and what is owed under it, a hull on order. */
+  papers: {
+    marque: { empire: EmpireId; since: Week } | null
+    guild: EmpireId | null
+    /** Dues set aside, and the week they fall due (a year after last paid). */
+    dues: number
+    duesDue: Week | null
+    hullOrder: { type: string; at: WorldId; ready: Week } | null
+    outlaw: boolean
+  }
   /** Where the player's body is: a world, or aboard a hull between worlds. */
   body: { kind: 'world'; world: WorldId } | { kind: 'aboard'; ship: ShipId; shipName: string; from: WorldId; to: WorldId; arrives: Week }
   /** The lane chart is public knowledge and never stale. */
@@ -323,7 +333,7 @@ export interface PlayerView {
   empires: Record<EmpireId, EmpireEntry>
   known: Belief
   /** What the player sees for themselves where they are this week. Null in jump. */
-  here: { world: WorldId; empire: EmpireId; starport: StarportClass; hulls: HullHere[]; market: MarketRow[]; freight: FreightRow[]; duty: number; closed: boolean; inspection: number; refuel: number | null; destinations: Destination[] } | null
+  here: { world: WorldId; name: string; empire: EmpireId; starport: StarportClass; seatOf: EmpireId | null; hulls: HullHere[]; market: MarketRow[]; freight: FreightRow[]; duty: number; closed: boolean; inspection: number; refuel: number | null; destinations: Destination[] } | null
   /** Purse and debt: certain. */
   purse: number
   debt: Debt | null

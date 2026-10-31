@@ -228,7 +228,7 @@ export function generateWorlds(rng: Rng): Generated {
   const order: Empire[] = []
   EMPIRES.forEach((e, i) => {
     // 12–16 weeks round trip to the imperial capital, per spec.
-    const empire: Empire = { id: e.id, name: e.name, core: e.core, seat: seats[i].id, capitalWeeks: nextInt(rng, 6, 8), treasury: 0, home: {}, exports: [], imports: [] }
+    const empire: Empire = { id: e.id, name: e.name, core: e.core, seat: seats[i].id, capitalWeeks: nextInt(rng, 6, 8), treasury: 0, home: {}, exports: [], imports: [], prizesForSale: [], owed: {}, lastArrival: 0 }
     // The seat is named by the power that sits there.
     taken.delete(seats[i].name)
     seats[i].name = seatName(rng, e.core, taken)

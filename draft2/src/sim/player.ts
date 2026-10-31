@@ -7,7 +7,7 @@
 import { hexDistance } from './hex'
 import { route } from './chart'
 import { dutyRate, GOODS, inspectionChance } from './economy'
-import { onTheFence, roundWouldHelp, willingness } from './agents'
+import { DUES_YEAR, onTheFence, roundWouldHelp, willingness } from './agents'
 import { ransomFor } from './captivity'
 import { esteemWord, greeting, regardOf, remarkable, standingWord, traitsOf } from './people'
 import { possibleAllies } from './combat'
@@ -16,7 +16,7 @@ import { playerShip, portClosed } from './game'
 import { beliefOf, characterLocation, readerOf, shipsAt } from './mail'
 import { sailsOn, otherEnd } from './scouts'
 import { fuelPrice, holdUsed, holding, MAINTENANCE_EVERY, maintenanceCost, reachable } from './ships'
-import { SHIP_CLASSES, type CharacterId, type GameState, type WorldId } from './types'
+import { SHIP_CLASSES, type CharacterId, type EmpireId, type GameState, type WorldId } from './types'
 import type { BookEntry, ChartEntry, Dispatch, EmpireEntry, HullHere, OwnShip, PlayerView, Report } from './view'
 
 export function buildPlayerView(state: GameState): PlayerView {
@@ -63,8 +63,10 @@ export function buildPlayerView(state: GameState): PlayerView {
       ? null
       : {
           world: at,
+          name: world.name,
           empire: world.empire,
           starport: world.profile.starport,
+          seatOf: (Object.values(state.empires).find((e) => e.seat === at)?.id ?? null) as EmpireId | null,
           hulls: shipsAt(state, at)
             .filter((s) => s.id !== own?.id)
             .map((s): HullHere => {
@@ -164,6 +166,14 @@ export function buildPlayerView(state: GameState): PlayerView {
   return {
     week: state.week,
     player: { id: me.id, name: me.name, empire: me.empire },
+    papers: {
+      marque: me.marque ?? null,
+      guild: me.guild ?? null,
+      dues: me.dues ?? 0,
+      duesDue: me.guild ? (me.duesPaid ?? 0) + DUES_YEAR : null,
+      hullOrder: me.hullOrder ?? null,
+      outlaw: !!me.outlaw,
+    },
     body,
     lanes: Object.values(state.lanes).sort((a, b) => (a.id < b.id ? -1 : 1)),
     chart,

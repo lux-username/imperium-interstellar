@@ -20,8 +20,11 @@ export function prizeValue(ship: Ship): number {
   return Math.round(SHIP_CLASSES[ship.type].price / 2)
 }
 
-/** The court sits: she is sold, and the proceeds go to the treasury. Returns who has her now. */
-function condemn(state: GameState, ship: Ship, taker: string): string {
+/** Weeks the court holds a condemned prize for sale before selling her off. */
+export const PRIZE_SALE_WEEKS = 8
+
+/** The court sits: she is condemned and put up for sale at the seat. A private captor under a letter of marque is owed a third of her value, to claim at the court. */
+function condemn(state: GameState, ship: Ship, taker: string, captor: string | null): void {
   const e = state.empires[taker as never]
   const seat = state.worlds[e.seat]
   const value = prizeValue(ship)
@@ -29,6 +32,21 @@ function condemn(state: GameState, ship: Ship, taker: string): string {
   ship.hold = []
   ship.damage = 0
   ship.lyingOff = false
+  ship.captain = null
+  ship.owner = { kind: 'organisation', empire: e.id, arm: 'navy' }
+  if (captor && state.characters[captor as never]) {
+    const share = Math.round(value / 3)
+    e.owed[captor] = (e.owed[captor] ?? 0) + share
+  }
+  e.prizesForSale.push({ ship: ship.id, until: state.week + PRIZE_SALE_WEEKS })
+  postNewsItem(state, seat.id, `The prize ${ship.name} was condemned; the court offers her for ${value} Cr.`)
+}
+
+/** A prize nobody bought is sold off: a freighter to the guild if its purse can bear it, any hull to a new captain of the empire. */
+function sellOff(state: GameState, ship: Ship, taker: string): string {
+  const e = state.empires[taker as never]
+  const seat = state.worlds[e.seat]
+  const value = prizeValue(ship)
   if (ship.type === 'bulk_freighter') {
     const g = state.guilds[e.id]
     if (g.purse >= value + FLOAT) {
@@ -62,15 +80,20 @@ function condemn(state: GameState, ship: Ship, taker: string): string {
   return c.name
 }
 
-/** Prizes under way: a hop toward the seat each week, fuel at the empire's ports; at the seat, the court. */
+/** Prizes under way: a hop toward the seat each week, fuel at the empire's ports; at the seat, the court; held eight weeks for sale, then sold off. */
 export function prizesAct(state: GameState): void {
+  for (const e of Object.values(state.empires)) {
+    const due = e.prizesForSale.filter((p) => state.week >= p.until)
+    e.prizesForSale = e.prizesForSale.filter((p) => state.week < p.until)
+    for (const p of due) if (state.ships[p.ship]) sellOff(state, state.ships[p.ship], e.id)
+  }
   for (const id of Object.keys(state.ships).sort() as ShipId[]) {
     const ship = state.ships[id]
     if (ship.duty?.kind !== 'prize' || ship.location.kind !== 'world') continue
     const at = ship.location.world
     const here = state.worlds[at]
     if (at === ship.duty.to) {
-      condemn(state, ship, ship.duty.taker)
+      condemn(state, ship, ship.duty.taker, ship.duty.captor ?? null)
       continue
     }
     const price = fuelPrice(here.profile.starport)

@@ -29,7 +29,8 @@ export function shipName(rng: Rng, type: ShipType, taken: Set<string>): string {
   const pool = SHIP_NAMES[POOL[type]]
   const free = pool.filter((n) => !taken.has(n))
   let name = free.length > 0 ? free[nextInt(rng, 0, free.length - 1)] : pool[nextInt(rng, 0, pool.length - 1)]
-  for (let i = 0; taken.has(name); i++) name = `${name.replace(/ [IVX]+$/, '')} ${ORDINALS[Math.min(i, ORDINALS.length - 1)]}`
+  const base = name.replace(/ [IVX]+$/, '').replace(/ \d+$/, '')
+  for (let i = 0; taken.has(name); i++) name = i < ORDINALS.length ? `${base} ${ORDINALS[i]}` : `${base} ${i + 2}`
   taken.add(name)
   return name
 }
@@ -85,6 +86,12 @@ export function driveFault(rng: Rng, ship: Ship, week: number): boolean {
   if (over === 0) return false
   return roll(rng) <= 2 + Math.floor(over / 8)
 }
+
+/** Weeks a yard takes to build each type. */
+export const BUILD_WEEKS: Record<ShipType, number> = { scout: 10, free_trader: 12, armed_trader: 14, far_trader: 14, bulk_freighter: 20, patrol_boat: 20, corvette: 24, frigate: 40 }
+
+/** Warships: the yards sell them only to a holder of a letter of marque. An armed trader is anyone's to buy. */
+export const WARSHIPS: readonly ShipType[] = ['patrol_boat', 'corvette', 'frigate']
 
 export function holdUsed(ship: Ship): number {
   return ship.hold.reduce((s, l) => s + l.tons, 0)

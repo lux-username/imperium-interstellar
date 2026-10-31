@@ -81,13 +81,17 @@ describe('what becomes of a hull taken', () => {
     resolveRound(state, enc, 'strike')
     const line = settle(state, enc)
     expect(line).toMatch(/sent in as a prize/)
-    expect(victim.duty).toEqual({ kind: 'prize', to: e.seat, taker: e.id })
+    expect(victim.duty).toEqual({ kind: 'prize', to: e.seat, taker: e.id, captor: null })
     const treasury = e.treasury
+    let offered = false
     let sold = false
-    for (let i = 0; i < 30 && !sold; i++) {
+    for (let i = 0; i < 50 && !sold; i++) {
       advanceWeek(state)
+      if (e.prizesForSale.some((p) => p.ship === victim.id)) offered = true
       if (victim.duty === null && victim.captain) sold = true
     }
+    // She lies at the court for sale a while before being sold off.
+    expect(offered).toBe(true)
     expect(sold).toBe(true)
     expect(e.treasury).toBeGreaterThan(treasury)
     expect(victim.owner.kind).toBe('personal')

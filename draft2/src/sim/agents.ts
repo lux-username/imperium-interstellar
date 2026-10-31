@@ -15,7 +15,7 @@ import { buy, demandLevel, dutyRate, FINE_TIMES_DUTY, GOOD_SPECS, GOODS, inspect
 import { postNewsItem } from './news'
 import { havens } from './navy'
 import { learnTraffic, tellDanger } from './belief'
-import { deal, esteemOf, impressed, regardOf, relation, rollTraits, traitsOf } from './people'
+import { deal, esteemOf, impressed, regardOf, relation, relKey, rollTraits, traitsOf } from './people'
 import { beliefOf, characterLocation } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { nextFloat, nextInt, roll, type Rng } from './rng'
@@ -120,7 +120,7 @@ export function payDues(state: GameState, c: Character, at: WorldId): void {
 export function expelLapsed(state: GameState): void {
   for (const id of Object.keys(state.characters).sort() as CharacterId[]) {
     const c = state.characters[id]
-    if (!c.guild || id === state.player) continue
+    if (!c.guild) continue
     // Only a member trading on her own account owes dues; the guild's own officers are its servants, not its members.
     const hull = c.body.kind === 'aboard' ? state.ships[c.body.ship] : null
     if (!hull || hull.owner.kind !== 'personal') continue
@@ -1010,10 +1010,8 @@ export function honours(state: GameState, b: Character, a: CharacterId, req: Rou
 /** The routes `b` has been asked to leave alone and means to. */
 export function routesToAvoid(state: GameState, b: Character): { world: WorldId; good: Good }[] {
   const out: { world: WorldId; good: Good }[] = []
-  for (const key of Object.keys(state.relations)) {
-    if (!key.endsWith(`|${b.id}`)) continue
-    const a = key.slice(0, key.indexOf('|')) as CharacterId
-    const req = state.relations[key].request
+  for (const a of Object.keys(state.characters) as CharacterId[]) {
+    const req = state.relations[relKey(a, b.id)]?.request
     if (req && honours(state, b, a, req)) out.push({ world: req.world, good: req.good as Good })
   }
   return out
@@ -1079,10 +1077,10 @@ export function tellTies(state: GameState, from: CharacterId, to: CharacterId): 
   let n = 0
   const heard: { key: string; regard: number; teller: CharacterId }[] = []
   // The teller's own friends and enemies.
-  for (const key of Object.keys(state.relations).sort()) {
-    if (!key.startsWith(`${from}|`)) continue
+  for (const y of Object.keys(state.characters).sort() as CharacterId[]) {
+    const key = relKey(from, y)
     const r = state.relations[key]
-    if (Math.abs(r.regard) < 1.5) continue
+    if (!r || Math.abs(r.regard) < 1.5) continue
     heard.push({ key, regard: r.regard, teller: from })
   }
   // And what the teller has heard of others.
@@ -1101,6 +1099,15 @@ export function tellTies(state: GameState, from: CharacterId, to: CharacterId): 
     if (myRegard < 1) continue
     if (h.regard <= -1.5) deal(state, to, y, -0.3, `${state.characters[from].name} counts ${state.characters[y]?.name ?? y} an enemy`, 'tie')
     else if (h.regard >= 1.5) deal(state, to, y, 0.2, `${state.characters[from].name} counts ${state.characters[y]?.name ?? y} a friend`, 'tie')
+  }
+  // A friend's tales carry: the people the teller thinks well of, the hearer comes to think well of too, at half strength.
+  if (regardOf(state, to, from) >= 1) {
+    for (const y of Object.keys(state.characters).sort() as CharacterId[]) {
+      if (y === to || y === from) continue
+      const told = state.relations[relKey(from, y)]?.esteem ?? 0
+      const mine = esteemOf(state, to, y)
+      if (told >= 1 && mine < told / 2) impressed(state, to, y, Math.round((told / 2 - mine) * 10) / 10)
+    }
   }
   return n
 }

@@ -8,7 +8,8 @@
  * lanes with mail and news, every body at a port seeing the port, and a
  * player who can take passage. Nothing trades or fights yet.
  */
-import { askCaptain, captainsAct, dockTalk, expelLapsed, guildPost, listenAtBar, noticeUndercut, seedTraderKnowledge, settleTip, spawnTraders } from './agents'
+import { askCaptain, captainsAct, dockTalk, expelLapsed, guildPost, listenAtBar, noticeUndercut, payDues, seedTraderKnowledge, settleTip, spawnTraders, tellPrices } from './agents'
+import { prizeValue } from './prizes'
 import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, type Hail } from './combat'
 import { huntersAct, patrolAt, spawnHunters } from './navy'
 import { GUILD_PURSE, guildsPlan, haulersAct, spawnHaulers } from './guild'
@@ -30,9 +31,9 @@ import { learnTraffic } from './belief'
 import { officerCulture, personName, rollSex } from './names'
 import { plainTraits, proved } from './people'
 import { createRng, nextInt, roll } from './rng'
-import { departOnAccount, fuelPrice, holdFree, holding, MAINTENANCE_WEEKS, maintenanceCost, newShip, reachable, setCourse, unload } from './ships'
+import { BUILD_WEEKS, departOnAccount, fuelPrice, holdFree, holding, MAINTENANCE_WEEKS, maintenanceCost, newShip, reachable, setCourse, unload, WARSHIPS } from './ships'
 import { departScouts, landShips, packetScouts } from './scouts'
-import { SHIP_CLASSES, stanceKey, stancePair, type CargoLot, type CharacterId, type Declaration, type EmpireId, type FreightOffer, type GameState, type Mail, type ReportId, type Ship, type ShipId, type Week, type World, type WorldId } from './types'
+import { SHIP_CLASSES, stanceKey, stancePair, type CargoLot, type CharacterId, type ShipType, type Declaration, type EmpireId, type FreightOffer, type GameState, type Mail, type ReportId, type Ship, type ShipId, type Week, type World, type WorldId } from './types'
 import type { Report } from './view'
 
 export const PLAYER = 'c-player' as CharacterId
@@ -50,9 +51,9 @@ function warTerm(state: GameState): number {
   return nextInt(state.rng, 52, 156)
 }
 
-/** Weeks a peace holds: two to five years. The opening peace is shorter, so the first war comes within the first year or two. */
+/** Weeks a peace holds: one to two years, so an empire is at war with someone most of the time and with everyone some of it. The opening peace is shorter. */
 function peaceTerm(state: GameState, opening = false): number {
-  return opening ? nextInt(state.rng, 20, 80) : nextInt(state.rng, 104, 260)
+  return opening ? nextInt(state.rng, 10, 50) : nextInt(state.rng, 40, 110)
 }
 
 /** A declaration is made at both seats the week it is made; the rest of the subsector hears when a hull brings it. */
@@ -775,6 +776,163 @@ export function askForRoute(state: GameState, who: CharacterId, world: WorldId, 
   if (state.relations[`${state.player}|${who}`]?.request) return false
   askRoute(state, state.player, who, world, good)
   return true
+}
+
+/** The fee for a letter of marque, and for the guild's ticket. */
+export const MARQUE_FEE = 10000
+export const GUILD_FEE = 5000
+
+/** A yard at this port: an A port with the tech to build the type. */
+export function yardHere(state: GameState): World | null {
+  const at = playerWorld(state)
+  return at && at.profile.starport === 'A' ? at : null
+}
+
+/** What the yard here would build for the player, with the weeks each takes; warships only under a letter of marque. */
+export function yardOffers(state: GameState): { type: ShipType; price: number; weeks: number; allowed: boolean }[] {
+  const me = state.characters[state.player]
+  const at = yardHere(state)
+  if (!at) return []
+  return (Object.keys(SHIP_CLASSES) as ShipType[])
+    .filter((t) => t !== 'scout')
+    .map((t) => ({ type: t, price: SHIP_CLASSES[t].price, weeks: BUILD_WEEKS[t], allowed: !WARSHIPS.includes(t) || !!(me.marque && me.marque.empire === at.empire) }))
+}
+
+/** Order a hull from the yard here: the price down now, delivery in the yard's time. One order at a time. */
+export function orderHull(state: GameState, type: ShipType): boolean {
+  const me = state.characters[state.player]
+  const at = yardHere(state)
+  const offer = yardOffers(state).find((o) => o.type === type)
+  if (!at || !offer || !offer.allowed || me.hullOrder || me.purse < offer.price) return false
+  me.purse -= offer.price
+  state.empires[at.empire].treasury += Math.round(offer.price * 0.1)
+  me.hullOrder = { type, at: at.id, ready: state.week + offer.weeks }
+  return true
+}
+
+/** Take delivery of a hull ordered here and ready: the player shifts into her; the old hull is sold to the yard for half her price. */
+export function takeDelivery(state: GameState): boolean {
+  const me = state.characters[state.player]
+  const at = playerWorld(state)
+  const o = me.hullOrder
+  if (!at || !o || o.at !== at.id || state.week < o.ready) return false
+  const old = playerShip(state)
+  const taken = new Set(Object.values(state.ships).map((s) => s.name))
+  const id = `s-player-${state.nextId++}` as ShipId
+  const hull = newShip(state.rng, id, o.type, me.empire, { kind: 'personal', character: me.id }, at.id, taken, me.id)
+  hull.maintained = state.week
+  state.ships[id] = hull
+  if (old && old.location.kind === 'world' && old.location.world === at.id) {
+    for (const lot of old.hold) hull.hold.push(lot)
+    me.purse += Math.round(SHIP_CLASSES[old.type].price / 2)
+    delete state.ships[old.id]
+  }
+  me.body = { kind: 'aboard', ship: id }
+  me.hullOrder = null
+  return true
+}
+
+/** Prizes the court here offers, if this is a seat. */
+export function prizesOffered(state: GameState): { ship: ShipId; name: string; type: ShipType; price: number; weeks: number }[] {
+  const at = playerWorld(state)
+  if (!at) return []
+  const e = Object.values(state.empires).find((x) => x.seat === at.id)
+  if (!e) return []
+  return e.prizesForSale.filter((p) => state.ships[p.ship]).map((p) => ({ ship: p.ship, name: state.ships[p.ship].name, type: state.ships[p.ship].type, price: prizeValue(state.ships[p.ship]), weeks: p.until - state.week }))
+}
+
+/** Buy a condemned prize from the court here and shift into her at once; the old hull is sold to the yard for half. Warships only under this empire's letter of marque. */
+export function buyPrize(state: GameState, ship: ShipId): boolean {
+  const me = state.characters[state.player]
+  const at = playerWorld(state)
+  if (!at) return false
+  const e = Object.values(state.empires).find((x) => x.seat === at.id)
+  const offer = e?.prizesForSale.find((p) => p.ship === ship)
+  const hull = state.ships[ship]
+  if (!e || !offer || !hull || me.purse < prizeValue(hull)) return false
+  if (WARSHIPS.includes(hull.type) && !(me.marque && me.marque.empire === e.id)) return false
+  me.purse -= prizeValue(hull)
+  e.treasury += prizeValue(hull)
+  e.prizesForSale = e.prizesForSale.filter((p) => p.ship !== ship)
+  const old = playerShip(state)
+  if (old && old.location.kind === 'world' && old.location.world === at.id) {
+    for (const lot of old.hold) hull.hold.push(lot)
+    me.purse += Math.round(SHIP_CLASSES[old.type].price / 2)
+    delete state.ships[old.id]
+  }
+  hull.owner = { kind: 'personal', character: me.id }
+  hull.empire = me.empire
+  hull.captain = me.id
+  hull.duty = null
+  hull.maintained = state.week
+  hull.fuel = SHIP_CLASSES[hull.type].tanks
+  me.body = { kind: 'aboard', ship: hull.id }
+  return true
+}
+
+/** Prize money owed to the player by the court here, and its claiming. */
+export function prizeMoneyOwed(state: GameState): number {
+  const at = playerWorld(state)
+  const e = at ? Object.values(state.empires).find((x) => x.seat === at.id) : null
+  return e?.owed[state.player] ?? 0
+}
+
+export function claimPrizeMoney(state: GameState): number {
+  const at = playerWorld(state)
+  const e = at ? Object.values(state.empires).find((x) => x.seat === at.id) : null
+  if (!e) return 0
+  const sum = e.owed[state.player] ?? 0
+  if (sum > 0) {
+    state.characters[state.player].purse += sum
+    e.owed[state.player] = 0
+  }
+  return sum
+}
+
+/** A letter of marque from the player's own empire, at its seat: a fee, and a clean record (no outlaw, no arrears). */
+export function takeMarque(state: GameState): boolean {
+  const me = state.characters[state.player]
+  const at = playerWorld(state)
+  if (!at || at.id !== state.empires[me.empire].seat || me.marque || me.outlaw || (me.debt?.arrears ?? 0) > 0 || me.purse < MARQUE_FEE) return false
+  me.purse -= MARQUE_FEE
+  state.empires[me.empire].treasury += MARQUE_FEE
+  me.marque = { empire: me.empire, since: state.week }
+  postNewsItem(state, at.id, `${me.name} of the ${playerShip(state)?.name ?? 'the port'} has taken out a letter of marque.`)
+  return true
+}
+
+/** The guild's ticket, from the player's own empire's guild at its seat, for a fee. */
+export function joinGuild(state: GameState): boolean {
+  const me = state.characters[state.player]
+  const at = playerWorld(state)
+  if (!at || at.id !== state.guilds[me.empire].seat || me.guild || me.outlaw || me.purse < GUILD_FEE) return false
+  me.purse -= GUILD_FEE
+  state.guilds[me.empire].purse += GUILD_FEE
+  me.guild = me.empire
+  me.dues = 0
+  me.duesPaid = state.week
+  return true
+}
+
+/** Pay over the dues set aside, at the seat. Returns what was paid. */
+export function payGuildDues(state: GameState): number {
+  const me = state.characters[state.player]
+  const at = playerWorld(state)
+  if (!me.guild || !at || state.guilds[me.guild].seat !== at.id) return 0
+  const sum = me.dues ?? 0
+  payDues(state, me, at.id)
+  return sum
+}
+
+/** Consult the guild's book at the seat: its prices into the player's own. Returns how many were news. */
+export function consultBook(state: GameState): number {
+  const me = state.characters[state.player]
+  const at = playerWorld(state)
+  if (!me.guild || !at || state.guilds[me.guild].seat !== at.id) return 0
+  const b = beliefOf(state, state.player)
+  const n = tellPrices(state.guilds[me.guild].book, b.prices, false)
+  tellPrices(b.prices, state.guilds[me.guild].book, false)
+  return n
 }
 
 /** Lay the player's hull up for maintenance here. */
