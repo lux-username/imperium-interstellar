@@ -99,3 +99,4 @@ button.tiny { padding: 0 4px; font-size: 10px; }
 .map .guildlines .e1 line { stroke: var(--e1); }
 .map .guildlines .e2 line { stroke: var(--e2); }
 .map .guildlines .age { font-size: 7px; text-anchor: middle; fill: var(--muted); }
+table.market tr.heard td { color: #b9bcc6; font-style: italic; }

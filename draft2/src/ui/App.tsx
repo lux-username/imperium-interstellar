@@ -411,7 +411,7 @@ function Brokers({ view, state, act }: PaneProps) {
             <tr key={r.good}>
               <td>{r.good}</td>
               <td>{cr(r.price)}</td>
-              <td>{r.stock} t</td>
+              <td>{Math.floor(r.stock)} t</td>
               <td>{r.holding ? `${r.holding.tons} t @ ${cr(r.holding.paid)}` : ''}</td>
               <td>
                 {ship && (
@@ -555,11 +555,14 @@ function Dossier({ view, world }: { view: PlayerView; world: WorldId }) {
             <table className="market small">
               <tbody>
                 {goods.map((g) => (
-                  <tr key={g}>
+                  <tr key={g} className={prices[g]!.heard ? 'heard' : ''}>
                     <td>{g}</td>
                     <td>{cr(prices[g]!.price)}</td>
-                    <td>{prices[g]!.stock} t</td>
-                    <td className="muted">{ago(view.week, prices[g]!.observed)}</td>
+                    <td>{Math.floor(prices[g]!.stock)} t</td>
+                    <td className="muted">
+                      {ago(view.week, prices[g]!.observed)}
+                      {prices[g]!.heard ? ' · heard' : ''}
+                    </td>
                   </tr>
                 ))}
               </tbody>
