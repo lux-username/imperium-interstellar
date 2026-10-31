@@ -8,7 +8,7 @@
  * lanes with mail and news, every body at a port seeing the port, and a
  * player who can take passage. Nothing trades or fights yet.
  */
-import { askCaptain, captainsAct, dockTalk, guildPost, listenAtBar, noticeUndercut, seedTraderKnowledge, settleTip, spawnTraders } from './agents'
+import { askCaptain, captainsAct, dockTalk, expelLapsed, guildPost, listenAtBar, noticeUndercut, seedTraderKnowledge, settleTip, spawnTraders } from './agents'
 import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, type Hail } from './combat'
 import { huntersAct, patrolAt, spawnHunters } from './navy'
 import { GUILD_PURSE, guildsPlan, haulersAct, spawnHaulers } from './guild'
@@ -407,6 +407,7 @@ export function advanceWeek(state: GameState): void {
   dockTalk(state)
   // Captains decide on what they now see and have heard, and sail next week.
   // The guild's factor has first claim on the dock: haulers load before the free traders act.
+  expelLapsed(state)
   guildsPlan(state)
   imperialAct(state)
   haulersAct(state)

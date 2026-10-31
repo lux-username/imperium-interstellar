@@ -158,14 +158,20 @@ function closedTo(state: GameState, g: Guild, w: WorldId): boolean {
 }
 
 /** The most haulers a guild keeps. */
-const MOST_HAULERS = 8
-/** A guild with this much in hand beyond a hauler's price buys another; a guild short of its starting pair replaces them sooner. */
-const GROW_AT = 200000 + SHIP_CLASSES.bulk_freighter.price
+const MOST_HAULERS = 10
+
+/** What the next hauler costs: the yards charge more for each the guild already runs, so a fleet builds over years, not months. */
+function nextHaulerPrice(fleet: number): number {
+  return Math.round(SHIP_CLASSES.bulk_freighter.price * (1 + 0.3 * Math.max(0, fleet - 2)))
+}
+/** A guild buys another hauler when it can pay for her and keep this much by: the dues and the lines together build the fleet, a hull a year or so where trade is good. */
+const CUSHION = 100000
 
 /** A guild flush with money adds a hauler at its seat, if its lines have work for one; one that has lost haulers replaces them as soon as it can. */
 function growFleet(state: GameState, g: Guild, work: boolean): void {
   const fleet = Object.values(state.ships).filter((s) => s.duty?.kind === 'haul' && s.owner.kind === 'organisation' && s.owner.empire === g.empire).length
-  const need = fleet < HAULERS ? SHIP_CLASSES.bulk_freighter.price + 50000 : GROW_AT
+  const price = nextHaulerPrice(fleet)
+  const need = fleet < HAULERS ? SHIP_CLASSES.bulk_freighter.price + 50000 : CUSHION + price
   if (fleet >= MOST_HAULERS || g.purse < need || (fleet >= HAULERS && !work)) return
   const taken = new Set(Object.values(state.ships).map((s) => s.name))
   const n = state.nextId++
@@ -178,7 +184,7 @@ function growFleet(state: GameState, g: Guild, work: boolean): void {
   const ship = newShip(state.rng, sid, 'bulk_freighter', g.empire, { kind: 'organisation', empire: g.empire, arm: 'guild' }, g.seat, taken, cid)
   ship.duty = { kind: 'haul', line: null, waited: 0 }
   state.ships[sid] = ship
-  g.purse -= SHIP_CLASSES.bulk_freighter.price
+  g.purse -= fleet < HAULERS ? SHIP_CLASSES.bulk_freighter.price : price
   postNewsItem(state, g.seat, `The guild has taken delivery of a new bulk freighter, the ${ship.name}.`)
 }
 

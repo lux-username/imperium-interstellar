@@ -68,8 +68,12 @@ export function spawnTraders(state: GameState, taken: Set<string>): void {
       const culture = officerCulture(rng, core)
       const sex = rollSex(rng)
       const captain: Character = { id: cid, name: personName(rng, culture, sex), culture, sex, empire, body: { kind: 'aboard', ship: sid }, purse: TRADER_PURSE + nextInt(rng, -5000, 10000), debt: null, traits: rollTraits(rng) }
-      // About half carry the guild's ticket.
-      if (roll(rng) >= 7) captain.guild = empire
+      // About half carry the guild's ticket, paid up at the start.
+      if (roll(rng) >= 7) {
+        captain.guild = empire
+        captain.dues = 0
+        captain.duesPaid = 0
+      }
       state.characters[cid] = captain
       // Most sail free traders; some a far trader; a quarter an armed trader, dearer and smaller-holded, with two guns.
       const r = roll(rng)
@@ -78,11 +82,55 @@ export function spawnTraders(state: GameState, taken: Set<string>): void {
   }
 }
 
-/** Book a deal's duty to the port's governor and, when a hull and a side are given, the deal in the port's register. Returns the deal for chaining. */
+/** The share of every sale a guild member sets aside for the guild. */
+export const GUILD_DUES = 0.04
+
+/**
+ * Book a deal's duty to the port's governor and, when a hull and a side
+ * are given, the deal in the port's register. A guild member's sale sets
+ * aside the guild's share, which comes out of the proceeds. Returns the
+ * deal, its credits less the share, for chaining.
+ */
 export function trade(state: GameState, world: World, deal: { duty: number; credits: number; tons: number; price: number }, ship?: Ship, kind?: 'sold' | 'bought', good?: Good): { duty: number; credits: number; tons: number; price: number } {
   state.empires[world.empire].treasury += deal.duty
   if (ship && kind && good) recordTrade(state, world, ship, kind, good, deal.tons, deal.price)
+  if (ship?.captain && kind === 'sold') {
+    const c = state.characters[ship.captain]
+    if (c?.guild) {
+      const share = Math.round(deal.credits * GUILD_DUES)
+      c.dues = (c.dues ?? 0) + share
+      return { ...deal, credits: deal.credits - share }
+    }
+  }
   return deal
+}
+
+/** Weeks a member may go without paying over their dues before the guild strikes them off. */
+export const DUES_YEAR = 52
+
+/** At the seat, a member pays over what they have set aside. */
+export function payDues(state: GameState, c: Character, at: WorldId): void {
+  if (!c.guild || state.guilds[c.guild].seat !== at) return
+  state.guilds[c.guild].purse += c.dues ?? 0
+  c.dues = 0
+  c.duesPaid = state.week
+}
+
+/** A member a year behind is struck off: the guild's book is closed to them, and the seat's news carries it. */
+export function expelLapsed(state: GameState): void {
+  for (const id of Object.keys(state.characters).sort() as CharacterId[]) {
+    const c = state.characters[id]
+    if (!c.guild || id === state.player) continue
+    // Only a member trading on her own account owes dues; the guild's own officers are its servants, not its members.
+    const hull = c.body.kind === 'aboard' ? state.ships[c.body.ship] : null
+    if (!hull || hull.owner.kind !== 'personal') continue
+    const since = c.duesPaid ?? 0
+    if (state.week - since <= DUES_YEAR) continue
+    const g = state.guilds[c.guild]
+    postNewsItem(state, g.seat, `The guild has struck ${c.name} off its rolls for a year's dues unpaid.`)
+    c.guild = undefined
+    c.dues = 0
+  }
 }
 
 /** The captains in port with hulls of their own to run: everyone but the player. */
@@ -520,6 +568,18 @@ function loadPlan(state: GameState, captain: Character, ship: Ship, here: World,
     }
 }
 
+/** The guild's seat and the next hop toward it, when a member's year is running out and they are not there. */
+function seatBound(state: GameState, captain: Character, ship: Ship, at: WorldId): { seat: WorldId; next: WorldId } | null {
+  if (!captain.guild) return null
+  const seat = state.guilds[captain.guild].seat
+  if (at === seat) return null
+  const left = DUES_YEAR - (state.week - (captain.duesPaid ?? 0))
+  const path = hexRoute(state.worlds, at, seat, SHIP_CLASSES[ship.type].jump)
+  if (!path || path.length < 2) return null
+  // Two weeks a hop with lie-overs, and a month's grace.
+  return left <= (path.length - 1) * 2 + 4 ? { seat, next: path[1] } : null
+}
+
 /** The nearest dockyard of the captain's own empire and the next hop toward it, when maintenance will fall due before a captain wandering could reach one. */
 function yardBound(state: GameState, captain: Character, ship: Ship, at: WorldId): { yard: WorldId; next: WorldId } | null {
   const here = state.worlds[at]
@@ -588,6 +648,8 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
       rememberLeg(state, captain, lot.from, at, Math.round((made * lot.tons) / soldTons))
     }
   }
+  // A guild member at the seat pays over what they have set aside.
+  payDues(state, captain, at)
   // A captain with money and a stale book buys the port's register: the best information there is, for a few hundred.
   if (captain.purse >= 20000 && ['A', 'B', 'C'].includes(here.profile.starport)) {
     const pages = belief.traffic[at] ?? []
@@ -611,6 +673,15 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
   // Maintenance when due, if this is a dockyard and the purse allows; a captain lets it slide a while if short.
   if (state.week - ship.maintained >= 26 - 4 * traitsOf(captain).caution && ['A', 'B'].includes(here.profile.starport) && captain.purse >= maintenanceCost(ship) + (overdue(ship, state.week) > 0 ? 500 : 2500) && (overdue(ship, state.week) > 0 || roll(state.rng) >= 7)) {
     if (layUp(state, ship, here)) return
+  }
+  // Dues a year nearly unpaid and not at the seat: head for it, with whatever pays on the way, before the guild strikes them off.
+  const toSeat = seatBound(state, captain, ship, at)
+  if (toSeat) {
+    const plan = bestPlan(state, captain, ship, at)
+    const target = plan && hexDistance(state.worlds[plan.to].hex, state.worlds[toSeat.seat].hex) < hexDistance(here.hex, state.worlds[toSeat.seat].hex) ? plan.to : toSeat.next
+    if (plan && plan.to === target) loadPlan(state, captain, ship, here, plan)
+    setCourse(state, ship, target)
+    return
   }
   // Maintenance coming due and no yard here: head for one, with whatever pays on the way, before it is overdue.
   const toYard = yardBound(state, captain, ship, at)

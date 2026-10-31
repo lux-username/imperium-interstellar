@@ -32,14 +32,16 @@ describe('the guilds\' bulk lines', () => {
     const state = newGame(92)
     let lines = 0
     let loaded = 0
+    let news = false
     for (let i = 0; i < 60; i++) {
       advanceWeek(state)
       for (const g of Object.values(state.guilds)) lines += g.lines.length
       for (const s of Object.values(state.ships)) if (s.duty?.kind === 'haul' && s.hold.length > 0) loaded++
+      // The seat's news said so at the time; news is kept only eight weeks.
+      if (Object.values(state.worlds).flatMap((w) => w.news).some((n) => /bulk line/.test(n.text))) news = true
     }
     expect(lines).toBeGreaterThan(0)
     expect(loaded).toBeGreaterThan(0)
-    const news = Object.values(state.worlds).flatMap((w) => w.news).some((n) => /bulk line/.test(n.text))
     expect(news).toBe(true)
     for (const g of Object.values(state.guilds)) {
       for (const l of g.lines) {

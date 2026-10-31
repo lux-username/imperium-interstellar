@@ -141,3 +141,8 @@
 - **Seats on the edge**, required where the map allows.
 - **The imperial trade**: each empire's home market beyond the map prices every good as a multiple of base: one or two exports at 0.5 to 0.7, one or two wants at 1.3 to 1.7, the rest 0.85 to 1.15, all drifting a little each call. Two imperial freighters an empire shuttle seat to capital, a round trip of twice the capital distance. On a call a freighter lands the exports (three quarters of a month's target stock) and whatever is dear at the seat against home (over 1.3 times), takes the wants and whatever is cheap (under 0.7), pays duty, and sails. Exports and wants are common knowledge, shown at the port captain's.
 - Two-year runs: seats hold their empire's exports at 57 to 72 percent of base and its wants at 130 to 170 percent, famous makers sell at 40 to 67 percent and famous markets pay 160 to 260 percent, and the guilds run more lines for it.
+
+## 2026-10-31 — guild dues and the fleet they buy
+
+- **Dues**: a guild member sets aside four percent of every sale, out of the proceeds, and pays it over the next time she calls at the seat. A member a year unpaid is struck off: the guild's book and fellows' free talk are closed to her, and the seat's news carries it. A member whose year is running out heads for the seat with whatever pays on the way. The guild's own officers owe nothing.
+- **The fleet**: the guild buys another hauler when it can pay for her and keep a hundred thousand by, and a running line has work for one; the yards charge thirty percent more for each hull beyond the first two, so the eighth costs nearly three times the first; ten at most. Three-year runs: fleets of three to five by the first year's end, three to ten by the third, two to five members struck off a map.

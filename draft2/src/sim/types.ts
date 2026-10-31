@@ -364,6 +364,9 @@ export interface Character {
   debt: Debt | null
   /** A member of their empire's merchant guild, if so. Members share freely among themselves and keep the guild's book. */
   guild?: EmpireId
+  /** Dues set aside from sales, owed to the guild and paid over at the seat; and the week they were last paid. */
+  dues?: number
+  duesPaid?: Week
   /** What kind of person they are. Rolled at birth; absent only on seats that are not rolled people. */
   traits?: Traits
   /** An outlaw has burned their standing with every empire: fair game for any navy, and welcome only at a haven. */
