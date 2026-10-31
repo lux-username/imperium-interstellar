@@ -252,7 +252,8 @@ export function lotPrice(world: Pick<World, 'profile' | 'isolation'>, good: Good
  */
 export function buy(world: World, good: Good, tons: number, trader: EmpireId, terms: Terms = {}): Deal | null {
   const e = world.market[good]
-  const n = Math.max(0, Math.min(tons, e.stock))
+  // Whole tons change hands; the dock may hold a fraction, which stays on it.
+  const n = Math.max(0, Math.floor(Math.min(tons, e.stock)))
   if (n === 0) return null
   // Each ton dearer than the last as the dock empties: the lot is priced at its midpoint.
   const price = lotPrice(world, good, e.mood, e.stock, -n)
@@ -269,6 +270,7 @@ export function buy(world: World, good: Good, tons: number, trader: EmpireId, te
  * itself goes on the dock for resale; what it wants is consumed.
  */
 export function sell(world: World, good: Good, tons: number, trader: EmpireId, terms: Terms = {}): Deal {
+  tons = Math.max(0, Math.floor(tons))
   const e = world.market[good]
   // Each ton cheaper than the last as the dock heaps up: the lot is priced at its midpoint. All of it goes on the dock; what the world eats, it eats in time.
   const price = lotPrice(world, good, e.mood, e.stock, tons)

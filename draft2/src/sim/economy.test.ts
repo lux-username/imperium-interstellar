@@ -189,3 +189,20 @@ describe('the buy quote', () => {
     expect(poor.most * poor.price).toBeLessThanOrEqual(1000)
   })
 })
+
+describe('whole tons', () => {
+  it('a dock holding a fraction still trades in whole tons', () => {
+    const state = newGame(26)
+    const here = characterLocation(state, state.player)!
+    const good = GOODS.find((g) => state.worlds[here].market[g].stock >= 30)!
+    state.worlds[here].market[good].stock = 12.7
+    const q = quoteBuy(state, good, 80)!
+    expect(q.most).toBe(12)
+    const b = buyGoods(state, good, 80)
+    expect(b).toMatchObject({ kind: 'ok', tons: 12 })
+    expect(Number.isInteger(state.characters[state.player].purse)).toBe(true)
+    const s = sellGoods(state, good, 12)
+    expect(s).toMatchObject({ kind: 'ok', tons: 12 })
+    expect(Number.isInteger(state.characters[state.player].purse)).toBe(true)
+  })
+})

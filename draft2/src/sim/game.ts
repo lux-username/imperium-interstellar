@@ -455,7 +455,7 @@ export function quoteBuy(state: GameState, good: Good, tons: number, smuggle = f
   const e = h.at.market[good]
   const rate = smuggle ? 0 : dutyRate(h.at, me.empire)
   // The most the purse covers, found by the same sum: price climbs as the dock empties.
-  let most = Math.min(e.stock, holdFree(h.ship))
+  let most = Math.floor(Math.min(e.stock, holdFree(h.ship)))
   while (most > 0 && lotPrice(h.at, good, e.mood, e.stock, -most) * most * (1 + rate) > me.purse) most -= 1
   const n = Math.max(0, Math.min(tons, most))
   if (n === 0) return { price: e.price, duty: 0, credits: 0, most }
