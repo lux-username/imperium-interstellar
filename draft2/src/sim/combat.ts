@@ -71,27 +71,33 @@ export function beginEncounter(state: GameState, attacker: Ship, defender: Ship,
 
 /**
  * Hulls at the port that could stand with the defender: armed, in the
- * approaches this week or lying off, not scouts, not the attacker, with a
- * captain. Whether they will is another matter.
+ * approaches this week or lying off, not scouts, not the attacker, with
+ * a captain, of any empire. Whether they will is another matter.
  */
 export function possibleAllies(state: GameState, e: Encounter): Ship[] {
-  const d = state.ships[e.defender]
   return (Object.keys(state.ships).sort() as ShipId[])
     .map((id) => state.ships[id])
-    .filter((s) => s.id !== e.attacker && s.id !== e.defender && s.captain && s.type !== 'scout' && SHIP_CLASSES[s.type].guns > 0 && s.location.kind === 'world' && s.location.world === e.at && s.docked >= state.week - 1 && s.empire === d.empire && !state.characters[s.captain]?.captive)
+    .filter((s) => s.id !== e.attacker && s.id !== e.defender && s.captain && s.type !== 'scout' && SHIP_CLASSES[s.type].guns > 0 && s.location.kind === 'world' && s.location.world === e.at && s.docked >= state.week - 1 && !state.characters[s.captain]?.captive)
 }
 
-/** Whether a captain will stand with the defender: a friend will; a stranger of bold temper will if the odds are fair; nobody stands with an outlaw. */
+/**
+ * Whether a captain will stand with the defender: a friend will, whatever
+ * flag either flies; a stranger of bold temper will if the odds are fair
+ * and their empires are not at war as the port knows it; an enemy will
+ * not; nobody stands with an outlaw, and an outlaw stands with nobody.
+ */
 export function willStand(state: GameState, ally: Ship, e: Encounter): boolean {
   const d = state.ships[e.defender]
   const a = state.ships[e.attacker]
   if (!ally.captain || !d.captain) return false
-  if (state.characters[d.captain]?.outlaw) return false
+  if (state.characters[d.captain]?.outlaw || state.characters[ally.captain]?.outlaw) return false
   const regard = regardOf(state, ally.captain, d.captain)
-  const t = traitsOf(state.characters[ally.captain])
-  const odds = (SHIP_CLASSES[ally.type].guns + SHIP_CLASSES[d.type].guns) / Math.max(1, SHIP_CLASSES[a.type].guns)
   if (regard >= 1) return true
   if (regard <= -1) return false
+  const port = state.worlds[e.at]
+  if (ally.empire !== d.empire && port.board[stanceKey(ally.empire, d.empire)]?.stance === 'war') return false
+  const t = traitsOf(state.characters[ally.captain])
+  const odds = (SHIP_CLASSES[ally.type].guns + SHIP_CLASSES[d.type].guns) / Math.max(1, SHIP_CLASSES[a.type].guns)
   return t.caution <= 0.4 && odds >= 0.8
 }
 

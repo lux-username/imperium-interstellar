@@ -115,12 +115,39 @@ export function esteemWord(e: number): string {
   return 'nobody in particular'
 }
 
-/** What `a` says on meeting `b`, from the last thing of note that passed between them; null if nothing worth a word. */
+/** How much a thing is worth bringing up again. */
+const WEIGHT: Partial<Record<NoteKind, number>> = { ransomed: 10, robbed: 9, stood_together: 7, request_broken: 6, tip_paid: 5, tip_cost: 4, request_kept: 4, released: 3, undercut: 2, round: 1 }
+
+/** A small deterministic hash, so a greeting is the same on every look in a week and different the next. */
+function mix(...parts: (string | number)[]): number {
+  let h = 2166136261
+  for (const p of parts) for (const ch of String(p)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619)
+  return (h >>> 0) / 4294967296
+}
+
+/**
+ * What `a` says on meeting `b`: one thing of note that passed between
+ * them, drawn at random with the weight of its significance and the
+ * freshness of its memory; null if nothing is worth a word. The draw is
+ * fixed for the week, so they do not change their story mid-conversation.
+ */
 export function greeting(state: GameState, a: CharacterId, b: CharacterId): string | null {
   const r = state.relations[relKey(a, b)]
   if (!r) return null
-  const notable = [...r.notes].reverse().find((n) => n.kind !== 'told' && n.kind !== 'refused' && n.kind !== 'tie' && n.kind !== 'other' && state.week - n.week <= 52)
-  if (!notable) return null
+  const candidates = r.notes
+    .filter((n) => WEIGHT[n.kind] !== undefined && state.week - n.week <= 104)
+    .map((n) => ({ n, w: (WEIGHT[n.kind] ?? 0) * (1 / (1 + (state.week - n.week) / 26)) }))
+  if (candidates.length === 0) return null
+  const total = candidates.reduce((s, c) => s + c.w, 0)
+  let pick = mix(a, b, state.week) * total
+  let notable = candidates[candidates.length - 1].n
+  for (const c of candidates) {
+    pick -= c.w
+    if (pick <= 0) {
+      notable = c.n
+      break
+    }
+  }
   const ago = state.week - notable.week
   const when = ago <= 1 ? 'the other day' : ago <= 8 ? 'a few weeks back' : 'a while back'
   switch (notable.kind) {
