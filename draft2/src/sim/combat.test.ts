@@ -43,9 +43,10 @@ describe('encounters', () => {
     expect(e.outcome).toBe('struck')
     const line = settle(state, e)
     expect(line).toMatch(/taken/)
-    expect(state.ships[sid].hold[0]).toMatchObject({ good: 'grain', tons: 20, paid: 0 })
-    expect(trader.hold.length).toBe(0)
-    expect(trader.captain).toBeNull()
+    // The hull goes whole to a promoted mate, cargo and all; her captain goes aboard the captor as a prisoner.
+    expect(trader.hold[0]).toMatchObject({ good: 'grain', tons: 20 })
+    expect(trader.captain).not.toBeNull()
+    expect(state.characters[trader.captain!].outlaw).toBe(true)
     const victim = Object.values(state.characters).find((c) => c.captive)!
     expect(victim.captive!.by).toBe(sid)
     expect(victim.body).toEqual({ kind: 'aboard', ship: sid })

@@ -13,6 +13,7 @@ import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, 
 import { huntersAct, patrolAt, spawnHunters } from './navy'
 import { GUILD_PURSE, guildsPlan, haulersAct, spawnHaulers } from './guild'
 import { imperialAct, spawnImperial } from './imperial'
+import { prizesAct } from './prizes'
 import { captivityTick, landCaptives, payRansom, ransomAnother, ransomFor } from './captivity'
 import { joinEncounter, possibleAllies, willStand } from './combat'
 import { askRoute, checkRequests, noticeImpressive, standRound } from './agents'
@@ -413,6 +414,7 @@ export function advanceWeek(state: GameState): void {
   haulersAct(state)
   captainsAct(state)
   huntersAct(state)
+  prizesAct(state)
   observeTraffic(state)
   noticeImpressive(state)
   checkRequests(state)

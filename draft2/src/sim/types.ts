@@ -347,6 +347,8 @@ export type Duty =
   | { kind: 'haul'; line: Line | null; waited: number }
   /** An imperial freighter shuttling between the seat and the capital beyond the map. */
   | { kind: 'imperial' }
+  /** A prize under a prize crew, bound for the captor's seat to be condemned and sold. */
+  | { kind: 'prize'; to: WorldId; taker: EmpireId }
 
 // ---------------------------------------------------------------------------
 // People

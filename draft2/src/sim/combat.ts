@@ -8,9 +8,10 @@
  * The player's encounters stand as `state.pending` until they choose; an
  * NPC's are resolved on the spot with the same rules and the same menu.
  */
-import { deal, impressed, regardOf, traitsOf } from './people'
+import { deal, impressed, regardOf, rollTraits, traitsOf } from './people'
+import { personName, rollSex } from './names'
 import { roll } from './rng'
-import { SHIP_CLASSES, stanceKey, type CharacterId, type Encounter, type EncounterOutcome, type GameState, type Ship, type ShipId, type Week, type WorldId } from './types'
+import { SHIP_CLASSES, stanceKey, type Character, type CharacterId, type Encounter, type EncounterOutcome, type GameState, type Ship, type ShipId, type Week, type WorldId } from './types'
 
 export type Choice = 'run' | 'fight' | 'strike'
 export type Hail = 'attack' | 'let_pass'
@@ -210,27 +211,42 @@ export function settle(state: GameState, e: Encounter): string {
     d.lyingOff = false
     return outcome === 'driven_off' ? `${d.name} drove off ${a.name} in the approaches.` : outcome === 'escaped' ? `${d.name} ran in from ${a.name} under the guns.` : `${a.name} let ${d.name} pass.`
   }
-  // Plunder: the hold, the strongbox and the purse aboard. A navy hull takes no cargo: it stays on the prize, which is the navy's now.
-  const captorChar = a.captain ? state.characters[a.captain] : null
-  if (d.strongbox > 0) {
-    if (a.duty?.kind === 'patrol') a.strongbox += d.strongbox
-    else if (captorChar) captorChar.purse += d.strongbox
-    d.strongbox = 0
-  }
-  if (a.duty?.kind !== 'patrol') {
-    for (const lot of d.hold) a.hold.push({ kind: 'cargo', good: lot.good, tons: lot.tons, paid: 0, from: at, week })
-    d.hold = []
-  }
   const captor = a.captain ? state.characters[a.captain] : null
   const victim = d.captain ? state.characters[d.captain] : null
-  if (victim && captor) {
-    deal(state, victim.id, captor.id, -3, `${captor.name} took the ${d.name} from me off ${state.worlds[at].name}`, 'robbed')
-    deal(state, captor.id, victim.id, 0.2, `took ${victim.name}'s ${d.name} off ${state.worlds[at].name}`, 'other')
+  const lawful = a.duty?.kind === 'patrol'
+  const where = state.worlds[at].name
+  // A robber who cannot use a bulk freighter robs her: the strongbox, and all the cargo she can carry, and lets her go.
+  if (!lawful && d.type === 'bulk_freighter') {
+    if (captor) captor.purse += d.strongbox
+    d.strongbox = 0
+    let room = SHIP_CLASSES[a.type].hold - a.hold.reduce((t, l) => t + l.tons, 0)
+    for (const lot of [...d.hold]) {
+      if (room <= 0) break
+      const tons = Math.min(room, lot.tons)
+      a.hold.push({ kind: 'cargo', good: lot.good, tons, paid: 0, from: at, week })
+      lot.tons -= tons
+      room -= tons
+    }
+    d.hold = d.hold.filter((l) => l.tons > 0)
+    d.lyingOff = false
+    if (victim && captor) {
+      deal(state, victim.id, captor.id, -2, `${captor.name} robbed the ${d.name} off ${where}`, 'robbed')
+      if (captor.id !== state.player) captor.outlaw = true
+    }
+    return `${d.name} was robbed in the approaches by ${a.name} and let go.`
   }
-  // A captain not in a navy who takes a hull has burned her standing: an outlaw from this day, and hunted as one.
-  if (captor && a.duty?.kind !== 'patrol' && captor.id !== state.player) captor.outlaw = true
+  // Plunder: the strongbox and the cash aboard. A navy takes no cargo: it stays on the prize for the court.
+  if (d.strongbox > 0) {
+    if (lawful) a.strongbox += d.strongbox
+    else if (captor) captor.purse += d.strongbox
+    d.strongbox = 0
+  }
+  if (victim && captor) {
+    deal(state, victim.id, captor.id, -3, `${captor.name} took the ${d.name} from me off ${where}`, 'robbed')
+    deal(state, captor.id, victim.id, 0.2, `took ${victim.name}'s ${d.name} off ${where}`, 'other')
+  }
+  if (captor && !lawful && captor.id !== state.player) captor.outlaw = true
   if (victim) {
-    // The cash aboard is the captor's; the rest is at home, and is what a ransom comes out of.
     if (captor && victim.purse > 0) {
       const aboard = Math.round(victim.purse / 2)
       captor.purse += aboard
@@ -240,18 +256,88 @@ export function settle(state: GameState, e: Encounter): string {
     victim.body = { kind: 'aboard', ship: a.id }
     if (!a.passengers.includes(victim.id)) a.passengers.push(victim.id)
   }
-  // The hull: an outlaw keeps her; a navy sends her in as a prize to lie at the port until the court sits (phase 4).
   d.captain = null
   d.course = null
   d.lyingOff = false
   d.duty = null
-  if (captor?.outlaw) {
-    d.owner = { kind: 'personal', character: captor.id }
-    d.empire = a.empire
-  } else {
+  d.location = { kind: 'world', world: at }
+  if (lawful) {
+    // A prize crew sails her to the captor's seat, where the court will sell her.
     d.owner = { kind: 'organisation', empire: a.empire, arm: 'navy' }
     d.empire = a.empire
+    d.duty = { kind: 'prize', to: state.empires[a.empire].seat, taker: a.empire }
+    return `${d.name} was taken in the approaches by ${a.name} and sent in as a prize${victim ? `; ${victim.name} is a prisoner` : ''}.`
   }
-  d.location = { kind: 'world', world: at }
+  // A robber takes a hull she can sail. If it is the better hull she moves into it and gives her old one to a loyal crewman; else the crewman has the prize.
+  if (!captor) return `${d.name} was taken in the approaches by ${a.name}.`
+  const better = SHIP_CLASSES[d.type].guns > SHIP_CLASSES[a.type].guns || (SHIP_CLASSES[d.type].guns === SHIP_CLASSES[a.type].guns && SHIP_CLASSES[d.type].hold > SHIP_CLASSES[a.type].hold)
+  const mate = promote(state, captor, a)
+  const old = a
+  if (better) {
+    // The captor shifts her flag: cargo across as far as it fits, prisoners and purse with her.
+    for (const lot of [...old.hold]) {
+      const room = SHIP_CLASSES[d.type].hold - d.hold.reduce((t, l) => t + l.tons, 0)
+      if (room <= 0) break
+      const tons = Math.min(room, lot.tons)
+      d.hold.push({ ...lot, tons })
+      lot.tons -= tons
+    }
+    old.hold = old.hold.filter((l) => l.tons > 0)
+    d.passengers = [...old.passengers]
+    old.passengers = []
+    for (const p of d.passengers) {
+      const c = state.characters[p]
+      if (c) {
+        c.body = { kind: 'aboard', ship: d.id }
+        if (c.captive && c.captive.by === old.id) c.captive.by = d.id
+      }
+    }
+    d.captain = captor.id
+    d.owner = { kind: 'personal', character: captor.id }
+    d.empire = captor.empire
+    d.duty = old.duty
+    d.lyingOff = old.lyingOff
+    captor.body = { kind: 'aboard', ship: d.id }
+    giveHull(state, old, mate, captor)
+    return `${d.name} was taken in the approaches by ${a.name}; ${captor.name} has shifted into her${victim ? `, and ${victim.name} is a prisoner` : ''}.`
+  }
+  giveHull(state, d, mate, captor)
   return `${d.name} was taken in the approaches by ${a.name}${victim ? `; ${victim.name} is a prisoner` : ''}.`
 }
+
+/** A loyal crewman promoted to command: a new person of the captor's empire and culture, an outlaw with her, who owes her everything. */
+function promote(state: GameState, captor: Character, aboard: Ship): Character {
+  const id = `c-mate-${state.nextId++}` as CharacterId
+  const culture = captor.culture
+  const sex = rollSex(state.rng)
+  const t = rollTraits(state.rng)
+  const mate: Character = {
+    id,
+    name: personName(state.rng, culture, sex),
+    culture,
+    sex,
+    empire: captor.empire,
+    body: { kind: 'aboard', ship: aboard.id },
+    purse: 2000,
+    debt: null,
+    outlaw: true,
+    traits: { ...t, greed: Math.max(t.greed, 0.5), caution: Math.min(t.caution, 0.5), loyalty: Math.max(t.loyalty, 0.6) },
+  }
+  state.characters[id] = mate
+  deal(state, id, captor.id, 2.5, `${captor.name} gave me my first command`, 'other')
+  deal(state, captor.id, id, 1, `gave ${mate.name} the command`, 'other')
+  return mate
+}
+
+/** A hull given to a promoted mate: hers now, on the raid with her captain's haven. */
+function giveHull(state: GameState, hull: Ship, mate: Character, captor: Character): void {
+  hull.captain = mate.id
+  hull.owner = { kind: 'personal', character: mate.id }
+  hull.empire = captor.empire
+  hull.course = null
+  hull.lyingOff = false
+  const haven = captor.body.kind === 'aboard' ? (state.ships[captor.body.ship]?.duty as { haven?: WorldId } | null)?.haven : undefined
+  hull.duty = { kind: 'raid', haven: haven ?? (hull.location.kind === 'world' ? hull.location.world : state.empires[captor.empire].seat), until: state.week + 2, since: state.week }
+  mate.body = { kind: 'aboard', ship: hull.id }
+}
+

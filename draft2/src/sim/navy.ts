@@ -75,13 +75,13 @@ export function spawnHunters(state: GameState, taken: Set<string>): void {
   }
 }
 
-type Hunt = Exclude<Duty, { kind: 'haul' } | { kind: 'imperial' }>
+type Hunt = Exclude<Duty, { kind: 'haul' } | { kind: 'imperial' } | { kind: 'prize' }>
 
 function hunters(state: GameState): { captain: Character; ship: Ship; at: WorldId }[] {
   const out: { captain: Character; ship: Ship; at: WorldId }[] = []
   for (const id of Object.keys(state.ships).sort() as ShipId[]) {
     const ship = state.ships[id]
-    if (!ship.duty || ship.duty.kind === 'haul' || ship.duty.kind === 'imperial' || !ship.captain || ship.location.kind !== 'world') continue
+    if (!ship.duty || ship.duty.kind === 'haul' || ship.duty.kind === 'imperial' || ship.duty.kind === 'prize' || !ship.captain || ship.location.kind !== 'world') continue
     const captain = state.characters[ship.captain]
     if (!captain || captain.captive) continue
     out.push({ captain, ship, at: ship.location.world })
