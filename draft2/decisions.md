@@ -36,3 +36,8 @@
 ## 2026-10-30 — fourth round
 
 - **Empire flavour**: English-like, Spanish-like, French-like. Names: the Wessmere Crown, the Castellar Throne, the Vauclair Concord. See `design/empires.md`. A Spanish name pool was added; seats are named from their empire's core.
+
+## 2026-10-31 — jump ratings and the timetable
+
+- **Free trader is J-2, far trader J-3.** With ~22 worlds in 80 hexes a J-1 hull often has no world within reach at all (seed 23's seat had none). J-2 follows the lanes; J-3 leaves them. Scouts are J-3 so one can run any charted lane.
+- **Scouts lie over a week.** A scout lands, lies over, sails: a four-week round. A busy lane gets two scouts, staggered, for a sailing every two weeks. Without the lie-over a scout on a busy lane landed and sailed within one tick and nobody could ever board her.

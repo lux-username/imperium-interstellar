@@ -8,7 +8,7 @@ import type { CharacterId, GameState, WorldId } from './types'
 /** A second person, placed at `at`, so letters have somewhere to go. */
 function someone(state: GameState, id: string, at: WorldId): CharacterId {
   const cid = id as CharacterId
-  state.characters[cid] = { id: cid, name: id, culture: 'English', sex: 'm', empire: state.worlds[at].empire, body: { kind: 'world', world: at } }
+  state.characters[cid] = { id: cid, name: id, culture: 'English', sex: 'm', empire: state.worlds[at].empire, body: { kind: 'world', world: at }, purse: 0, debt: null }
   return cid
 }
 
@@ -21,6 +21,16 @@ function away(state: GameState, hops: number): WorldId {
     if (path && path.length === hops + 1) return id
   }
   throw new Error(`no world ${hops} hops away`)
+}
+
+/** Advance until a scout on the packets lies in port at `here`, and return her. */
+function scoutHere(state: GameState, here: WorldId) {
+  for (let i = 0; i < 12; i++) {
+    const hull = Object.values(state.ships).find((s) => s.location.kind === 'world' && s.location.world === here && s.run)
+    if (hull) return hull
+    advanceWeek(state)
+  }
+  throw new Error('no scout called')
 }
 
 describe('mail', () => {
@@ -70,8 +80,7 @@ describe('mail', () => {
   it('follows a passenger: a letter to where the player is going arrives after they do', () => {
     const state = newGame(5)
     const here = characterLocation(state, state.player) as WorldId
-    const hull = Object.values(state.ships).find((s) => s.location.kind === 'world' && s.location.world === here && s.run)
-    expect(hull).toBeDefined()
+    const hull = scoutHere(state, here)
     const lane = state.lanes[hull!.run!.lane]
     const to = lane.ends[0] === here ? lane.ends[1] : lane.ends[0]
     const sailing = sailsOn(state, hull!, here, state.week + 1)!

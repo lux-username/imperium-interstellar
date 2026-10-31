@@ -17,6 +17,7 @@ import { neighbours } from './chart'
 import { chartLanes } from './lanes'
 import { seatName, worldCultures, worldName } from './names'
 import type { CoreName } from './data/names'
+import { newMarket } from './economy'
 import { createRng, nextInt, roll, type Rng } from './rng'
 import type { Empire, EmpireId, Lane, LaneId, StarportClass, World, WorldId, WorldProfile } from './types'
 
@@ -95,14 +96,17 @@ function isEdge({ col, row }: Hex): boolean {
 /** A world at a hex: who settled it, what it is called, and what it is like. Unclaimed until the seats are chosen. */
 function newWorld(rng: Rng, hex: Hex, taken: Set<string>): World {
   const cultures = worldCultures(rng)
+  const profile = generateProfile(rng)
   return {
     id: worldId(hex),
     name: worldName(rng, cultures, taken),
     hex,
     cultures,
-    profile: generateProfile(rng),
+    profile,
     empire: '' as EmpireId,
     board: {},
+    market: newMarket(rng, profile),
+    freight: [],
   }
 }
 
@@ -212,6 +216,8 @@ export function generateWorlds(rng: Rng): Generated {
   }
 
   const seats = chooseSeats(list)
+  // A seat's port and people were just raised; its market is rolled again to match.
+  for (const seat of seats) seat.market = newMarket(rng, seat.profile)
   const empires: Record<EmpireId, Empire> = {}
   const order: Empire[] = []
   EMPIRES.forEach((e, i) => {
@@ -253,7 +259,8 @@ function reachable(lanes: Record<LaneId, Lane>, from: WorldId): Set<WorldId> {
  * - it has neither too few worlds nor too many;
  * - the three seats are at least SEAT_SPACING parsecs apart, so each has
  *   worlds of its own between it and the others;
- * - each empire holds at least three worlds;
+ * - each empire holds at least three worlds, and each seat has a world
+ *   within two parsecs, so a J-2 hull can leave it;
  * - the seats are joined to one another over the chart, so trade and war
  *   between them run on lanes and the border is a thing ships cross;
  * - the chart from any seat reaches most of the worlds;
@@ -274,6 +281,8 @@ export function layoutFaults(worlds: Record<WorldId, World>, lanes: Record<LaneI
   for (const e of Object.values(empires)) {
     const held = all.filter((w) => w.empire === e.id).length
     if (held < 3) faults.push(`${e.name} holds only ${held}`)
+    const seat = worlds[e.seat]
+    if (!all.some((w) => w !== seat && hexDistance(w.hex, seat.hex) <= 2)) faults.push(`${seat.name} has no world within two parsecs`)
   }
   const chart = reachable(lanes, seats[0].id)
   for (const s of seats.slice(1)) if (!chart.has(s.id)) faults.push(`${s.name} is not on ${seats[0].name}'s chart`)

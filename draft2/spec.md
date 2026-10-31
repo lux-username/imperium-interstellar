@@ -66,8 +66,8 @@ new.
 | Type | Role |
 |---|---|
 | Scout | couriers, packets, watching; fuel scoops; never fights |
-| Free trader | J-1, modest hold, light guns; the default start |
-| Far trader | J-2, smaller hold; reaches off-lane worlds |
+| Free trader | J-2, modest hold, light guns; the default start |
+| Far trader | J-3, smaller hold; reaches off-lane and distant worlds |
 | Bulk freighter | large hold, slow, unarmed; the guild's route workhorse |
 | Patrol corvette | the navy's cruiser of the lanes; the privateer's rival |
 | Frigate | the navy's heavy hull; flagships |

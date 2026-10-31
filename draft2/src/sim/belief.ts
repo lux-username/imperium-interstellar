@@ -52,6 +52,15 @@ export function absorb(belief: Belief, report: Report, asOf: Week = Number.POSIT
   for (const ship of world.ships) sight(ship, report.observed)
   for (const person of world.people) meet(person, report.observed)
   for (const d of world.board) if (d.week <= asOf) hear(belief, d)
+  const goods = Object.keys(world.market) as (keyof typeof world.market)[]
+  if (goods.length > 0) {
+    const prices = (belief.prices[world.id] ??= {})
+    for (const g of goods) {
+      const seen = world.market[g]
+      const known = prices[g]
+      if (seen && (!known || report.observed >= known.observed)) prices[g] = { price: seen.price, stock: seen.stock, observed: report.observed }
+    }
+  }
 }
 
 /** The picture a pile of reports adds up to, as of `asOf` (or now), folded in the order they arrived. */

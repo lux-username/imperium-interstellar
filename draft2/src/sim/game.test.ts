@@ -5,7 +5,16 @@ import { characterLocation } from './mail'
 import { buildPlayerView } from './player'
 import { stanceKnown } from './belief'
 import { clone, deserialize, serialize } from './save'
-import { stanceKey, stancePair, type WorldId } from './types'
+import { stanceKey, stancePair, type GameState, type WorldId } from './types'
+
+function scoutHere(state: GameState, here: WorldId) {
+  for (let i = 0; i < 12; i++) {
+    const hull = Object.values(state.ships).find((s) => s.location.kind === 'world' && s.location.world === here && s.run)
+    if (hull) return hull
+    advanceWeek(state)
+  }
+  throw new Error('no scout called')
+}
 
 describe('the game', () => {
   it('is deterministic over thirty weeks from a seed', () => {
@@ -76,7 +85,7 @@ describe('the game', () => {
   it('passage moves the player one lane in one week and their eyes go with them', () => {
     const state = newGame(6)
     const here = characterLocation(state, PLAYER) as WorldId
-    const hull = Object.values(state.ships).find((s) => s.location.kind === 'world' && s.location.world === here && s.run)!
+    const hull = scoutHere(state, here)
     expect(takePassage(state, hull.id)).toBe(true)
     const lane = state.lanes[hull.run!.lane]
     const to = lane.ends[0] === here ? lane.ends[1] : lane.ends[0]

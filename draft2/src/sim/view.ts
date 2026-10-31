@@ -11,14 +11,15 @@
  * The same shapes serve every reader: an NPC's belief is folded from the
  * same reports, and the sim never hands an NPC ground truth either.
  */
+import type { Good } from './economy'
 import type { Hex } from './hex'
-import type { CharacterId, Declaration, DispatchId, EmpireId, Lane, LaneId, ReportId, ShipId, ShipType, Stance, StarportClass, Week, WorldId, WorldProfile } from './types'
+import type { CargoLot, CharacterId, Debt, Declaration, DispatchId, EmpireId, Lane, LaneId, ReportId, ShipId, ShipType, Stance, StarportClass, Week, WorldId, WorldProfile } from './types'
 
 export { expectedArrival, hexRoute, nextDeparture, route } from './chart'
 export { beliefFrom, stanceKnown } from './belief'
 export { stanceKey, stancePair } from './types'
 
-export type { CharacterId, Declaration, DispatchId, EmpireId, Hex, Lane, LaneId, ReportId, ShipId, ShipType, Stance, StarportClass, Week, WorldId, WorldProfile }
+export type { CargoLot, CharacterId, Debt, Declaration, Good, DispatchId, EmpireId, Hex, Lane, LaneId, ReportId, ShipId, ShipType, Stance, StarportClass, Week, WorldId, WorldProfile }
 
 // ---------------------------------------------------------------------------
 // Snapshots: an entity as it appeared to someone, somewhere, once.
@@ -54,6 +55,8 @@ export interface WorldSnapshot {
   people: PersonSnapshot[]
   /** The port's notice board as it stood: the newest declaration it had heard of, per pair. */
   board: Declaration[]
+  /** What the brokers were charging and what lay on the dock, as seen. Empty when the observer never went to the brokers (the chart). */
+  market: Partial<Record<Good, { price: number; stock: number }>>
 }
 
 export type Snapshot = { kind: 'world'; world: WorldSnapshot } | { kind: 'ship'; ship: ShipSnapshot }
@@ -142,11 +145,8 @@ export interface Belief {
   people: Record<CharacterId, PersonKnown>
   /** The newest declaration heard of for each pair of empires, keyed as `stanceKey`. */
   stances: Record<string, Declaration>
-  /**
-   * Last-known prices per world and good. Empty until the economy lands;
-   * the slot is here so the fold has one shape from the start.
-   */
-  prices: Record<WorldId, Record<string, { price: number; observed: Week }>>
+  /** Last-known price and stock per world and good, from the newest sight of that market. */
+  prices: Record<WorldId, Partial<Record<Good, { price: number; stock: number; observed: Week }>>>
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +178,46 @@ export interface HullHere {
   sailsOn: Week | null
 }
 
+/** The player's own hull, seen from her own deck: certain, like the body. */
+export interface OwnShip {
+  id: ShipId
+  name: string
+  type: ShipType
+  jump: number
+  fuel: number
+  tanks: number
+  holdTons: number
+  holdUsed: number
+  hold: CargoLot[]
+  damage: number
+  guns: number
+  course: WorldId | null
+}
+
+/** A world the player's hull can jump to from here, and whether the lanes also go there. */
+export interface Destination {
+  world: WorldId
+  parsecs: number
+  charted: boolean
+}
+
+/** What a place in the port offers this week, as seen on the spot. */
+export interface MarketRow {
+  good: Good
+  price: number
+  stock: number
+  /** What the player paid for what is in the hold of it, averaged, or null. */
+  holding: { tons: number; paid: number } | null
+}
+
+export interface FreightRow {
+  id: string
+  good: Good
+  tons: number
+  to: WorldId
+  rate: number
+}
+
 /**
  * The player's whole picture, rebuilt each week from their belief and their
  * own mail. This is the only thing the UI renders.
@@ -193,7 +233,12 @@ export interface PlayerView {
   empires: Record<EmpireId, EmpireEntry>
   known: Belief
   /** What the player sees for themselves where they are this week. Null in jump. */
-  here: { world: WorldId; hulls: HullHere[] } | null
+  here: { world: WorldId; empire: EmpireId; starport: StarportClass; hulls: HullHere[]; market: MarketRow[]; freight: FreightRow[]; tariff: number; refuel: number | null; destinations: Destination[] } | null
+  /** Purse and debt: certain. */
+  purse: number
+  debt: Debt | null
+  /** The player's own hull, or null if they have none. */
+  ship: OwnShip | null
   /** Every letter that has reached the player, newest arrival first. */
   inbox: Report[]
   /** What the player saw with their own eyes each week. Not mail, but reports all the same. */

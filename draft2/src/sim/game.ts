@@ -10,15 +10,22 @@
  */
 import { hexLabel } from './hex'
 import { route } from './chart'
+import { buy, GOODS, sell, tickMarkets, type Good } from './economy'
 import { generateSubsector } from './generate'
 import { characterLocation, copyDeclaration, deliverHeld, observe, postLetter, postNews, pruneMail, snapshotWorld } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { createRng, nextInt, roll } from './rng'
+import { departOnAccount, fuelPrice, holdFree, newShip, reachable, setCourse, unload } from './ships'
 import { departScouts, landShips, packetScouts } from './scouts'
-import { stanceKey, stancePair, type CharacterId, type Declaration, type EmpireId, type GameState, type Mail, type ReportId, type ShipId, type Week, type World, type WorldId } from './types'
+import { SHIP_CLASSES, stanceKey, stancePair, type CharacterId, type Declaration, type EmpireId, type FreightOffer, type GameState, type Mail, type ReportId, type Ship, type ShipId, type Week, type World, type WorldId } from './types'
 import type { Report } from './view'
 
 export const PLAYER = 'c-player' as CharacterId
+
+/** What a free trader costs new, what the player starts with in hand, and the terms of the mortgage on her. */
+export const SHIP_PRICE = 60000
+export const STARTING_PURSE = 20000
+export const MORTGAGE = { payment: 600, every: 4 }
 
 // ---------------------------------------------------------------------------
 // The stance clock
@@ -94,6 +101,7 @@ function openingChart(state: GameState, reader: CharacterId, home: WorldId): voi
       snapshot.world.ships = []
       snapshot.world.people = []
       snapshot.world.board = []
+      snapshot.world.market = {}
     }
     const report: Report = {
       id: `r-chart-${hexLabel(world.hex)}` as ReportId,
@@ -132,7 +140,18 @@ export function newGame(seed: number): GameState {
     stances: {},
     declarations: [],
     ships,
-    characters: { [PLAYER]: { id: PLAYER, name: personName(rng, culture, sex), culture, sex, empire: first.id, body: { kind: 'world', world: home } } },
+    characters: {
+      [PLAYER]: {
+        id: PLAYER,
+        name: personName(rng, culture, sex),
+        culture,
+        sex,
+        empire: first.id,
+        body: { kind: 'world', world: home },
+        purse: STARTING_PURSE,
+        debt: { balance: SHIP_PRICE - 10000, payment: MORTGAGE.payment, every: MORTGAGE.every, nextDue: MORTGAGE.every, arrears: 0 },
+      },
+    },
     mail: {},
     beliefs: {},
     player: PLAYER,
@@ -143,10 +162,53 @@ export function newGame(seed: number): GameState {
       state.stances[stanceKey(eids[i], eids[j])] = { stance: 'peace', since: 0, until: peaceTerm(state, true) }
     }
   }
+  const taken = new Set(Object.values(ships).map((s) => s.name))
+  const own = newShip(rng, 's-player' as ShipId, 'free_trader', first.id, { kind: 'personal', character: PLAYER }, home, taken, PLAYER)
+  state.ships[own.id] = own
+  state.characters[PLAYER].body = { kind: 'aboard', ship: own.id }
+  offerFreight(state)
   openingChart(state, PLAYER, home)
   observeAll(state)
   departScouts(state)
   return state
+}
+
+// ---------------------------------------------------------------------------
+// Freight and debts
+
+/** The brokers at each port put up a few lots a week for worlds on the lanes nearby, and take down last week's. */
+export function offerFreight(state: GameState): void {
+  const ids = Object.keys(state.worlds).sort() as WorldId[]
+  for (const id of ids) {
+    const world = state.worlds[id]
+    world.freight = []
+    if (world.profile.population === 0 || world.profile.starport === 'X' || world.profile.starport === 'E') continue
+    const n = Math.max(0, roll(state.rng) - 8)
+    const near = reachable(state, id, 2).filter((w) => state.worlds[w].profile.population > 0)
+    for (let i = 0; i < n && near.length > 0; i++) {
+      const to = near[nextInt(state.rng, 0, near.length - 1)]
+      const good = GOODS[nextInt(state.rng, 0, GOODS.length - 1)]
+      const offer: FreightOffer = { id: `f-${state.nextId++}`, good, tons: nextInt(state.rng, 1, 4) * 10, to, rate: nextInt(state.rng, 40, 120) }
+      world.freight.push(offer)
+    }
+  }
+}
+
+/** Payments fall due; what cannot be paid goes to arrears. */
+export function collectDebts(state: GameState): void {
+  const ids = Object.keys(state.characters).sort() as CharacterId[]
+  for (const id of ids) {
+    const c = state.characters[id]
+    const d = c.debt
+    if (!d || state.week < d.nextDue) continue
+    d.nextDue += d.every
+    const due = d.payment + d.arrears
+    const paid = Math.min(due, Math.max(0, c.purse))
+    c.purse -= paid
+    d.balance = Math.max(0, d.balance - paid)
+    d.arrears = due - paid
+    if (d.balance === 0) c.debt = null
+  }
 }
 
 export function advanceWeek(state: GameState): void {
@@ -154,8 +216,13 @@ export function advanceWeek(state: GameState): void {
   landShips(state)
   deliverHeld(state)
   stanceClock(state)
-  observeAll(state)
+  tickMarkets(state)
+  offerFreight(state)
+  collectDebts(state)
+  // Sailings happen before the week's observation: a hull that sails this week is gone from the port by then.
   departScouts(state)
+  departOnAccount(state)
+  observeAll(state)
   pruneMail(state)
 }
 
@@ -191,6 +258,82 @@ export function goAshore(state: GameState): boolean {
 /** Write to someone at the world the player believes them to be. Rides the next sailing. */
 export function writeLetter(state: GameState, recipient: CharacterId, to: WorldId, text: string): Mail | null {
   return postLetter(state, state.player, recipient, to, text)
+}
+
+/** The player's own hull, if they have one. */
+export function playerShip(state: GameState): Ship | null {
+  for (const s of Object.values(state.ships)) if (s.owner.kind === 'personal' && s.owner.character === state.player) return s
+  return null
+}
+
+/** The player's hull, if it lies in the port the player is at. */
+function ownHullHere(state: GameState): { ship: Ship; at: World } | null {
+  const ship = playerShip(state)
+  const at = playerWorld(state)
+  if (!ship || !at || ship.location.kind !== 'world' || ship.location.world !== at.id) return null
+  return { ship, at }
+}
+
+/** Buy at the brokers: as many tons as asked, the hold allows and the purse covers. Returns tons bought. */
+export function buyGoods(state: GameState, good: Good, tons: number): number {
+  const h = ownHullHere(state)
+  if (!h) return 0
+  const me = state.characters[state.player]
+  const price = h.at.market[good].price
+  const affordable = Math.floor(me.purse / (price * 1.2))
+  const n = Math.min(tons, holdFree(h.ship), affordable)
+  if (n <= 0) return 0
+  const deal = buy(h.at, good, n, me.empire)
+  if (!deal) return 0
+  me.purse -= deal.credits
+  h.ship.hold.push({ kind: 'cargo', good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: h.at.id, week: state.week })
+  return deal.tons
+}
+
+/** Sell at the brokers what is in the hold of a good. Returns credits taken. */
+export function sellGoods(state: GameState, good: Good, tons: number): number {
+  const h = ownHullHere(state)
+  if (!h) return 0
+  const me = state.characters[state.player]
+  const n = unload(h.ship, good, tons)
+  if (n === 0) return 0
+  const deal = sell(h.at, good, n, me.empire)
+  me.purse += deal.credits
+  return deal.credits
+}
+
+/** Fill a tank at the docks. Returns false if there is no fuel here, no room, or no money. */
+export function refuel(state: GameState): boolean {
+  const h = ownHullHere(state)
+  if (!h) return false
+  const me = state.characters[state.player]
+  const price = fuelPrice(h.at.profile.starport)
+  if (price === null || h.ship.fuel >= SHIP_CLASSES[h.ship.type].tanks || me.purse < price) return false
+  me.purse -= price
+  h.ship.fuel += 1
+  return true
+}
+
+/** Take a freight lot aboard from the brokers' board. */
+export function takeFreight(state: GameState, offer: string): boolean {
+  const h = ownHullHere(state)
+  if (!h) return false
+  const i = h.at.freight.findIndex((f) => f.id === offer)
+  if (i < 0) return false
+  const f = h.at.freight[i]
+  if (f.tons > holdFree(h.ship)) return false
+  h.at.freight.splice(i, 1)
+  h.ship.hold.push({ kind: 'freight', good: f.good, tons: f.tons, to: f.to, rate: f.rate, from: h.at.id, week: state.week })
+  return true
+}
+
+/** Set the player's hull's course for next week. */
+export function sail(state: GameState, to: WorldId | null): boolean {
+  const ship = playerShip(state)
+  if (!ship) return false
+  const me = state.characters[state.player]
+  if (me.body.kind !== 'aboard' || me.body.ship !== ship.id) return false
+  return setCourse(state, ship, to)
 }
 
 /** The world the player's body is at, if not in jump. */

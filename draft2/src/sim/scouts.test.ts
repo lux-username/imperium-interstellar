@@ -6,11 +6,12 @@ import { otherEnd } from './scouts'
 describe('scouts on the packets', () => {
   it('one per lane, each keeping her lane\'s timetable and never off it', () => {
     const state = newGame(14)
-    expect(Object.keys(state.ships).length).toBe(Object.keys(state.lanes).length)
+    expect(Object.values(state.ships).filter((s) => s.run).length).toBe(Object.values(state.lanes).reduce((n, l) => n + l.schedule.scouts, 0))
     const left: Record<string, number> = {}
     for (let i = 0; i < 24; i++) {
       for (const s of Object.values(state.ships)) {
-        const lane = state.lanes[s.run!.lane]
+        if (!s.run) continue
+        const lane = state.lanes[s.run.lane]
         if (s.location.kind === 'transit') {
           expect(otherEnd(lane, s.location.from)).toBe(s.location.to)
           expect(s.location.arrives - state.week).toBeLessThanOrEqual(1)
@@ -22,20 +23,22 @@ describe('scouts on the packets', () => {
       advanceWeek(state)
     }
     // Every scout sailed at least a few times in six months.
-    for (const s of Object.values(state.ships)) expect(left[s.id] ?? 0, s.name).toBeGreaterThanOrEqual(4)
+    for (const s of Object.values(state.ships)) if (s.run) expect(left[s.id] ?? 0, s.name).toBeGreaterThanOrEqual(4)
   })
 
-  it('sails on the week the timetable names', () => {
+  it('a scout lies over a week, and a sailing leaves on every week the timetable names once the lane is running', () => {
     const state = newGame(15)
-    const s = Object.values(state.ships)[0]
-    const lane = state.lanes[s.run!.lane]
-    for (let i = 0; i < 10; i++) {
-      if (s.location.kind === 'world') {
-        const at = s.location.world
-        const due = nextDeparture(lane, at, state.week + 1)
-        advanceWeek(state)
-        if (due === state.week) expect(s.location.kind).toBe('transit')
-      } else advanceWeek(state)
+    for (let i = 0; i < 8; i++) advanceWeek(state)
+    for (let i = 0; i < 24; i++) {
+      advanceWeek(state)
+      for (const lane of Object.values(state.lanes)) {
+        for (const end of lane.ends) {
+          if (nextDeparture(lane, end, state.week) !== state.week) continue
+          const sailed = Object.values(state.ships).some((s) => s.run?.lane === lane.id && s.location.kind === 'transit' && s.location.from === end && s.location.arrives === state.week + 1)
+          expect(sailed, `${lane.id} from ${end} week ${state.week}`).toBe(true)
+        }
+      }
+      for (const s of Object.values(state.ships)) if (s.run && s.location.kind === 'transit') expect(s.docked).toBeLessThan(state.week)
     }
   })
 })

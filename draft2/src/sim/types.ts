@@ -12,6 +12,7 @@
  * organisations, prizes and relationships land with their phases.
  */
 import type { CoreName } from './data/names'
+import type { Good, Market } from './economy'
 import type { Hex } from './hex'
 import type { Sex } from './names'
 import type { Rng } from './rng'
@@ -78,14 +79,34 @@ export interface World {
    * they are made. Keyed as `stanceKey`.
    */
   board: Record<string, Declaration>
+  /** What the dock holds and charges this week. Ground truth; anyone trading goes by the price they last saw. */
+  market: Market
+  /** Freight the brokers are offering this week, to be carried and paid on delivery. */
+  freight: FreightOffer[]
 }
 
-/** When packets leave each end of a lane. */
+export interface FreightOffer {
+  id: string
+  good: Good
+  tons: number
+  to: WorldId
+  /** Credits per ton, paid on delivery at `to`. */
+  rate: number
+}
+
+/**
+ * When scouts leave each end of a lane. A scout sails, lands next week,
+ * lies over a week, and sails back: a four-week round. One scout gives a
+ * sailing from each end every four weeks; a busy lane has two, staggered,
+ * so each end sees one every two.
+ */
 export interface PacketSchedule {
-  /** A packet departs every `interval` weeks. */
+  /** The round: always 4 for now. */
   interval: number
-  /** Week of the first departure, so neighbouring lanes are out of step. */
+  /** Week of the first departure from the first end, so neighbouring lanes are out of step. */
   phase: Week
+  /** Scouts on the lane: 1 or 2. */
+  scouts: number
 }
 
 /** A charted route. Scheduled traffic runs only along these; everything else is a deliberate off-lane jump. */
@@ -169,9 +190,9 @@ export interface ShipClass {
 }
 
 export const SHIP_CLASSES: Record<ShipType, ShipClass> = {
-  scout: { type: 'scout', jump: 2, tanks: 2, hold: 2, guns: 0, crew: 4 },
-  free_trader: { type: 'free_trader', jump: 1, tanks: 2, hold: 80, guns: 1, crew: 5 },
-  far_trader: { type: 'far_trader', jump: 2, tanks: 2, hold: 60, guns: 1, crew: 5 },
+  scout: { type: 'scout', jump: 3, tanks: 2, hold: 2, guns: 0, crew: 4 },
+  free_trader: { type: 'free_trader', jump: 2, tanks: 2, hold: 80, guns: 1, crew: 5 },
+  far_trader: { type: 'far_trader', jump: 3, tanks: 2, hold: 60, guns: 1, crew: 5 },
   bulk_freighter: { type: 'bulk_freighter', jump: 1, tanks: 2, hold: 400, guns: 0, crew: 10 },
   corvette: { type: 'corvette', jump: 2, tanks: 4, hold: 10, guns: 3, crew: 20 },
   frigate: { type: 'frigate', jump: 3, tanks: 4, hold: 20, guns: 6, crew: 60 },
@@ -196,6 +217,11 @@ export interface PacketRun {
   lane: LaneId
 }
 
+/** A lot in a hold: bought on the owner's account to sell, or freight carried for a fee. */
+export type CargoLot =
+  | { kind: 'cargo'; good: Good; tons: number; paid: number; from: WorldId; week: Week }
+  | { kind: 'freight'; good: Good; tons: number; to: WorldId; rate: number; from: WorldId; week: Week }
+
 export interface Ship {
   id: ShipId
   name: string
@@ -203,6 +229,13 @@ export interface Ship {
   empire: EmpireId
   owner: Owner
   location: Location
+  /** Jumps left in her tanks. */
+  fuel: number
+  /** Points of damage; her class's guns say how much she can take before she is a wreck. */
+  damage: number
+  hold: CargoLot[]
+  /** Where she sails next, for a hull on her own account. Null: lying in port. */
+  course: WorldId | null
   /** The captain, when the hull has a named one. Scouts' crews go unnamed. */
   captain: CharacterId | null
   /** People aboard other than the crew, by id. They go where the hull goes. */
@@ -212,6 +245,8 @@ export interface Ship {
   news: Record<string, Declaration>
   /** Set for a scout on the packets. */
   run: PacketRun | null
+  /** The week she last came into port. She sails no sooner than the week after. */
+  docked: Week
 }
 
 // ---------------------------------------------------------------------------
@@ -228,6 +263,19 @@ export interface Character {
   /** The empire whose subject they are. */
   empire: EmpireId
   body: Body
+  /** Credits in hand. */
+  purse: number
+  /** What they owe on their hull, if anything. */
+  debt: Debt | null
+}
+
+/** A mortgage: a payment falls due every `every` weeks; missed payments pile up as arrears. */
+export interface Debt {
+  balance: number
+  payment: number
+  every: number
+  nextDue: Week
+  arrears: number
 }
 
 // ---------------------------------------------------------------------------

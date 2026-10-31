@@ -12,14 +12,21 @@ export function laneId(a: WorldId, b: WorldId): LaneId {
   return (a < b ? `l-${a.slice(2)}-${b.slice(2)}` : `l-${b.slice(2)}-${a.slice(2)}`) as LaneId
 }
 
-/** Week of the next packet departure from `from` along `lane`, at or after `week`. */
+/** Weeks between sailings from one end: the round shared among the scouts on the lane. */
+export function sailingGap(lane: Lane): number {
+  return lane.schedule.interval / Math.max(1, lane.schedule.scouts)
+}
+
+/** Week of the next scheduled sailing from `from` along `lane`, at or after `week`. The far end sails half a round later than the first. */
 export function nextDeparture(lane: Lane, from: WorldId, week: Week): Week {
   const { interval, phase } = lane.schedule
+  const gap = sailingGap(lane)
   const offset = from === lane.ends[0] ? 0 : interval / 2
-  const first = phase + offset
+  let first = phase + offset
+  while (first - gap >= 0) first -= gap
   if (week <= first) return first
-  const since = (week - first) % interval
-  return since === 0 ? week : week + interval - since
+  const since = (week - first) % gap
+  return since === 0 ? week : week + gap - since
 }
 
 // ---------------------------------------------------------------------------

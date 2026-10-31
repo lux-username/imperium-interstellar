@@ -19,16 +19,11 @@ function isPort(w: World): boolean {
   return w.profile.starport === 'A' || w.profile.starport === 'B'
 }
 
-/**
- * Packets on a busy lane turn straight around; elsewhere they lie over a
- * week at each end. `interval` is the gap between departures from one end;
- * the other end's departures are offset by half of it.
- */
+/** A four-week round everywhere; a busy lane (two A ports, or an A and a B on a good roll) gets a second scout. */
 function schedule(rng: Rng, a: World, b: World): PacketSchedule {
-  const busy = isPort(a) && isPort(b) && a.profile.starport === 'A' && b.profile.starport === 'A'
-  const dwell = busy ? 0 : roll(rng) >= 8 ? 0 : 1
-  const interval = 2 * (1 + dwell)
-  return { interval, phase: nextInt(rng, 0, interval - 1) }
+  const grade = (w: World) => (w.profile.starport === 'A' ? 2 : w.profile.starport === 'B' ? 1 : 0)
+  const busy = grade(a) + grade(b) >= 4 || (grade(a) + grade(b) === 3 && roll(rng) >= 8)
+  return { interval: 4, phase: nextInt(rng, 0, 3), scouts: busy ? 2 : 1 }
 }
 
 /**

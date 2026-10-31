@@ -18,7 +18,7 @@ import { absorb, emptyBelief, hear } from './belief'
 import { expectedArrival, route } from './chart'
 import type { CharacterId, Declaration, DispatchId, GameState, Mail, MailId, ReportId, Ship, Week, World, WorldId } from './types'
 import { stanceKey } from './types'
-import type { Belief, Dispatch, Envelope, PersonSnapshot, Report, ShipSnapshot, Snapshot } from './view'
+import type { Belief, Dispatch, Envelope, PersonSnapshot, Report, ShipSnapshot, Snapshot, WorldSnapshot } from './view'
 
 // ---------------------------------------------------------------------------
 // Minting
@@ -91,7 +91,9 @@ export function snapshotWorld(state: GameState, world: World): Snapshot {
   const board = Object.keys(world.board)
     .sort()
     .map((k) => copyDeclaration(world.board[k]))
-  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, empire, ships, people: peopleAt(state, id), board } }
+  const market: WorldSnapshot['market'] = {}
+  for (const g of Object.keys(world.market).sort() as (keyof typeof world.market)[]) market[g] = { price: world.market[g].price, stock: world.market[g].stock }
+  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, empire, ships, people: peopleAt(state, id), board, market } }
 }
 
 // ---------------------------------------------------------------------------
