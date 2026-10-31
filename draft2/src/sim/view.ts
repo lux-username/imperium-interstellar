@@ -149,7 +149,7 @@ export interface Belief {
   /** The newest declaration heard of for each pair of empires, keyed as `stanceKey`. */
   stances: Record<string, Declaration>
   /** Last-known price and stock per world and good, from the newest sight of that market. */
-  prices: Record<WorldId, Partial<Record<Good, { price: number; stock: number; observed: Week }>>>
+  prices: Record<WorldId, Partial<Record<Good, { price: number; stock: number; observed: Week; heard?: boolean }>>>
 }
 
 // ---------------------------------------------------------------------------
