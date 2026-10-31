@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buy, consumption, demandLevel, dutyRate, GOODS, inspectionChance, newMarket, priceOf, sell, supplyLevel, targetStock, tickMarket, tradeCodes } from './economy'
-import { advanceWeek, buyGoods, newGame, playerShip, quoteSale, refuel, sail, sellGoods, STARTING_PURSE, takeFreight } from './game'
+import { advanceWeek, buyGoods, newGame, playerShip, quoteBuy, quoteSale, refuel, sail, sellGoods, STARTING_PURSE, takeFreight } from './game'
 import { characterLocation } from './mail'
 import { createRng } from './rng'
 import type { WorldId, WorldProfile } from './types'
@@ -167,5 +167,25 @@ describe('the sale quote', () => {
     expect(s.kind).toBe('ok')
     if (s.kind === 'ok') expect(s.credits).toBe(q.credits)
     expect(state.characters[state.player].purse).toBe(purse + q.credits)
+  })
+})
+
+describe('the buy quote', () => {
+  it('says exactly what the brokers then charge, and caps at dock, hold and purse', () => {
+    const state = newGame(25)
+    const here = characterLocation(state, state.player)!
+    const good = GOODS.find((g) => state.worlds[here].market[g].stock >= 30)!
+    const q = quoteBuy(state, good, 12)!
+    expect(q.most).toBeGreaterThanOrEqual(12)
+    expect(q.most).toBeLessThanOrEqual(Math.min(80, state.worlds[here].market[good].stock))
+    expect(q.credits).toBe(12 * q.price + q.duty)
+    const purse = state.characters[state.player].purse
+    const b = buyGoods(state, good, 12)
+    expect(b.kind).toBe('ok')
+    if (b.kind === 'ok') expect(b.credits).toBe(q.credits)
+    expect(state.characters[state.player].purse).toBe(purse - q.credits)
+    state.characters[state.player].purse = 1000
+    const poor = quoteBuy(state, good, 50)!
+    expect(poor.most * poor.price).toBeLessThanOrEqual(1000)
   })
 })

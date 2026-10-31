@@ -5,7 +5,7 @@
  * development only.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { advanceWeek, askCaptain, buyGoods, goAshore, hail, lieOff, maintain, newGame, quoteSale, ransomSelf, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
+import { advanceWeek, askCaptain, buyGoods, goAshore, hail, lieOff, maintain, newGame, quoteBuy, quoteSale, ransomSelf, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
@@ -325,16 +325,50 @@ function Docks({ view, state, act }: PaneProps) {
   )
 }
 
-/** The sell row: a slider for how much, and what that lot would fetch a ton and in all. */
+/** A slider and a number box for how many tons, from 1 to `most`. */
+function Tons({ most, value, onChange }: { most: number; value: number; onChange: (n: number) => void }) {
+  const clamp = (n: number) => Math.max(1, Math.min(most, Math.round(n) || 1))
+  return (
+    <>
+      <input type="range" min={1} max={most} step={1} value={value} onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      <input type="number" min={1} max={most} value={value} onChange={(e) => onChange(clamp(Number(e.target.value)))} className="tons" />
+      <button className="tiny" onClick={() => onChange(most)}>
+        max
+      </button>
+    </>
+  )
+}
+
+/** The buy row: how much to take off the dock, and what that lot would cost a ton and in all. */
+function BuyLot({ good, state, act, smuggle, tell, version }: { good: Good; state: GameState; act: PaneProps['act']; smuggle: boolean; tell: (o: ReturnType<typeof buyGoods>) => void; version: number }) {
+  const [n, setN] = useState(10)
+  const q = quoteBuy(state, good, n, smuggle)
+  void version
+  if (!q || q.most <= 0) return <span className="muted">nothing to buy</span>
+  const want = Math.min(n, q.most)
+  const qq = want === n ? q : quoteBuy(state, good, want, smuggle)!
+  return (
+    <span className="lot">
+      <Tons most={q.most} value={want} onChange={setN} />
+      <span className="quote">
+        buy {want} t at {cr(qq.price)}/t → {cr(qq.credits)}
+        {qq.duty > 0 ? <span className="muted"> (duty {cr(qq.duty)})</span> : null}
+      </span>
+      <button onClick={act(() => tell(buyGoods(state, good, want, smuggle)))}>buy</button>
+    </span>
+  )
+}
+
+/** The sell row: how much of the hold to part with, and what that lot would fetch a ton and in all. */
 function SellLot({ good, tons, state, act, smuggle, tell }: { good: Good; tons: number; state: GameState; act: PaneProps['act']; smuggle: boolean; tell: (o: ReturnType<typeof sellGoods>) => void }) {
   const [n, setN] = useState(tons)
   const want = Math.min(n, tons)
   const q = quoteSale(state, good, want, smuggle)
   return (
-    <span className="selllot">
-      <input type="range" min={1} max={tons} step={1} value={want} onChange={(e) => setN(Number(e.target.value))} />
+    <span className="lot">
+      <Tons most={tons} value={want} onChange={setN} />
       <span className="quote">
-        {want} t{q ? ` at ${cr(q.price)}/t → ${cr(q.credits)}` : ''}
+        sell {want} t at {q ? cr(q.price) : '?'}/t → {q ? cr(q.credits) : '?'}
         {q && q.duty > 0 ? <span className="muted"> (duty {cr(q.duty)})</span> : null}
       </span>
       <button onClick={act(() => tell(sellGoods(state, good, want, smuggle)))}>sell</button>
@@ -382,13 +416,13 @@ function Brokers({ view, state, act }: PaneProps) {
               <td>
                 {ship && (
                   <>
-                    <button disabled={r.stock === 0} onClick={act(() => tell(buyGoods(state, r.good, 10, smuggle || here.closed)))}>
-                      buy 10
-                    </button>
-                    <button disabled={r.stock === 0} onClick={act(() => tell(buyGoods(state, r.good, 999, smuggle || here.closed)))}>
-                      fill
-                    </button>
-                    {r.holding && <SellLot key={`${r.good}-${r.holding.tons}`} good={r.good} tons={r.holding.tons} state={state} act={act} smuggle={smuggle || here.closed} tell={tell} />}
+                    <BuyLot key={`b-${r.good}-${r.stock}-${view.purse}`} good={r.good} state={state} act={act} smuggle={smuggle || here.closed} tell={tell} version={r.stock} />
+                    {r.holding && (
+                      <>
+                        <br />
+                        <SellLot key={`s-${r.good}-${r.holding.tons}-${r.stock}`} good={r.good} tons={r.holding.tons} state={state} act={act} smuggle={smuggle || here.closed} tell={tell} />
+                      </>
+                    )}
                   </>
                 )}
               </td>

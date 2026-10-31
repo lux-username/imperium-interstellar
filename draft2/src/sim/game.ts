@@ -443,6 +443,27 @@ export function quoteSale(state: GameState, good: Good, tons: number, smuggle = 
   return { price, duty, credits: tons * price - duty }
 }
 
+/**
+ * What `tons` of a good would cost here, a ton and in all, duty on; and
+ * the most that could be bought: what the dock holds, the hold takes and
+ * the purse covers. The brokers' own sum, without making it.
+ */
+export function quoteBuy(state: GameState, good: Good, tons: number, smuggle = false): { price: number; duty: number; credits: number; most: number } | null {
+  const h = ownHullHere(state)
+  if (!h) return null
+  const me = state.characters[state.player]
+  const e = h.at.market[good]
+  const rate = smuggle ? 0 : dutyRate(h.at, me.empire)
+  // The most the purse covers, found by the same sum: price climbs as the dock empties.
+  let most = Math.min(e.stock, holdFree(h.ship))
+  while (most > 0 && lotPrice(h.at, good, e.mood, e.stock, -most) * most * (1 + rate) > me.purse) most -= 1
+  const n = Math.max(0, Math.min(tons, most))
+  if (n === 0) return { price: e.price, duty: 0, credits: 0, most }
+  const price = lotPrice(h.at, good, e.mood, e.stock, -n)
+  const duty = Math.round(n * price * rate)
+  return { price, duty, credits: n * price + duty, most }
+}
+
 /** Buy at the brokers: as many tons as asked, the hold allows and the purse covers. Off the books there is no duty and the customs house may look. */
 export function buyGoods(state: GameState, good: Good, tons: number, smuggle = false): Outcome {
   const h = ownHullHere(state)

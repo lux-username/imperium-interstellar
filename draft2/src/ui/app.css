@@ -89,6 +89,8 @@ section.captive { border-color: #6a5a2a; }
 ul.log li { color: var(--muted); }
 ul.log li:last-child { color: var(--fg); }
 .warn { color: #e0a070; }
-.selllot { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.selllot input[type='range'] { width: 90px; vertical-align: middle; }
-.selllot .quote { font-size: 11px; white-space: nowrap; }
+.lot { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; margin: 2px 0; }
+.lot input[type='range'] { width: 80px; vertical-align: middle; }
+.lot input.tons { width: 3.5em; padding: 1px 3px; font-size: 11px; }
+.lot .quote { font-size: 11px; white-space: nowrap; }
+button.tiny { padding: 0 4px; font-size: 10px; }
