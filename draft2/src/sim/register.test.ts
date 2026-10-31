@@ -4,7 +4,7 @@ import { characterLocation } from './mail'
 import { learnTraffic } from './belief'
 import { bestPlan } from './agents'
 import { lineKey } from './view'
-import type { WorldId } from './types'
+import type { Ship, WorldId } from './types'
 import { GOODS as GOODS_ } from './economy'
 
 describe('the port register', () => {
@@ -84,7 +84,7 @@ describe('what captains do with the register', () => {
   it('a captain who knows of a guild line on the pair they would sail expects half as much from it', () => {
     const state = newGame(105)
     // Wait for a week in which some captain in port has a plan worth the name.
-    let trader: (typeof state.ships)[string] | undefined
+    let trader: Ship | undefined
     for (let i = 0; i < 40 && !trader; i++) {
       advanceWeek(state)
       trader = Object.values(state.ships).find((s) => s.owner.kind === 'personal' && s.captain && s.captain !== PLAYER && !s.duty && s.location.kind === 'world' && (bestPlan(state, state.characters[s.captain!], s, (s.location as { world: WorldId }).world)?.profit ?? 0) > 4000)
