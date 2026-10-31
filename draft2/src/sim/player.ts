@@ -23,7 +23,7 @@ export function buildPlayerView(state: GameState): PlayerView {
   const chart: Record<string, ChartEntry> = {}
   for (const w of Object.values(state.worlds)) chart[w.id] = { id: w.id, name: w.name, hex: { ...w.hex }, cultures: [...w.cultures] }
   const empires: Record<string, EmpireEntry> = {}
-  for (const e of Object.values(state.empires)) empires[e.id] = { id: e.id, name: e.name, seat: e.seat }
+  for (const e of Object.values(state.empires)) empires[e.id] = { id: e.id, name: e.name, seat: e.seat, exports: [...e.exports], imports: [...e.imports] }
 
   const inbox: Report[] = []
   const observations: Report[] = []

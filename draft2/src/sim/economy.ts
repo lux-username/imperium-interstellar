@@ -65,14 +65,18 @@ export const GOOD_SPECS: Record<Good, GoodSpec> = {
 }
 
 /** How much a world makes or wants of a good: 0, 1 or 2. */
+/** How much a world makes of a good: 0, 1 or 2 by its codes; 3 where it is famous for it. */
 export function supplyLevel(p: WorldProfile, good: Good): number {
   if (p.tech < GOOD_SPECS[good].tech || p.population === 0) return 0
+  if (p.specialty?.kind === 'maker' && p.specialty.good === good) return 3
   const codes = tradeCodes(p)
   return Math.min(2, GOOD_SPECS[good].made.filter((c) => codes.includes(c)).length)
 }
 
+/** How much a world wants of a good: 0, 1 or 2 by its codes; 3 where it is a great market for it. */
 export function demandLevel(p: WorldProfile, good: Good): number {
   if (p.population === 0) return 0
+  if (p.specialty?.kind === 'eater' && p.specialty.good === good) return 3
   const codes = tradeCodes(p)
   return Math.min(2, GOOD_SPECS[good].wanted.filter((c) => codes.includes(c)).length)
 }

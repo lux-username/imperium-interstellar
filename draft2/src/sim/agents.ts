@@ -526,9 +526,16 @@ function yardBound(state: GameState, captain: Character, ship: Ship, at: WorldId
   if (['A', 'B'].includes(here.profile.starport) && here.empire === captain.empire) return null
   const due = ship.maintained + 26 - state.week
   const yards = (Object.keys(state.worlds).sort() as WorldId[]).filter((w) => ['A', 'B'].includes(state.worlds[w].profile.starport) && state.worlds[w].empire === captain.empire)
+  // The way home does not pass through an enemy's port.
+  const belief = beliefOf(state, captain.id)
+  const safe: Record<WorldId, { hex: World['hex'] }> = {}
+  for (const w of Object.keys(state.worlds) as WorldId[]) {
+    const e = belief.worlds[w]?.snapshot.kind === 'world' ? belief.worlds[w].snapshot.world.empire : state.worlds[w].empire
+    if (w === at || !believesAtWar(belief, captain.empire, e)) safe[w] = state.worlds[w]
+  }
   let best: { yard: WorldId; hops: number; next: WorldId } | null = null
   for (const y of yards) {
-    const path = hexRoute(state.worlds, at, y, SHIP_CLASSES[ship.type].jump)
+    const path = hexRoute(safe, at, y, SHIP_CLASSES[ship.type].jump)
     if (!path || path.length < 2) continue
     if (!best || path.length - 1 < best.hops) best = { yard: y, hops: path.length - 1, next: path[1] }
   }

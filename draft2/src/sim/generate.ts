@@ -17,7 +17,7 @@ import { neighbours } from './chart'
 import { chartLanes } from './lanes'
 import { seatName, worldCultures, worldName } from './names'
 import type { CoreName } from './data/names'
-import { isolationOf, newMarket, reprice } from './economy'
+import { demandLevel, GOOD_SPECS, GOODS, isolationOf, newMarket, reprice, supplyLevel, type Good } from './economy'
 import { createRng, nextInt, roll, type Rng } from './rng'
 import type { Empire, EmpireId, Lane, LaneId, StarportClass, World, WorldId, WorldProfile } from './types'
 
@@ -140,6 +140,7 @@ const SEAT_SPACING = 4
  * A seat is guaranteed a class A port and a tech level that can build ships.
  */
 function chooseSeats(worlds: World[]): World[] {
+  // A seat is on the edge: the Empire each answers to lies beyond it. Only a map with fewer than three edge worlds falls back.
   const populated = worlds.filter((w) => w.profile.population > 0)
   const edge = populated.filter((w) => isEdge(w.hex))
   const pool = (edge.length >= 3 ? edge : populated.length >= 3 ? populated : worlds).sort((a, b) => (a.id < b.id ? -1 : 1))
@@ -227,7 +228,7 @@ export function generateWorlds(rng: Rng): Generated {
   const order: Empire[] = []
   EMPIRES.forEach((e, i) => {
     // 12–16 weeks round trip to the imperial capital, per spec.
-    const empire: Empire = { id: e.id, name: e.name, core: e.core, seat: seats[i].id, capitalWeeks: nextInt(rng, 6, 8), treasury: 0 }
+    const empire: Empire = { id: e.id, name: e.name, core: e.core, seat: seats[i].id, capitalWeeks: nextInt(rng, 6, 8), treasury: 0, home: {}, exports: [], imports: [] }
     // The seat is named by the power that sits there.
     taken.delete(seats[i].name)
     seats[i].name = seatName(rng, e.core, taken)
@@ -235,8 +236,57 @@ export function generateWorlds(rng: Rng): Generated {
     order.push(empire)
   })
   claimWorlds(list, order, worlds)
+  makeFamous(rng, list)
+  for (const e of order) homeMarket(rng, e)
 
   return { worlds, empires }
+}
+
+/** How many worlds get a specialty: two great makers and two great markets. */
+const FAMOUS = { makers: 2, eaters: 2 }
+
+/**
+ * A few worlds are famous for something: a great maker of a good few
+ * others make, or a great market for one few others want, so that the
+ * sector has places that matter for one thing and nowhere else does.
+ * A maker must be big enough and advanced enough to make it; a market
+ * must be big enough to eat it. Goods and worlds are drawn so that no
+ * two specialties share a good.
+ */
+function makeFamous(rng: Rng, worlds: World[]): void {
+  const used = new Set<string>()
+  const pick = (kind: 'maker' | 'eater') => {
+    const makers = (g: Good) => worlds.filter((w) => supplyLevel(w.profile, g) > 0).length
+    const eaters = (g: Good) => worlds.filter((w) => demandLevel(w.profile, g) > 0).length
+    // The goods with the fewest rivals first, ties by the dice.
+    const goods = GOODS.filter((g) => !used.has(g)).map((g) => ({ g, n: kind === 'maker' ? makers(g) : eaters(g), r: nextInt(rng, 0, 99) })).sort((a, b) => a.n - b.n || a.r - b.r)
+    for (const { g } of goods) {
+      const able = worlds.filter((w) => !w.profile.specialty && w.profile.population >= 5 && (kind === 'maker' ? w.profile.tech >= GOOD_SPECS[g].tech : true)).sort((a, b) => (a.id < b.id ? -1 : 1))
+      if (able.length === 0) continue
+      const w = able[nextInt(rng, 0, able.length - 1)]
+      w.profile.specialty = { good: g, kind }
+      used.add(g)
+      return
+    }
+  }
+  for (let i = 0; i < FAMOUS.makers; i++) pick('maker')
+  for (let i = 0; i < FAMOUS.eaters; i++) pick('eater')
+}
+
+/**
+ * The empire's home market beyond the map: one or two goods it exports
+ * in bulk, at six tenths of base; one or two it wants, at a half again;
+ * the rest about par. What it exports and wants is known to everyone.
+ */
+function homeMarket(rng: Rng, e: Empire): void {
+  const goods = [...GOODS].sort(() => 0)
+  const shuffled = goods.map((g) => ({ g, r: nextInt(rng, 0, 999) })).sort((a, b) => a.r - b.r).map((x) => x.g)
+  const nx = nextInt(rng, 1, 2)
+  const ni = nextInt(rng, 1, 2)
+  e.exports = shuffled.slice(0, nx)
+  e.imports = shuffled.slice(nx, nx + ni)
+  e.home = {}
+  for (const g of GOODS) e.home[g] = e.exports.includes(g) ? 0.6 : e.imports.includes(g) ? 1.5 : 0.9 + nextInt(rng, 0, 20) / 100
 }
 
 // ---------------------------------------------------------------------------

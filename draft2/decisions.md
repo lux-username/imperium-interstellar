@@ -134,3 +134,10 @@
 - **Buying the register**: a captain with twenty thousand and no page of this port's register under twelve weeks old buys it, at the player's price. Everyone does within a year, and the treasuries notice.
 - **No loans against cargo** (user's call): interstellar banking is not ready to lend to someone who may never be seen again.
 - One-year review after: idle weeks one to three percent, overdue six to ten, stranded for fuel none, ping-pong between a pair a third of legs, medians up a fifth.
+
+## 2026-10-31 — consequential worlds and the imperial trade
+
+- **Famous worlds**: after the map is laid, two great makers and two great markets, each of a different good, chosen where the sector has the fewest other makers or eaters of it, on worlds big enough (population 5 or more) and, for a maker, advanced enough. A specialty triples the world's weight in that good (supply or demand level 3: production, consumption and price pull) and sits on the chart as public knowledge: "famous for its ore", "a great market for medicines".
+- **Seats on the edge**, required where the map allows.
+- **The imperial trade**: each empire's home market beyond the map prices every good as a multiple of base: one or two exports at 0.5 to 0.7, one or two wants at 1.3 to 1.7, the rest 0.85 to 1.15, all drifting a little each call. Two imperial freighters an empire shuttle seat to capital, a round trip of twice the capital distance. On a call a freighter lands the exports (three quarters of a month's target stock) and whatever is dear at the seat against home (over 1.3 times), takes the wants and whatever is cheap (under 0.7), pays duty, and sails. Exports and wants are common knowledge, shown at the port captain's.
+- Two-year runs: seats hold their empire's exports at 57 to 72 percent of base and its wants at 130 to 170 percent, famous makers sell at 40 to 67 percent and famous markets pay 160 to 260 percent, and the guilds run more lines for it.

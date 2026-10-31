@@ -75,13 +75,13 @@ export function spawnHunters(state: GameState, taken: Set<string>): void {
   }
 }
 
-type Hunt = Exclude<Duty, { kind: 'haul' }>
+type Hunt = Exclude<Duty, { kind: 'haul' } | { kind: 'imperial' }>
 
 function hunters(state: GameState): { captain: Character; ship: Ship; at: WorldId }[] {
   const out: { captain: Character; ship: Ship; at: WorldId }[] = []
   for (const id of Object.keys(state.ships).sort() as ShipId[]) {
     const ship = state.ships[id]
-    if (!ship.duty || ship.duty.kind === 'haul' || !ship.captain || ship.location.kind !== 'world') continue
+    if (!ship.duty || ship.duty.kind === 'haul' || ship.duty.kind === 'imperial' || !ship.captain || ship.location.kind !== 'world') continue
     const captain = state.characters[ship.captain]
     if (!captain || captain.captive) continue
     out.push({ captain, ship, at: ship.location.world })
@@ -169,25 +169,29 @@ export function huntersAct(state: GameState): void {
         if (n > 0) captain.purse += sell(here, lot.good, n, captain.empire, { smuggle: true }).credits
       }
     }
-    // A boat that has reached her station lies off at once, for the station's whole term.
-    if (duty.kind === 'patrol' && duty.station === at && !ship.lyingOff) {
+    // A boat that has reached her station lies off at once, for the station's whole term. The seat is only the way home.
+    if (duty.kind === 'patrol' && duty.station === at && duty.station !== state.empires[ship.empire].seat && !ship.lyingOff) {
       ship.lyingOff = true
       ship.duty = { ...duty, until: Math.max(duty.until, state.week + STATION_WEEKS) }
       continue
     }
-    if (state.week < duty.until) continue
-    if (ship.lyingOff || home) {
+    // A boat with a station she is not at, or homing to the seat, moves regardless of any term.
+    const bound = duty.kind === 'patrol' && duty.station && duty.station !== at && !ship.lyingOff
+    if (!bound && state.week < duty.until) continue
+    if (ship.lyingOff || home || bound) {
       // Time to move. A patrol goes to the next station; an outlaw with plunder goes home, else to a port worth watching.
       let to: WorldId | null = null
       if (duty.kind === 'patrol') {
         const station = duty.station ?? null
-        if (station && at === station && state.week >= duty.until) {
-          // Station held: home for a new assignment.
-          ship.duty = { kind: 'patrol', until: state.week + 1, station: null }
-          to = hopToward(state, at, state.empires[ship.empire].seat)
+        const seat = state.empires[ship.empire].seat
+        if (station && at === station && station !== seat && state.week >= duty.until) {
+          // Station held: home for a new assignment, the seat being her station until she is there.
+          ship.duty = { kind: 'patrol', until: state.week + 1, station: seat }
+          to = hopToward(state, at, seat)
         } else if (station && at !== station) {
           to = hopToward(state, at, station)
-        } else if (!station && at === state.empires[ship.empire].seat) {
+        } else if ((!station || station === seat) && at === seat) {
+          ship.duty = { kind: 'patrol', until: state.week + 1, station: null }
           const worst = mostDangerous(state, ship.empire)
           if (worst) {
             ship.duty = { kind: 'patrol', until: state.week + STATION_WEEKS, station: worst }

@@ -61,6 +61,8 @@ export interface WorldProfile {
   law: number
   /** 0–15. Caps what can be built and repaired here. */
   tech: number
+  /** What the world is famous for, if anything: a great maker or a great eater of one good, three times the ordinary weight. On the chart; everyone knows it. */
+  specialty?: { good: string; kind: 'maker' | 'eater' }
 }
 
 export interface World {
@@ -201,6 +203,11 @@ export interface Empire {
   capitalWeeks: number
   /** Duty collected at its ports, so far unspent: the governor's purse to be. */
   treasury: number
+  /** The home market beyond the map: what each good fetches there, as a multiple of its base. Exports sit low, wants high, the rest near one, all drifting. */
+  home: Record<string, number>
+  /** The goods the empire exports in bulk and the ones it wants, as everyone knows. */
+  exports: string[]
+  imports: string[]
 }
 
 /** Each pair of empires is at war or at peace; the three pairs change independently. */
@@ -334,6 +341,8 @@ export type Duty =
   | { kind: 'raid'; haven: WorldId; until: Week; since?: Week }
   /** A guild bulk hauler on a line, or idle at the seat when `line` is null. `waited`: weeks spent at a loading end with too little to carry. */
   | { kind: 'haul'; line: Line | null; waited: number }
+  /** An imperial freighter shuttling between the seat and the capital beyond the map. */
+  | { kind: 'imperial' }
 
 // ---------------------------------------------------------------------------
 // People

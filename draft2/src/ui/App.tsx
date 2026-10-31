@@ -519,6 +519,14 @@ function Captain({ view, state, act }: PaneProps) {
         ))}
         {news.length === 0 && <li className="muted">Nothing has happened here lately, the port captain says.</li>}
       </ul>
+      <h3>The imperial trade</h3>
+      <ul>
+        {eids.map((e) => (
+          <li key={e}>
+            {empireName(view, e)} ships in {view.empires[e].exports.join(' and ')} from its capital and sends home {view.empires[e].imports.join(' and ')}.
+          </li>
+        ))}
+      </ul>
       <h3>Between the powers</h3>
       <ul>
         {eids.flatMap((a, i) =>
@@ -766,6 +774,7 @@ function Dossier({ view, world }: { view: PlayerView; world: WorldId }) {
         <>
           <p>
             {profileString(snap.profile)} · {empireName(view, snap.empire)} · as of {ago(view.week, report.observed)}
+            {snap.profile.specialty && <b> · {snap.profile.specialty.kind === 'maker' ? `famous for its ${snap.profile.specialty.good}` : `a great market for ${snap.profile.specialty.good}`}</b>}
           </p>
           {goods.length > 0 ? (
             <table className="market small">

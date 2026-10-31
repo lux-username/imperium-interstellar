@@ -12,6 +12,7 @@ import { askCaptain, captainsAct, dockTalk, guildPost, listenAtBar, noticeUnderc
 import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, type Hail } from './combat'
 import { huntersAct, patrolAt, spawnHunters } from './navy'
 import { GUILD_PURSE, guildsPlan, haulersAct, spawnHaulers } from './guild'
+import { imperialAct, spawnImperial } from './imperial'
 import { captivityTick, landCaptives, payRansom, ransomAnother, ransomFor } from './captivity'
 import { joinEncounter, possibleAllies, willStand } from './combat'
 import { askRoute, checkRequests, noticeImpressive, standRound } from './agents'
@@ -220,6 +221,7 @@ export function newGame(seed: number): GameState {
   spawnTraders(state, taken)
   spawnHunters(state, taken)
   spawnHaulers(state, taken)
+  spawnImperial(state, taken)
   offerFreight(state)
   openingChart(state, PLAYER, home)
   for (const c of Object.values(state.characters)) {
@@ -406,6 +408,7 @@ export function advanceWeek(state: GameState): void {
   // Captains decide on what they now see and have heard, and sail next week.
   // The guild's factor has first claim on the dock: haulers load before the free traders act.
   guildsPlan(state)
+  imperialAct(state)
   haulersAct(state)
   captainsAct(state)
   huntersAct(state)

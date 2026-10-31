@@ -197,6 +197,9 @@ export interface EmpireEntry {
   id: EmpireId
   name: string
   seat: WorldId
+  /** What the empire ships in from its capital in bulk, and what it sends home: common knowledge. */
+  exports: string[]
+  imports: string[]
 }
 
 /** A hull lying in the same port as the player, seen directly. */
