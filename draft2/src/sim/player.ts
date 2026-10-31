@@ -7,10 +7,11 @@
 import { hexDistance } from './hex'
 import { route } from './chart'
 import { GOODS, tariffFor } from './economy'
+import { quarrel } from './combat'
 import { playerShip } from './game'
 import { beliefOf, characterLocation, readerOf, shipsAt } from './mail'
 import { sailsOn, otherEnd } from './scouts'
-import { fuelPrice, holdUsed, holding, reachable } from './ships'
+import { fuelPrice, holdUsed, holding, MAINTENANCE_EVERY, maintenanceCost, reachable } from './ships'
 import { SHIP_CLASSES, type GameState } from './types'
 import type { ChartEntry, Dispatch, EmpireEntry, HullHere, OwnShip, PlayerView, Report } from './view'
 
@@ -49,7 +50,7 @@ export function buildPlayerView(state: GameState): PlayerView {
   }
   const own = playerShip(state)
   const ship: OwnShip | null = own
-    ? { id: own.id, name: own.name, type: own.type, jump: SHIP_CLASSES[own.type].jump, upkeep: SHIP_CLASSES[own.type].upkeep, fuel: own.fuel, tanks: SHIP_CLASSES[own.type].tanks, holdTons: SHIP_CLASSES[own.type].hold, holdUsed: holdUsed(own), hold: own.hold.map((l) => ({ ...l })), damage: own.damage, guns: SHIP_CLASSES[own.type].guns, course: own.course }
+    ? { id: own.id, name: own.name, type: own.type, jump: SHIP_CLASSES[own.type].jump, price: SHIP_CLASSES[own.type].price, fuel: own.fuel, maintenanceDueIn: own.maintained + MAINTENANCE_EVERY - state.week, inYard: own.inYard, maintenanceCost: maintenanceCost(own), tanks: SHIP_CLASSES[own.type].tanks, holdTons: SHIP_CLASSES[own.type].hold, holdUsed: holdUsed(own), hold: own.hold.map((l) => ({ ...l })), damage: own.damage, guns: SHIP_CLASSES[own.type].guns, course: own.course }
     : null
   const world = at === null ? null : state.worlds[at]
   const here =
@@ -74,6 +75,17 @@ export function buildPlayerView(state: GameState): PlayerView {
             : [],
         }
 
+  const pend = state.pending
+  const hull = (id: typeof pend extends null ? never : NonNullable<typeof pend>['attacker']) => {
+    const s = state.ships[id]
+    return { id: s.id, name: s.name, type: s.type, empire: s.empire, guns: SHIP_CLASSES[s.type].guns }
+  }
+  const pending = pend
+    ? { attacker: hull(pend.attacker), defender: hull(pend.defender), mine: (pend.attacker === own?.id ? 'attacker' : 'defender') as 'attacker' | 'defender', round: pend.round, log: [...pend.log], quarrel: own ? quarrel(state, state.ships[pend.attacker], state.ships[pend.defender]) : false }
+    : null
+  const cap = me.captive ?? null
+  const captive = cap ? { of: cap.of, since: cap.since, at: cap.at, aboard: cap.at ? null : (state.ships[cap.by]?.name ?? null) } : null
+
   return {
     week: state.week,
     player: { id: me.id, name: me.name, empire: me.empire },
@@ -86,6 +98,9 @@ export function buildPlayerView(state: GameState): PlayerView {
     purse: me.purse,
     debt: me.debt ? { ...me.debt } : null,
     ship,
+    pending,
+    lyingOff: own?.lyingOff ?? false,
+    captive,
     inbox,
     observations,
     outgoing,

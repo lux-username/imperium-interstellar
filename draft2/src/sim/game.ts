@@ -9,6 +9,8 @@
  * player who can take passage. Nothing trades or fights yet.
  */
 import { askAround, captainsAct, dockTalk, seedTraderKnowledge, spawnTraders } from './agents'
+import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, type Hail } from './combat'
+import { huntersAct, spawnHunters } from './navy'
 import { hexLabel } from './hex'
 import { route } from './chart'
 import { buy, GOODS, sell, tickMarkets, type Good } from './economy'
@@ -16,7 +18,7 @@ import { generateSubsector } from './generate'
 import { characterLocation, copyDeclaration, deliverHeld, observe, postLetter, postNews, pruneMail, snapshotWorld } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { createRng, nextInt, roll } from './rng'
-import { departOnAccount, fuelPrice, holdFree, newShip, reachable, setCourse, unload } from './ships'
+import { departOnAccount, fuelPrice, holdFree, MAINTENANCE_WEEKS, maintenanceCost, newShip, reachable, setCourse, unload } from './ships'
 import { departScouts, landShips, packetScouts } from './scouts'
 import { SHIP_CLASSES, stanceKey, stancePair, type CharacterId, type Declaration, type EmpireId, type FreightOffer, type GameState, type Mail, type ReportId, type Ship, type ShipId, type Week, type World, type WorldId } from './types'
 import type { Report } from './view'
@@ -103,6 +105,7 @@ function openingChart(state: GameState, reader: CharacterId, home: WorldId): voi
       snapshot.world.people = []
       snapshot.world.board = []
       snapshot.world.market = {}
+      snapshot.world.news = []
     }
     const report: Report = {
       id: `r-chart-${hexLabel(world.hex)}` as ReportId,
@@ -156,6 +159,7 @@ export function newGame(seed: number): GameState {
     mail: {},
     beliefs: {},
     player: PLAYER,
+    pending: null,
   }
   const eids = Object.keys(empires).sort() as EmpireId[]
   for (let i = 0; i < eids.length; i++) {
@@ -168,6 +172,7 @@ export function newGame(seed: number): GameState {
   state.ships[own.id] = own
   state.characters[PLAYER].body = { kind: 'aboard', ship: own.id }
   spawnTraders(state, taken)
+  spawnHunters(state, taken)
   offerFreight(state)
   openingChart(state, PLAYER, home)
   for (const c of Object.values(state.characters)) {
@@ -202,15 +207,31 @@ export function offerFreight(state: GameState): void {
   }
 }
 
-/** Every hull on a personal account costs her owner her upkeep each week, paid or not. */
-export function payUpkeep(state: GameState): void {
+/** Hulls in the yard come out when their month is up: mended, maintained, ready. */
+export function finishMaintenance(state: GameState): void {
   const ids = Object.keys(state.ships).sort() as ShipId[]
   for (const id of ids) {
     const ship = state.ships[id]
-    if (ship.owner.kind !== 'personal') continue
-    const owner = state.characters[ship.owner.character]
-    if (owner) owner.purse -= SHIP_CLASSES[ship.type].upkeep
+    if (ship.inYard === null || state.week < ship.inYard) continue
+    ship.inYard = null
+    ship.maintained = state.week
+    ship.damage = 0
   }
+}
+
+/** Lay a hull up for her maintenance at a dockyard: A or B ports, a tenth of her price, four weeks. The owner pays. */
+export function layUp(state: GameState, ship: Ship, at: World): boolean {
+  if (ship.location.kind !== 'world' || ship.inYard !== null || !['A', 'B'].includes(at.profile.starport)) return false
+  const cost = maintenanceCost(ship)
+  if (ship.owner.kind === 'personal') {
+    const owner = state.characters[ship.owner.character]
+    if (!owner || owner.purse < cost) return false
+    owner.purse -= cost
+  }
+  ship.inYard = state.week + MAINTENANCE_WEEKS
+  ship.course = null
+  ship.lyingOff = false
+  return true
 }
 
 /** Payments fall due; what cannot be paid goes to arrears. */
@@ -230,14 +251,57 @@ export function collectDebts(state: GameState): void {
   }
 }
 
+/** Weeks a port keeps a piece of news on its board. */
+export const NEWS_WEEKS = 8
+
+export function postNewsItem(state: GameState, at: WorldId, text: string): void {
+  const world = state.worlds[at]
+  world.news.push({ week: state.week, text })
+  world.news = world.news.filter((n) => state.week - n.week <= NEWS_WEEKS)
+}
+
+/**
+ * The approaches: every hull that landed this week meets whoever lies
+ * off the port with a quarrel against her. An NPC's meeting is resolved
+ * on the spot; the player's stands as `pending` until they choose. One
+ * meeting a hull a week.
+ */
+export function approaches(state: GameState, landed: Ship[]): void {
+  const lying = (at: WorldId) =>
+    (Object.keys(state.ships).sort() as ShipId[])
+      .map((id) => state.ships[id])
+      .filter((s) => s.lyingOff && s.location.kind === 'world' && s.location.world === at && (!s.captain || !state.characters[s.captain]?.captive))
+  for (const ship of landed) {
+    if (ship.location.kind !== 'world' || state.pending) continue
+    const at = ship.location.world
+    for (const hunter of lying(at)) {
+      // The player lying off is told of everything that comes in and chooses; an NPC hails only what she has a quarrel with.
+      if (hunter.captain === state.player ? ship.type === 'scout' || ship.id === hunter.id : !quarrel(state, hunter, ship)) continue
+      // Half the arrivals slip by unseen.
+      if (roll(state.rng) < 7) continue
+      const e = beginEncounter(state, hunter, ship, at)
+      const mine = hunter.captain === state.player || ship.captain === state.player
+      if (mine) {
+        state.pending = e
+        break
+      }
+      while (!e.outcome) resolveRound(state, e, npcChoice(state, e))
+      postNewsItem(state, at, settle(state, e))
+      break
+    }
+  }
+}
+
 export function advanceWeek(state: GameState): void {
+  if (state.pending) return
   state.week += 1
-  landShips(state)
+  const landed = landShips(state)
+  approaches(state, landed)
   deliverHeld(state)
   stanceClock(state)
   tickMarkets(state)
   offerFreight(state)
-  payUpkeep(state)
+  finishMaintenance(state)
   collectDebts(state)
   // Sailings happen before the week's observation: a hull that sails this week is gone from the port by then.
   departScouts(state)
@@ -246,6 +310,7 @@ export function advanceWeek(state: GameState): void {
   dockTalk(state)
   // Captains decide on what they now see and have heard, and sail next week.
   captainsAct(state)
+  huntersAct(state)
   pruneMail(state)
 }
 
@@ -353,10 +418,68 @@ export function takeFreight(state: GameState, offer: string): boolean {
 /** Set the player's hull's course for next week. */
 export function sail(state: GameState, to: WorldId | null): boolean {
   const ship = playerShip(state)
-  if (!ship) return false
+  if (!ship || ship.inYard !== null) return false
   const me = state.characters[state.player]
-  if (me.body.kind !== 'aboard' || me.body.ship !== ship.id) return false
+  if (me.captive) return false
+  if (me.body.kind !== 'aboard' || me.body.ship !== ship.id) {
+    // Step aboard if she lies where the player is.
+    if (ship.location.kind !== 'world' || characterLocation(state, state.player) !== ship.location.world) return false
+    me.body = { kind: 'aboard', ship: ship.id }
+  }
   return setCourse(state, ship, to)
+}
+
+/** The player's answer to a hail when they are the one hailed. Resolves a round; settles the meeting when it ends. */
+export function respond(state: GameState, choice: Choice): void {
+  const e = state.pending
+  if (!e || e.defender !== playerShip(state)?.id) return
+  resolveRound(state, e, choice)
+  if (e.outcome) {
+    postNewsItem(state, e.at, settle(state, e))
+    state.pending = null
+  }
+}
+
+/** The player's decision when they are the one lying off: attack, and the other captain answers round by round, or let her pass. */
+export function hail(state: GameState, decision: Hail): void {
+  const e = state.pending
+  if (!e || e.attacker !== playerShip(state)?.id) return
+  if (decision === 'let_pass') {
+    e.outcome = 'let_pass'
+    e.log.push('You let her pass.')
+  } else {
+    while (!e.outcome) resolveRound(state, e, npcChoice(state, e))
+  }
+  postNewsItem(state, e.at, settle(state, e))
+  state.pending = null
+}
+
+/** Lie off the port, or come in and dock. Lying off, the player hails what comes in and is not seen by the brokers. */
+export function lieOff(state: GameState, on: boolean): boolean {
+  const ship = playerShip(state)
+  if (!ship || ship.location.kind !== 'world') return false
+  ship.lyingOff = on
+  return true
+}
+
+/** Lay the player's hull up for maintenance here. */
+export function maintain(state: GameState): boolean {
+  const h = ownHullHere(state)
+  if (!h) return false
+  const ok = layUp(state, h.ship, h.at)
+  if (ok) state.characters[state.player].body = { kind: 'world', world: h.at.id }
+  return ok
+}
+
+/** Mend a point of damage at a dockyard: A or B ports, a thousand a point. */
+export function repair(state: GameState): boolean {
+  const h = ownHullHere(state)
+  if (!h || !['A', 'B'].includes(h.at.profile.starport) || h.ship.damage === 0) return false
+  const me = state.characters[state.player]
+  if (me.purse < 1000) return false
+  me.purse -= 1000
+  h.ship.damage -= 1
+  return true
 }
 
 /** Ask around the bar. Once a visit is enough; the same captains say the same things. Returns how many prices were news. */

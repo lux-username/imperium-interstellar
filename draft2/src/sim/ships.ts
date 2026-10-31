@@ -6,7 +6,7 @@
  */
 import { SHIP_NAMES, type NamedHull } from './data/ships'
 import { hexDistance } from './hex'
-import { nextInt, type Rng } from './rng'
+import { nextInt, roll, type Rng } from './rng'
 import { SHIP_CLASSES, type CargoLot, type CharacterId, type EmpireId, type GameState, type Owner, type Ship, type ShipId, type ShipType, type WorldId } from './types'
 import type { Good } from './economy'
 
@@ -50,7 +50,36 @@ export function newShip(rng: Rng, id: ShipId, type: ShipType, empire: EmpireId, 
     news: {},
     run: null,
     docked: -1,
+    lyingOff: false,
+    duty: null,
+    maintained: 0,
+    inYard: null,
   }
+}
+
+/** Weeks between maintenances: twice a year. */
+export const MAINTENANCE_EVERY = 26
+/** Weeks a maintenance takes. */
+export const MAINTENANCE_WEEKS = 4
+
+export function maintenanceCost(ship: Ship): number {
+  return Math.round(SHIP_CLASSES[ship.type].price / 10)
+}
+
+/** Weeks past due, or 0. */
+export function overdue(ship: Ship, week: number): number {
+  return Math.max(0, week - ship.maintained - MAINTENANCE_EVERY)
+}
+
+/**
+ * The risk an overdue hull runs on each jump: 2d6 at or under 2 plus a
+ * point for every eight weeks overdue. A fault costs her the jump, a tank,
+ * and a point of damage.
+ */
+export function driveFault(rng: Rng, ship: Ship, week: number): boolean {
+  const over = overdue(ship, week)
+  if (over === 0) return false
+  return roll(rng) <= 2 + Math.floor(over / 8)
 }
 
 export function holdUsed(ship: Ship): number {
@@ -98,7 +127,7 @@ export function fuelPrice(starport: string): number | null {
 
 /** Set a hull's course for next week. False if out of jump, out of fuel, or not in port. */
 export function setCourse(state: GameState, ship: Ship, to: WorldId | null): boolean {
-  if (ship.location.kind !== 'world') return false
+  if (ship.location.kind !== 'world' || ship.inYard !== null) return false
   if (to === null) {
     ship.course = null
     return true
@@ -114,13 +143,20 @@ export function departOnAccount(state: GameState): void {
   const ids = Object.keys(state.ships).sort() as ShipId[]
   for (const id of ids) {
     const ship = state.ships[id]
-    if (ship.run || ship.course === null || ship.location.kind !== 'world' || ship.fuel < 1) continue
+    if (ship.run || ship.course === null || ship.location.kind !== 'world' || ship.fuel < 1 || ship.inYard !== null) continue
     const from = ship.location.world
     if (!reachable(state, from, SHIP_CLASSES[ship.type].jump).includes(ship.course)) {
       ship.course = null
       continue
     }
     ship.fuel -= 1
+    if (driveFault(state.rng, ship, state.week)) {
+      // The drive baulks: a tank burned for nothing, a point of damage, and she lies where she was.
+      ship.damage += 1
+      ship.course = null
+      state.worlds[from].news.push({ week: state.week, text: `${ship.name}'s drive failed on the jump; she lies in port, overdue for her maintenance.` })
+      continue
+    }
     ship.location = { kind: 'transit', from, to: ship.course, arrives: state.week + 1 }
     ship.course = null
   }

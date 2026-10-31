@@ -16,7 +16,7 @@ function world(id: string, week: number, extra: Partial<WorldSnapshot> = {}): Re
     subject: id,
     observedAt: w,
     observed: week,
-    snapshot: { kind: 'world', world: { id: w, name: id, hex: { col: 1, row: 1 }, profile: { starport: 'B', size: 5, atmosphere: 6, hydrographics: 5, population: 5, government: 5, law: 5, tech: 9 }, empire: A, ships: [], people: [], board: [], market: {}, ...extra } },
+    snapshot: { kind: 'world', world: { id: w, name: id, hex: { col: 1, row: 1 }, profile: { starport: 'B', size: 5, atmosphere: 6, hydrographics: 5, population: 5, government: 5, law: 5, tech: 9 }, empire: A, ships: [], people: [], board: [], market: {}, news: [], ...extra } },
     envelope: { origin: w, destination: w, sent: week, route: [w], eta: week },
     delivered: week,
   }

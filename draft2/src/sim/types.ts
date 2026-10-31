@@ -83,6 +83,13 @@ export interface World {
   market: Market
   /** Freight the brokers are offering this week, to be carried and paid on delivery. */
   freight: FreightOffer[]
+  /** What happened here lately, as the port tells it: the newest last. Kept for NEWS_WEEKS. */
+  news: NewsItem[]
+}
+
+export interface NewsItem {
+  week: Week
+  text: string
 }
 
 export interface FreightOffer {
@@ -180,8 +187,8 @@ export type ShipType = 'scout' | 'free_trader' | 'far_trader' | 'bulk_freighter'
 
 export interface ShipClass {
   type: ShipType
-  /** Credits a week to keep her crewed and found, paid by a personal owner. An organisation keeps its own. */
-  upkeep: number
+  /** What she costs new. Maintenance is a tenth of it, twice a year. */
+  price: number
   jump: number
   /** Tanks: jumps on a full load. Scouts scoop and never want for fuel. */
   tanks: number
@@ -192,12 +199,12 @@ export interface ShipClass {
 }
 
 export const SHIP_CLASSES: Record<ShipType, ShipClass> = {
-  scout: { type: 'scout', upkeep: 300, jump: 3, tanks: 2, hold: 2, guns: 0, crew: 4 },
-  free_trader: { type: 'free_trader', upkeep: 600, jump: 2, tanks: 2, hold: 80, guns: 1, crew: 5 },
-  far_trader: { type: 'far_trader', upkeep: 700, jump: 3, tanks: 2, hold: 60, guns: 1, crew: 5 },
-  bulk_freighter: { type: 'bulk_freighter', upkeep: 1200, jump: 2, tanks: 2, hold: 400, guns: 0, crew: 10 },
-  corvette: { type: 'corvette', upkeep: 2500, jump: 2, tanks: 4, hold: 10, guns: 3, crew: 20 },
-  frigate: { type: 'frigate', upkeep: 7000, jump: 3, tanks: 4, hold: 20, guns: 6, crew: 60 },
+  scout: { type: 'scout', price: 30000, jump: 3, tanks: 2, hold: 2, guns: 0, crew: 4 },
+  free_trader: { type: 'free_trader', price: 60000, jump: 2, tanks: 2, hold: 80, guns: 1, crew: 5 },
+  far_trader: { type: 'far_trader', price: 80000, jump: 3, tanks: 2, hold: 60, guns: 1, crew: 5 },
+  bulk_freighter: { type: 'bulk_freighter', price: 150000, jump: 2, tanks: 2, hold: 400, guns: 0, crew: 10 },
+  corvette: { type: 'corvette', price: 200000, jump: 2, tanks: 4, hold: 10, guns: 3, crew: 20 },
+  frigate: { type: 'frigate', price: 600000, jump: 3, tanks: 4, hold: 20, guns: 6, crew: 60 },
 }
 
 /** Where a ship truly is. In transit means committed to a jump that lands on `arrives`. */
@@ -249,7 +256,22 @@ export interface Ship {
   run: PacketRun | null
   /** The week she last came into port. She sails no sooner than the week after. */
   docked: Week
+  /** Lying off the port in the approaches rather than docked: hunting what comes in, or waiting to. */
+  lyingOff: boolean
+  /** The week her last maintenance was finished. Due again MAINTENANCE_EVERY weeks on; overdue, her drive is a risk. */
+  maintained: Week
+  /** The week she comes out of the yard, while she is in it. */
+  inYard: Week | null
+  /** What she is for, when she is not trading: a navy hull cruising, or an outlaw's. */
+  duty: Duty | null
 }
+
+/** A hull's standing employment beyond trade. */
+export type Duty =
+  /** Cruising the empire's worlds, lying off each a week or two. `until`: when to move on. */
+  | { kind: 'patrol'; until: Week }
+  /** An outlaw: lying off ports to take what comes, and selling it at a haven. */
+  | { kind: 'raid'; haven: WorldId; until: Week }
 
 // ---------------------------------------------------------------------------
 // People
@@ -269,6 +291,20 @@ export interface Character {
   purse: number
   /** What they owe on their hull, if anything. */
   debt: Debt | null
+  /** An outlaw has burned their standing with every empire: fair game for any navy, and welcome only at a haven. */
+  outlaw?: boolean
+  /** Held by a captor: where, and since when. Null when free. */
+  captive?: Captivity | null
+}
+
+export interface Captivity {
+  /** Who took them, by hull. */
+  by: ShipId
+  /** The empire whose prisoner they are, or null for an outlaw's. */
+  of: EmpireId | null
+  since: Week
+  /** Where they are held once landed; null while still aboard the captor. */
+  at: WorldId | null
 }
 
 /** A mortgage: a payment falls due every `every` weeks; missed payments pile up as arrears. */
@@ -322,4 +358,20 @@ export interface GameState {
   /** Everyone's belief, folded from what reached them. NPCs keep the fold only; the player keeps the mail too. */
   beliefs: Record<CharacterId, Belief>
   player: CharacterId
+  /** An encounter waiting on the player's choice. The week cannot advance while it stands. */
+  pending: Encounter | null
 }
+
+/** A meeting in the approaches, resolved a round at a time. */
+export interface Encounter {
+  attacker: ShipId
+  defender: ShipId
+  at: WorldId
+  round: number
+  /** What has happened so far, in order. */
+  log: string[]
+  /** How it ended, or null while it goes on. */
+  outcome: EncounterOutcome | null
+}
+
+export type EncounterOutcome = 'escaped' | 'let_pass' | 'struck' | 'driven_off' | 'docked'

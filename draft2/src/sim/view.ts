@@ -58,6 +58,8 @@ export interface WorldSnapshot {
   board: Declaration[]
   /** What the brokers were charging and what lay on the dock, as seen. Empty when the observer never went to the brokers (the chart). */
   market: Partial<Record<Good, { price: number; stock: number }>>
+  /** What the port was telling of lately. */
+  news: { week: Week; text: string }[]
 }
 
 export type Snapshot = { kind: 'world'; world: WorldSnapshot } | { kind: 'ship'; ship: ShipSnapshot }
@@ -187,8 +189,12 @@ export interface OwnShip {
   name: string
   type: ShipType
   jump: number
-  upkeep: number
+  price: number
   fuel: number
+  /** Weeks until maintenance is due (negative: overdue), and when she comes out of the yard if she is in it. */
+  maintenanceDueIn: number
+  inYard: Week | null
+  maintenanceCost: number
   tanks: number
   holdTons: number
   holdUsed: number
@@ -243,6 +249,12 @@ export interface PlayerView {
   debt: Debt | null
   /** The player's own hull, or null if they have none. */
   ship: OwnShip | null
+  /** A meeting in the approaches waiting on the player. */
+  pending: { attacker: { id: ShipId; name: string; type: ShipType; empire: EmpireId; guns: number }; defender: { id: ShipId; name: string; type: ShipType; empire: EmpireId; guns: number }; mine: 'attacker' | 'defender'; round: number; log: string[]; quarrel: boolean } | null
+  /** Whether the player's hull lies off the port rather than docked. */
+  lyingOff: boolean
+  /** The player is a prisoner: whose, since when, and where held if landed. */
+  captive: { of: EmpireId | null; since: Week; at: WorldId | null; aboard: string | null } | null
   /** Every letter that has reached the player, newest arrival first. */
   inbox: Report[]
   /** What the player saw with their own eyes each week. Not mail, but reports all the same. */

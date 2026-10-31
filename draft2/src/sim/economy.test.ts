@@ -28,7 +28,7 @@ describe('trade codes and prices', () => {
 
   it('buying takes stock and lifts the price; selling lowers it; a foreigner pays duty', () => {
     const rng = createRng(1)
-    const world = { id: 'w' as WorldId, name: 'w', hex: { col: 1, row: 1 }, cultures: [], profile: farm, empire: 'e-a' as never, board: {}, market: newMarket(rng, farm), freight: [] }
+    const world = { id: 'w' as WorldId, name: 'w', hex: { col: 1, row: 1 }, cultures: [], profile: farm, empire: 'e-a' as never, board: {}, market: newMarket(rng, farm), freight: [], news: [] }
     const before = world.market.grain.price
     const stock = world.market.grain.stock
     expect(stock).toBeGreaterThan(0)
@@ -95,7 +95,7 @@ describe('the trader at the brokers', () => {
         advanceWeek(state)
         expect(characterLocation(state, state.player)).toBe(offer.to)
         expect(playerShip(state)!.hold.length).toBe(0)
-        expect(state.characters[state.player].purse).toBeGreaterThanOrEqual(purse + offer.tons * offer.rate - 2000 - 2 * 600)
+        expect(state.characters[state.player].purse).toBeGreaterThanOrEqual(purse + offer.tons * offer.rate - 2000)
         return
       }
       advanceWeek(state)

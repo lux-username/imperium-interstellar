@@ -42,6 +42,10 @@ export function packetScouts(rng: Rng, lanes: Record<LaneId, Lane>, worlds: Reco
       news: {},
       run: { lane: id },
       docked: -1,
+      lyingOff: false,
+      duty: null,
+      maintained: 0,
+      inYard: null,
       }
     }
   }
@@ -103,11 +107,15 @@ export function landShips(state: GameState): Ship[] {
     ship.docked = state.week
     unloadMail(state, ship, at)
     deliverFreight(state, ship, at)
+    // Passengers step ashore; prisoners stay aboard until their captor lands them (see ./captivity.ts).
+    const keep: typeof ship.passengers = []
     for (const p of ship.passengers) {
       const c = state.characters[p]
-      if (c) c.body = { kind: 'world', world: at }
+      if (!c) continue
+      if (c.captive) keep.push(p)
+      else c.body = { kind: 'world', world: at }
     }
-    ship.passengers = []
+    ship.passengers = keep
     landed.push(ship)
   }
   return landed

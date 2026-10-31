@@ -5,7 +5,7 @@
  * development only.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { advanceWeek, buyGoods, goAshore, newGame, refuel, sail, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
+import { advanceWeek, buyGoods, goAshore, hail, lieOff, maintain, newGame, refuel, repair, respond, sail, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
@@ -86,7 +86,7 @@ export function App() {
           {view.body.kind === 'world' ? `at ${view.chart[view.body.world].name}` : `aboard ${view.body.shipName}, in jump for ${view.chart[view.body.to].name}`}
         </span>
         <span className="purse">{cr(view.purse)}</span>
-        <button className="advance" onClick={act(() => advanceWeek(state))}>
+        <button className="advance" disabled={!!view.pending} onClick={act(() => advanceWeek(state))}>
           Advance week{view.ship?.course ? ` · sail for ${view.chart[view.ship.course].name}` : ''}
         </button>
         <span className="dev">
@@ -109,7 +109,17 @@ export function App() {
       <main>
         <Map view={view} selected={selected} onSelect={setSelected} overlay={overlay} />
         <aside>
-          {here ? (
+          {view.pending && <EncounterPane view={view} state={state} act={act} />}
+          {view.captive && (
+            <section className="captive">
+              <h2>A prisoner</h2>
+              <p>
+                Taken {ago(view.week, view.captive.since)}, {view.captive.of ? `a prisoner of ${empireName(view, view.captive.of)}` : "an outlaw's prisoner"}
+                {view.captive.at ? `, held at ${view.chart[view.captive.at].name}` : view.captive.aboard ? `, aboard the ${view.captive.aboard}` : ''}.
+              </p>
+            </section>
+          )}
+          {here && !view.pending ? (
             <section className="port">
               <h2>
                 {hereName} <span className="muted">· {empireName(view, here.empire)} · port {here.starport}</span>
@@ -142,6 +152,37 @@ export function App() {
 
 type PaneProps = { view: PlayerView; state: GameState; act: (f: () => unknown) => () => void }
 
+function EncounterPane({ view, state, act }: PaneProps) {
+  const p = view.pending!
+  const other = p.mine === 'attacker' ? p.defender : p.attacker
+  return (
+    <section className="encounter">
+      <h2>In the approaches of {view.chart[view.here?.world ?? (view.body.kind === 'world' ? view.body.world : view.body.to)].name}</h2>
+      <p>
+        <b>{other.name}</b>, {TYPE_WORDS[other.type]} of {empireName(view, other.empire)}, {other.guns} gun{other.guns === 1 ? '' : 's'}. You have {view.ship?.guns ?? 0}.
+      </p>
+      <ul className="log">
+        {p.log.map((l, i) => (
+          <li key={i}>{l}</li>
+        ))}
+      </ul>
+      {p.mine === 'defender' ? (
+        <p>
+          <button onClick={act(() => respond(state, 'run'))}>run for the port</button> <button onClick={act(() => respond(state, 'fight'))}>fight</button> <button onClick={act(() => respond(state, 'strike'))}>strike</button>
+        </p>
+      ) : (
+        <p>
+          <button disabled={!p.quarrel} onClick={act(() => hail(state, 'attack'))}>
+            attack
+          </button>{' '}
+          <button onClick={act(() => hail(state, 'let_pass'))}>let her pass</button>
+          {!p.quarrel && <span className="muted"> You have no quarrel with her; an attack would be piracy.</span>}
+        </p>
+      )}
+    </section>
+  )
+}
+
 function Docks({ view, state, act }: PaneProps) {
   const here = view.here!
   const ship = view.ship
@@ -151,7 +192,26 @@ function Docks({ view, state, act }: PaneProps) {
       {ship ? (
         <>
           <p>
-            <b>{ship.name}</b>, {TYPE_WORDS[ship.type]} · jump-{ship.jump} · fuel {ship.fuel}/{ship.tanks} tanks · hold {ship.holdUsed}/{ship.holdTons} t{ship.damage > 0 ? ` · damage ${ship.damage}` : ''}
+            <b>{ship.name}</b>, {TYPE_WORDS[ship.type]} · jump-{ship.jump} · {ship.guns} gun{ship.guns === 1 ? '' : 's'} · fuel {ship.fuel}/{ship.tanks} tanks · hold {ship.holdUsed}/{ship.holdTons} t{ship.damage > 0 ? ` · damage ${ship.damage}` : ''}
+          </p>
+          <p>
+            {view.lyingOff ? (
+              <>
+                Lying off the port, watching what comes in. <button onClick={act(() => lieOff(state, false))}>come in and dock</button>
+              </>
+            ) : (
+              <>
+                Docked. <button onClick={act(() => lieOff(state, true))}>lie off the port</button>
+              </>
+            )}
+            {ship.damage > 0 && (here.starport === 'A' || here.starport === 'B') && (
+              <>
+                {' '}
+                <button disabled={view.purse < 1000} onClick={act(() => repair(state))}>
+                  mend a point (1,000 Cr)
+                </button>
+              </>
+            )}
           </p>
           <p>
             {here.refuel === null ? (
@@ -174,7 +234,21 @@ function Docks({ view, state, act }: PaneProps) {
             ))}
             {ship.hold.length === 0 && <li className="muted">The hold is empty.</li>}
           </ul>
-          <p className="muted">Her upkeep comes to {cr(ship.upkeep)} a week.</p>
+          <p className={ship.maintenanceDueIn < 0 ? 'warn' : 'muted'}>
+            {ship.inYard !== null
+              ? `In the yard for her maintenance; out in week ${ship.inYard}.`
+              : ship.maintenanceDueIn < 0
+                ? `Maintenance ${-ship.maintenanceDueIn} wk overdue: her drive is a risk on every jump.`
+                : `Maintenance due in ${ship.maintenanceDueIn} wk (${cr(ship.maintenanceCost)}, four weeks in a dockyard).`}
+            {ship.inYard === null && (here.starport === 'A' || here.starport === 'B') && (
+              <>
+                {' '}
+                <button disabled={view.purse < ship.maintenanceCost} onClick={act(() => maintain(state))}>
+                  lay her up
+                </button>
+              </>
+            )}
+          </p>
           {view.debt && (
             <p className="muted">
               Owed on her: {cr(view.debt.balance)} · {cr(view.debt.payment)} due week {view.debt.nextDue}
@@ -307,9 +381,22 @@ function Factor({ view }: { view: PlayerView }) {
 
 function Captain({ view }: { view: PlayerView }) {
   const eids = Object.keys(view.empires).sort() as EmpireId[]
+  const here = view.here!
+  const report = view.known.worlds[here.world]
+  const news = report?.snapshot.kind === 'world' ? report.snapshot.world.news : []
   return (
     <div className="scene">
       <p>The port captain's notices.</p>
+      <h3>News</h3>
+      <ul>
+        {[...news].reverse().map((n, i) => (
+          <li key={i}>
+            <span className="muted">week {n.week}:</span> {n.text}
+          </li>
+        ))}
+        {news.length === 0 && <li className="muted">Nothing has happened here lately, the port captain says.</li>}
+      </ul>
+      <h3>Between the powers</h3>
       <ul>
         {eids.flatMap((a, i) =>
           eids.slice(i + 1).map((b) => {

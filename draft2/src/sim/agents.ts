@@ -13,7 +13,8 @@ import { buy, GOODS, sell, tariffFor, type Good } from './economy'
 import { beliefOf, characterLocation } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { nextInt, roll, type Rng } from './rng'
-import { fuelPrice, holdFree, newShip, reachable, setCourse, unload } from './ships'
+import { fuelPrice, holdFree, maintenanceCost, newShip, overdue, reachable, setCourse, unload } from './ships'
+import { layUp } from './game'
 import { stanceKey, SHIP_CLASSES, type Character, type CharacterId, type EmpireId, type GameState, type Ship, type ShipId, type Week, type WorldId } from './types'
 import type { Belief } from './view'
 
@@ -60,9 +61,9 @@ function tradingCaptains(state: GameState): { captain: Character; ship: Ship; at
   const ids = Object.keys(state.ships).sort() as ShipId[]
   for (const id of ids) {
     const ship = state.ships[id]
-    if (!ship.captain || ship.captain === state.player || ship.owner.kind !== 'personal' || ship.location.kind !== 'world') continue
+    if (!ship.captain || ship.captain === state.player || ship.owner.kind !== 'personal' || ship.location.kind !== 'world' || ship.duty || ship.inYard !== null) continue
     const captain = state.characters[ship.captain]
-    if (!captain || captain.body.kind !== 'aboard' || captain.body.ship !== ship.id) continue
+    if (!captain || captain.captive || captain.body.kind !== 'aboard' || captain.body.ship !== ship.id) continue
     out.push({ captain, ship, at: ship.location.world })
   }
   return out
@@ -151,6 +152,10 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
     ship.fuel += 1
   }
   if (ship.fuel < 1) return
+  // Maintenance when due, if this is a dockyard and the purse allows; a captain lets it slide a while if short.
+  if (state.week - ship.maintained >= 24 && ['A', 'B'].includes(here.profile.starport) && captain.purse >= maintenanceCost(ship) + 5000 && (overdue(ship, state.week) > 0 || roll(state.rng) >= 7)) {
+    if (layUp(state, ship, here)) return
+  }
   // Buy for the best believed margin, or go and look.
   const leg = bestLeg(state, captain, ship, at)
   if (leg) {

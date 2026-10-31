@@ -84,3 +84,8 @@ table.market td button { padding: 0 5px; font-size: 11px; margin-right: 2px; }
 table.market.small td { padding: 1px 4px; }
 select { background: #1b202b; color: var(--fg); border: 1px solid var(--line); font: inherit; font-size: 12px; padding: 2px; max-width: 220px; }
 button:disabled { opacity: 0.4; cursor: default; }
+section.encounter { border-color: #8a4a4a; background: #1d1518; }
+section.captive { border-color: #6a5a2a; }
+ul.log li { color: var(--muted); }
+ul.log li:last-child { color: var(--fg); }
+.warn { color: #e0a070; }

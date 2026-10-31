@@ -8,15 +8,15 @@ import type { WorldId } from './types'
 describe('captain-agents', () => {
   it('the subsector starts with traders who sail, trade and mostly prosper over a year', () => {
     const state = newGame(31)
-    const traders = Object.values(state.characters).filter((c) => c.id !== PLAYER)
+    const traders = Object.values(state.ships).filter((s) => s.owner.kind === 'personal' && s.owner.character !== PLAYER && !s.duty).map((s) => state.characters[s.captain!])
     expect(traders.length).toBeGreaterThanOrEqual(8)
     const start = traders.map((c) => c.purse)
     let jumps = 0
     let dealsWeeks = 0
     for (let i = 0; i < 52; i++) {
       advanceWeek(state)
-      for (const s of Object.values(state.ships)) if (s.owner.kind === 'personal' && s.owner.character !== PLAYER && s.location.kind === 'transit') jumps++
-      if (Object.values(state.ships).some((s) => s.owner.kind === 'personal' && s.owner.character !== PLAYER && s.hold.length > 0)) dealsWeeks++
+      for (const s of Object.values(state.ships)) if (s.owner.kind === 'personal' && s.owner.character !== PLAYER && !s.duty && s.location.kind === 'transit') jumps++
+      if (Object.values(state.ships).some((s) => s.owner.kind === 'personal' && s.owner.character !== PLAYER && !s.duty && s.hold.length > 0)) dealsWeeks++
     }
     expect(jumps).toBeGreaterThan(traders.length * 8)
     expect(dealsWeeks).toBeGreaterThan(40)
@@ -32,8 +32,8 @@ describe('captain-agents', () => {
     for (let i = 0; i < 30; i++) {
       advanceWeek(state)
       for (const s of Object.values(state.ships)) {
-        if (s.owner.kind !== 'personal' || s.owner.character === PLAYER || s.location.kind !== 'transit') continue
-        const captain = state.characters[s.captain!]
+        if (s.owner.kind !== 'personal' || s.owner.character === PLAYER || s.duty || !s.captain || s.location.kind !== 'transit') continue
+        const captain = state.characters[s.captain]
         const dest = state.worlds[s.location.to]
         const key = [captain.empire, dest.empire].sort().join(':')
         const heard = state.beliefs[captain.id].stances[key]
