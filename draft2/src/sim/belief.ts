@@ -10,11 +10,11 @@
  * they are the same fold. Every NPC has a belief; theirs is the fold
  * alone, with no pile of mail behind it.
  */
-import { stanceKey, type Declaration, type EmpireId, type Week } from './types'
-import { isRumour, lineKey, type Belief, type PersonSnapshot, type Report, type ShipSnapshot } from './view'
+import { stanceKey, type Declaration, type EmpireId, type Week, type WorldId } from './types'
+import { isRumour, lineKey, type Belief, type Movement, type PersonSnapshot, type Report, type ShipSnapshot, type TrafficKnown } from './view'
 
 export function emptyBelief(): Belief {
-  return { worlds: {}, ships: {}, people: {}, stances: {}, prices: {}, lines: {} }
+  return { worlds: {}, ships: {}, people: {}, stances: {}, prices: {}, lines: {}, traffic: {} }
 }
 
 /** A declaration enters where it is newer than what is held for its pair. Returns whether it did. */
@@ -64,6 +64,7 @@ export function absorb(belief: Belief, report: Report, asOf: Week = Number.POSIT
     const known = belief.lines[k]
     if (!known || report.observed >= known.observed) belief.lines[k] = { line: { ...l }, observed: report.observed, report: report.id }
   }
+  if (world.traffic.length > 0) learnTraffic(belief, world.id, world.traffic, report.channel === 'port' && report.observer === null && world.traffic.every((m) => m.week === report.observed) ? 'seen' : 'register', report.observed)
   const goods = Object.keys(world.market) as (keyof typeof world.market)[]
   if (goods.length > 0) {
     const prices = (belief.prices[world.id] ??= {})
@@ -86,4 +87,28 @@ export function beliefFrom(reports: readonly Report[], asOf?: Week): Belief {
 /** How a reader believes two empires stand: the newest declaration heard, or peace if none has ever been. */
 export function stanceKnown(belief: Pick<Belief, 'stances'>, a: EmpireId, b: EmpireId): Declaration | null {
   return belief.stances[stanceKey(a, b)] ?? null
+}
+
+/** Weeks of traffic a reader keeps. */
+export const TRAFFIC_WEEKS = 52
+
+/** Enter lines of a port's register into a belief, newest first, one per hull and week, the better source winning. */
+export function learnTraffic(belief: Pick<Belief, 'traffic'>, world: WorldId, lines: readonly Movement[], source: TrafficKnown['source'], observed: Week): number {
+  const known = (belief.traffic[world] ??= [])
+  const rank = { register: 3, seen: 2, heard: 1 }
+  let news = 0
+  for (const m of lines) {
+    const i = known.findIndex((k) => k.movement.week === m.week && k.movement.ship === m.ship)
+    if (i >= 0) {
+      const old = known[i]
+      // A better source wins; so does a fuller line of the same page, since the evening's look has the day's trades the morning's lacked.
+      const fuller = m.sold.length + m.bought.length > old.movement.sold.length + old.movement.bought.length || (m.to !== null && old.movement.to === null) || (m.from !== null && old.movement.from === null)
+      if (rank[old.source] > rank[source] || (rank[old.source] === rank[source] && !fuller)) continue
+      known[i] = { movement: { ...m, sold: m.sold.map((x) => ({ ...x })), bought: m.bought.map((x) => ({ ...x })) }, source, observed }
+    } else known.push({ movement: { ...m, sold: m.sold.map((x) => ({ ...x })), bought: m.bought.map((x) => ({ ...x })) }, source, observed })
+    news += 1
+  }
+  known.sort((a, b) => b.movement.week - a.movement.week || (a.movement.ship < b.movement.ship ? -1 : 1))
+  belief.traffic[world] = known.filter((k) => observed - k.movement.week < TRAFFIC_WEEKS)
+  return news
 }

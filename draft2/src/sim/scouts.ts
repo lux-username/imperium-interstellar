@@ -10,6 +10,7 @@ import { nextDeparture } from './chart'
 import { shipName } from './ships'
 import { loadMail, unloadMail } from './mail'
 import { deliverFreight } from './ships'
+import { recordArrival, recordSailing } from './register'
 import type { Rng } from './rng'
 import type { Empire, EmpireId, GameState, Lane, LaneId, Ship, ShipId, World, WorldId } from './types'
 
@@ -87,6 +88,7 @@ export function departScouts(state: GameState): void {
     const to = otherEnd(state.lanes[ship.run.lane], at)
     if (to === null) continue
     loadMail(state, ship, at, to)
+    recordSailing(state, state.worlds[at], ship, to)
     ship.location = { kind: 'transit', from: at, to, arrives: state.week + 1 }
     sailedFrom.add(key)
   }
@@ -103,8 +105,10 @@ export function landShips(state: GameState): Ship[] {
     const ship = state.ships[id]
     if (ship.location.kind !== 'transit' || ship.location.arrives > state.week) continue
     const at = ship.location.to
+    const from = ship.location.from
     ship.location = { kind: 'world', world: at }
     ship.docked = state.week
+    recordArrival(state, state.worlds[at], ship, from)
     unloadMail(state, ship, at)
     deliverFreight(state, ship, at)
     // Passengers step ashore; prisoners stay aboard until their captor lands them (see ./captivity.ts).

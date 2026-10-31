@@ -13,6 +13,7 @@ import { buy, consumption, dutyRate, GOODS, levelOf, production, sell, targetSto
 import { hexRoute } from './chart'
 import { hexDistance } from './hex'
 import { fuelPrice } from './ships'
+import { recordTrade } from './register'
 import { officerCulture, personName, rollSex } from './names'
 import { postNewsItem } from './news'
 import { newShip, unload } from './ships'
@@ -277,6 +278,7 @@ export function haulersAct(state: GameState): void {
         const deal = sell(here, lot.good as Good, n, g.empire)
         g.purse += deal.credits
         state.empires[here.empire].treasury += deal.duty
+        recordTrade(state, here, ship, 'sold', lot.good as Good, deal.tons, deal.price)
         if (d.line) d.line.earned += deal.credits - (lot.kind === 'cargo' ? lot.paid * n : 0)
       }
     }
@@ -324,6 +326,7 @@ export function haulersAct(state: GameState): void {
       if (!deal) continue
       g.purse -= deal.credits
       state.empires[here.empire].treasury += deal.duty
+      recordTrade(state, here, ship, 'bought', l.good, deal.tons, deal.price)
       ship.hold.push({ kind: 'cargo', good: l.good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: at, week: state.week })
     }
     ship.course = hopTo(dest)

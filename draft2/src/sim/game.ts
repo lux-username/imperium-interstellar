@@ -13,13 +13,15 @@ import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, 
 import { huntersAct, spawnHunters } from './navy'
 import { GUILD_PURSE, guildsPlan, haulersAct, spawnHaulers } from './guild'
 import { captivityTick, landCaptives, payRansom, ransomFor } from './captivity'
+import { pruneRegisters, registerSince } from './register'
 import { postNewsItem } from './news'
 import { hexLabel } from './hex'
 import { route } from './chart'
 import { buy, dutyRate, FINE_TIMES_DUTY, GOODS, inspectionChance, lotPrice, sell, tickMarkets, type Good } from './economy'
 import { trade } from './agents'
 import { generateSubsector } from './generate'
-import { characterLocation, copyDeclaration, deliverHeld, observe, postLetter, postNews, pruneMail, snapshotWorld } from './mail'
+import { beliefOf, characterLocation, copyDeclaration, deliverHeld, observe, postLetter, postNews, pruneMail, snapshotWorld } from './mail'
+import { learnTraffic } from './belief'
 import { officerCulture, personName, rollSex } from './names'
 import { createRng, nextInt, roll } from './rng'
 import { departOnAccount, fuelPrice, holdFree, MAINTENANCE_WEEKS, maintenanceCost, newShip, reachable, setCourse, unload } from './ships'
@@ -92,6 +94,23 @@ export function observeAll(state: GameState): void {
 }
 
 /**
+ * At the week's end, everyone at a port sees the page the register has
+ * filled in since the morning's look: who sold and bought what. The
+ * morning's observation is what captains decide on; this is what they
+ * carry away.
+ */
+export function observeTraffic(state: GameState): void {
+  const ids = Object.keys(state.worlds).sort() as WorldId[]
+  for (const id of ids) {
+    const world = state.worlds[id]
+    const page = world.register.filter((m) => m.week === state.week)
+    if (page.length === 0) continue
+    const readers = (Object.keys(state.characters).sort() as CharacterId[]).filter((c) => characterLocation(state, c) === id)
+    for (const reader of readers) learnTraffic(beliefOf(state, reader), id, page, 'seen', state.week)
+  }
+}
+
+/**
  * The player starts with a chart of the subsector: every world is on it,
  * but the entries are old — a few weeks for worlds on the lanes from where
  * they stand, a year or more for worlds nobody visits.
@@ -111,6 +130,7 @@ function openingChart(state: GameState, reader: CharacterId, home: WorldId): voi
       snapshot.world.market = {}
       snapshot.world.news = []
       snapshot.world.lines = []
+      snapshot.world.traffic = []
     }
     const report: Report = {
       id: `r-chart-${hexLabel(world.hex)}` as ReportId,
@@ -350,7 +370,9 @@ export function advanceWeek(state: GameState): void {
   haulersAct(state)
   captainsAct(state)
   huntersAct(state)
+  observeTraffic(state)
   pruneMail(state)
+  pruneRegisters(state)
 }
 
 // ---------------------------------------------------------------------------
@@ -479,7 +501,7 @@ export function buyGoods(state: GameState, good: Good, tons: number, smuggle = f
   const deal = buy(h.at, good, n, me.empire, { smuggle })
   if (!deal) return { kind: 'refused' }
   me.purse -= deal.credits
-  trade(state, h.at, deal)
+  trade(state, h.at, deal, smuggle ? undefined : h.ship, 'bought', good)
   if (smuggle) {
     const caught = inspected(state, h.at, good, deal.tons, deal.tons * deal.price)
     if (caught) return caught
@@ -497,7 +519,7 @@ export function sellGoods(state: GameState, good: Good, tons: number, smuggle = 
   const n = unload(h.ship, good, tons)
   if (n === 0) return { kind: 'refused' }
   const deal = sell(h.at, good, n, me.empire, { smuggle })
-  trade(state, h.at, deal)
+  trade(state, h.at, deal, smuggle ? undefined : h.ship, 'sold', good)
   if (smuggle) {
     const caught = inspected(state, h.at, good, n, n * deal.price)
     if (caught) {
@@ -613,6 +635,45 @@ export function seeLender(state: GameState): boolean {
   const owed = me.debt?.balance ?? 0
   me.debt = { balance: owed + SHIP_PRICE, payment: LENDER.payment, every: LENDER.every, nextDue: state.week + LENDER.every, arrears: me.debt?.arrears ?? 0 }
   return true
+}
+
+/** What the administrator asks for the year's register: a flat fee and a little a line. */
+export function registerFee(state: GameState): number | null {
+  const at = playerWorld(state)
+  if (!at || !['A', 'B', 'C'].includes(at.profile.starport)) return null
+  return 300 + Math.min(700, 5 * at.register.length)
+}
+
+/**
+ * Pay the port administrator for the year's register. It is read as a
+ * report of the port with the whole register in it: every hull's week
+ * here, on the books. Returns how many lines were new to the player.
+ */
+export function buyRegister(state: GameState): number {
+  const at = playerWorld(state)
+  const fee = registerFee(state)
+  const me = state.characters[state.player]
+  if (!at || fee === null || me.purse < fee) return 0
+  me.purse -= fee
+  state.empires[at.empire].treasury += fee
+  const snapshot = snapshotWorld(state, at)
+  if (snapshot.kind !== 'world') return 0
+  snapshot.world.traffic = registerSince(at, state.week - 52).map((m) => ({ ...m, sold: m.sold.map((x) => ({ ...x })), bought: m.bought.map((x) => ({ ...x })) }))
+  const report: Report = {
+    id: `r-register-${state.week}-${hexLabel(at.hex)}` as ReportId,
+    channel: 'official',
+    observer: null,
+    observerName: `The port administrator of ${at.name}`,
+    subject: `The register of ${at.name}`,
+    observedAt: at.id,
+    observed: state.week,
+    snapshot,
+    envelope: { origin: at.id, destination: at.id, sent: state.week, route: [at.id], eta: state.week },
+    delivered: state.week,
+  }
+  const before = (state.beliefs[state.player]?.traffic[at.id] ?? []).length
+  observe(state, state.player, report)
+  return (state.beliefs[state.player].traffic[at.id] ?? []).length - before
 }
 
 /** Lay the player's hull up for maintenance here. */

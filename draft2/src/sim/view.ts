@@ -13,13 +13,13 @@
  */
 import type { Good } from './economy'
 import type { Hex } from './hex'
-import type { CargoLot, CharacterId, Debt, Declaration, DispatchId, EmpireId, Lane, LaneId, ReportId, ShipId, ShipType, Stance, StarportClass, Week, WorldId, WorldProfile } from './types'
+import type { CargoLot, CharacterId, Debt, Declaration, DispatchId, Movement, EmpireId, Lane, LaneId, ReportId, ShipId, ShipType, Stance, StarportClass, Week, WorldId, WorldProfile } from './types'
 
 export { expectedArrival, hexRoute, nextDeparture, route } from './chart'
 export { beliefFrom, stanceKnown } from './belief'
 export { stanceKey, stancePair } from './types'
 
-export type { CargoLot, CharacterId, Debt, Declaration, Good, DispatchId, EmpireId, Hex, Lane, LaneId, ReportId, ShipId, ShipType, Stance, StarportClass, Week, WorldId, WorldProfile }
+export type { CargoLot, CharacterId, Debt, Declaration, Good, Movement, DispatchId, EmpireId, Hex, Lane, LaneId, ReportId, ShipId, ShipType, Stance, StarportClass, Week, WorldId, WorldProfile }
 
 // ---------------------------------------------------------------------------
 // Snapshots: an entity as it appeared to someone, somewhere, once.
@@ -62,6 +62,8 @@ export interface WorldSnapshot {
   news: { week: Week; text: string }[]
   /** Bulk lines a guild runs through this port, as the factor will tell anyone: the two ends and whose guild. */
   lines: LineSeen[]
+  /** Pages of the port's register the observer saw: this week's with their own eyes, a year's from the administrator. */
+  traffic: Movement[]
 }
 
 export interface LineSeen {
@@ -165,6 +167,8 @@ export interface Belief {
   stances: Record<string, Declaration>
   /** Guild bulk lines the reader has seen running, keyed by `lineKey`. */
   lines: Record<string, LineKnown>
+  /** What the reader knows of who came and went at each port, newest first, each line stamped with how they know it. */
+  traffic: Record<WorldId, TrafficKnown[]>
   /** Last-known price and stock per world and good, from the newest sight of that market. */
   prices: Record<WorldId, Partial<Record<Good, { price: number; stock: number; observed: Week; heard?: boolean }>>>
 }
@@ -289,6 +293,14 @@ export interface PlayerView {
   observations: Report[]
   /** Letters the player has sent, newest first. */
   outgoing: Dispatch[]
+}
+
+/** A line of a port's register as the reader has it, and by what means. */
+export interface TrafficKnown {
+  movement: Movement
+  source: 'seen' | 'register' | 'heard'
+  /** When the reader learned it. */
+  observed: Week
 }
 
 /** The key of a line between two worlds, whichever way round. */

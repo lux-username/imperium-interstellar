@@ -16,7 +16,7 @@ import type { Good, Market } from './economy'
 import type { Hex } from './hex'
 import type { Sex } from './names'
 import type { Rng } from './rng'
-import type { Belief, Dispatch, Report } from './view'
+import type { Belief, Dispatch, Report, TrafficKnown } from './view'
 
 // ---------------------------------------------------------------------------
 // Identity and time
@@ -87,8 +87,29 @@ export interface World {
   news: NewsItem[]
   /** Prices let slip on the docks: what anyone in port may pick up as hearsay. */
   gossip: PriceBook
+  /** Who was seen selling what where, as the docks tell it. */
+  gossipTraffic: Record<WorldId, TrafficKnown[]>
   /** 0 on two or more lanes, 1 on a spur, 2 dark. */
   isolation: number
+  /** The port's register: every hull's week here, kept a year. On the books only; smuggling is not in it. */
+  register: Movement[]
+}
+
+/** One hull's week at a port, as the register has it. */
+export interface Movement {
+  week: Week
+  ship: ShipId
+  shipName: string
+  type: ShipType
+  empire: EmpireId
+  captain: CharacterId | null
+  captainName: string | null
+  /** Where she came in from this week, if she came in. */
+  from: WorldId | null
+  /** Where she declared for when she sailed this week, if she sailed. */
+  to: WorldId | null
+  sold: { good: string; tons: number; price: number }[]
+  bought: { good: string; tons: number; price: number }[]
 }
 
 /** Prices by world and good, with when each was seen. The shape of a guild's book, a port's gossip, and the price slice of a belief. */

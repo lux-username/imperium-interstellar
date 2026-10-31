@@ -109,7 +109,9 @@ function newWorld(rng: Rng, hex: Hex, taken: Set<string>): World {
     freight: [],
     news: [],
     gossip: {},
+    gossipTraffic: {},
     isolation: 0,
+    register: [],
   }
 }
 

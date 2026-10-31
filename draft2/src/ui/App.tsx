@@ -5,7 +5,7 @@
  * development only.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { advanceWeek, askCaptain, buyGoods, goAshore, hail, lieOff, maintain, newGame, quoteBuy, quoteSale, ransomSelf, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
+import { advanceWeek, askCaptain, buyGoods, buyRegister, goAshore, hail, lieOff, maintain, newGame, quoteBuy, quoteSale, ransomSelf, registerFee, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
@@ -143,7 +143,7 @@ export function App() {
               {place === 'docks' && <Docks view={view} state={state} act={act} />}
               {place === 'brokers' && <Brokers view={view} state={state} act={act} />}
               {place === 'factor' && <Factor view={view} />}
-              {place === 'captain' && <Captain view={view} />}
+              {place === 'captain' && <Captain view={view} state={state} act={act} />}
               {place === 'bar' && <Bar view={view} state={state} act={act} />}
             </section>
           ) : (
@@ -459,14 +459,29 @@ function Factor({ view }: { view: PlayerView }) {
   )
 }
 
-function Captain({ view }: { view: PlayerView }) {
+function Captain({ view, state, act }: PaneProps) {
   const eids = Object.keys(view.empires).sort() as EmpireId[]
   const here = view.here!
   const report = view.known.worlds[here.world]
   const news = report?.snapshot.kind === 'world' ? report.snapshot.world.news : []
+  const fee = registerFee(state)
+  const [bought, setBought] = useState<number | null>(null)
   return (
     <div className="scene">
       <p>The port captain's notices.</p>
+      <p>
+        {fee === null ? (
+          <span className="muted">No register is kept at a port of this class.</span>
+        ) : (
+          <>
+            The administrator will sell you the year's register for {cr(fee)}: every hull's week here on the books, where from, where for, what sold and bought.{' '}
+            <button disabled={view.purse < fee} onClick={act(() => setBought(buyRegister(state)))}>
+              buy the register
+            </button>
+            {bought !== null && <span className="muted"> {bought > 0 ? `${bought} lines you did not have.` : 'Nothing you did not already know.'}</span>}
+          </>
+        )}
+      </p>
       <h3>News</h3>
       <ul>
         {[...news].reverse().map((n, i) => (
@@ -537,6 +552,44 @@ function Bar({ view, state, act }: PaneProps) {
   )
 }
 
+/** Who came and went at a world, as far as the player knows, newest first, with how they know. */
+function Traffic({ view, world }: { view: PlayerView; world: WorldId }) {
+  const [open, setOpen] = useState(false)
+  const lines = view.known.traffic[world] ?? []
+  if (lines.length === 0) return <p className="muted">You know nothing of who comes and goes here.</p>
+  const shown = open ? lines : lines.slice(0, 6)
+  const SRC = { seen: 'seen', register: 'register', heard: 'heard' }
+  return (
+    <div className="traffic">
+      <h3>
+        Comings and goings{' '}
+        {lines.length > 6 && (
+          <button className="tiny" onClick={() => setOpen(!open)}>
+            {open ? 'fewer' : `all ${lines.length}`}
+          </button>
+        )}
+      </h3>
+      <ul>
+        {shown.map((k) => {
+          const m = k.movement
+          const what = [
+            m.from ? `in from ${view.chart[m.from]?.name ?? m.from}` : '',
+            ...m.sold.map((x) => `sold ${x.tons}t ${x.good} @${cr(x.price)}`),
+            ...m.bought.map((x) => `bought ${x.tons}t ${x.good} @${cr(x.price)}`),
+            m.to ? `sailed for ${view.chart[m.to]?.name ?? m.to}` : '',
+          ].filter(Boolean)
+          return (
+            <li key={`${m.week}-${m.ship}`} className={empireClass(view, m.empire)}>
+              <span className="muted">wk {m.week}</span> <span className="dot" /> <b>{m.shipName}</b>
+              {m.captainName ? `, ${m.captainName}` : ''}: {what.join('; ') || 'lay in port'} <span className="muted">[{SRC[k.source]}]</span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 function Dossier({ view, world }: { view: PlayerView; world: WorldId }) {
   const entry = view.chart[world]
   const report = view.known.worlds[world]
@@ -577,6 +630,7 @@ function Dossier({ view, world }: { view: PlayerView; world: WorldId }) {
               </li>
             ))}
           </ul>
+          <Traffic view={view} world={world} />
           <p className="muted">Settled by {entry.cultures.join(', ')}.</p>
         </>
       ) : (

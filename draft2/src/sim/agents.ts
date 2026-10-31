@@ -9,8 +9,10 @@
  * about any world but the one the captain is standing on.
  */
 import { expectedArrival, route } from './chart'
+import { recordTrade } from './register'
 import { hexDistance } from './hex'
 import { buy, demandLevel, dutyRate, GOOD_SPECS, GOODS, levelOf, marketScale, production, sell, supplyLevel, valueScale, type Good } from './economy'
+import { learnTraffic } from './belief'
 import { beliefOf, characterLocation } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { nextFloat, nextInt, roll, type Rng } from './rng'
@@ -70,9 +72,10 @@ export function spawnTraders(state: GameState, taken: Set<string>): void {
   }
 }
 
-/** Book a deal's duty to the port's governor. Returns the deal for chaining. */
-export function trade(state: GameState, world: { empire: EmpireId }, deal: { duty: number; credits: number }): { duty: number; credits: number } {
+/** Book a deal's duty to the port's governor and, when a hull and a side are given, the deal in the port's register. Returns the deal for chaining. */
+export function trade(state: GameState, world: World, deal: { duty: number; credits: number; tons: number; price: number }, ship?: Ship, kind?: 'sold' | 'bought', good?: Good): { duty: number; credits: number; tons: number; price: number } {
   state.empires[world.empire].treasury += deal.duty
+  if (ship && kind && good) recordTrade(state, world, ship, kind, good, deal.tons, deal.price)
   return deal
 }
 
@@ -254,8 +257,10 @@ function bestPlan(state: GameState, captain: Character, ship: Ship, at: WorldId)
     const cargo = taken.length > 0 ? lotsFor(state, belief, captain, here, to, left, spend, true) : lots
     let profit = freightProfit + cargo.reduce((s, l) => s + l.profit, 0)
     if (dangerous(state, belief, to)) profit = Math.round(profit * 0.6)
-    // Every rival in port is after the same lots and the same markets.
-    profit = Math.round(profit / (1 + 0.15 * rivalsAt(state, ship, at)))
+    // Every rival in port is after the same lots and the same markets; and every hull seen sailing for the same port
+    // with the same goods these last two weeks got there first.
+    const crowd = (belief.traffic[at] ?? []).filter((k) => k.movement.ship !== ship.id && k.movement.to === to && state.week - k.movement.week <= 2 && k.movement.bought.some((b) => cargo.some((l) => l.good === b.good))).length
+    profit = Math.round(profit / (1 + 0.15 * rivalsAt(state, ship, at) + 0.3 * crowd))
     const onward = onwardProfit(state, belief, captain, ship, to, captain.purse + profit)
     const score = profit + Math.round(onward / 2)
     if (!best || score > best.score) best = { to, lots: cargo, freight: taken, profit, score }
@@ -311,7 +316,7 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
     const net = here.market[lot.good].price * (1 - duty)
     if (stale && !betterElsewhere(state, belief, captain, ship, at, lot.good, net)) {
       const n = unload(ship, lot.good, lot.tons)
-      if (n > 0) captain.purse += trade(state, here, sell(here, lot.good, n, captain.empire)).credits
+      if (n > 0) captain.purse += trade(state, here, sell(here, lot.good, n, captain.empire), ship, 'sold', lot.good).credits
       continue
     }
     let tons = lot.tons
@@ -322,7 +327,7 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
       if (!stale && betterElsewhere(state, belief, captain, ship, at, lot.good, priceNow)) break
       const sold = unload(ship, lot.good, n)
       if (sold === 0) break
-      captain.purse += trade(state, here, sell(here, lot.good, sold, captain.empire)).credits
+      captain.purse += trade(state, here, sell(here, lot.good, sold, captain.empire), ship, 'sold', lot.good).credits
       tons -= sold
     }
   }
@@ -359,7 +364,7 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
         }
         continue
       }
-      trade(state, here, deal)
+      trade(state, here, deal, ship, 'bought', lot.good)
       captain.purse -= deal.credits
       ship.hold.push({ kind: 'cargo', good: lot.good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: at, week: state.week })
     }
@@ -444,13 +449,19 @@ export function wantsInfo(state: GameState, captain: Character, ship: Ship, at: 
   return stale / near.length > 0.4
 }
 
-/** Leak one world's prices from a captain's book into the port's gossip. */
+/** Leak one world's prices from a captain's book into the port's gossip, and a page of what they saw come and go somewhere. */
 function leak(state: GameState, captain: Character, port: World): void {
   const belief = beliefOf(state, captain.id)
   const worlds = Object.keys(belief.prices).sort() as WorldId[]
   if (worlds.length === 0) return
   const w = worlds[nextInt(state.rng, 0, worlds.length - 1)]
   tellPrices({ [w]: belief.prices[w] } as PriceBook, port.gossip)
+  // And who they saw selling what where: the talk of the docks.
+  const seen = Object.keys(belief.traffic).sort() as WorldId[]
+  if (seen.length === 0) return
+  const t = seen[nextInt(state.rng, 0, seen.length - 1)]
+  const lines = belief.traffic[t].filter((k) => k.source !== 'heard' && state.week - k.movement.week <= 8 && (k.movement.sold.length > 0 || k.movement.bought.length > 0)).slice(0, 3)
+  if (lines.length > 0) learnTraffic({ traffic: port.gossipTraffic }, t, lines.map((k) => k.movement), 'heard', state.week)
 }
 
 /** Gossip older than this is forgotten on the docks. */
@@ -480,12 +491,21 @@ export function dockTalk(state: GameState): void {
       // Something always slips: one world's prices from about two captains in five, each week.
       if (roll(state.rng) >= 8) leak(state, c, here)
     }
-    for (const c of captains) tellPrices(here.gossip, beliefOf(state, c.id).prices)
+    for (const c of captains) {
+      const b = beliefOf(state, c.id)
+      tellPrices(here.gossip, b.prices)
+      for (const w of Object.keys(here.gossipTraffic) as WorldId[]) learnTraffic(b, w, here.gossipTraffic[w].map((k) => k.movement), 'heard', state.week)
+    }
+    // Dock talk about movements fades in a few weeks.
+    for (const w of Object.keys(here.gossipTraffic) as WorldId[]) {
+      here.gossipTraffic[w] = here.gossipTraffic[w].filter((k) => state.week - k.observed <= 6)
+      if (here.gossipTraffic[w].length === 0) delete here.gossipTraffic[w]
+    }
     for (const a of captains) {
       for (const b of captains) {
         if (a === b) continue
         if (a.guild && a.guild === b.guild) {
-          tellPrices(beliefOf(state, a.id).prices, beliefOf(state, b.id).prices)
+          tellAll(state, a.id, b.id)
           continue
         }
         // Everyone asks: more known is better than less. Only a captain whose knowledge is thin pays for it.
@@ -499,7 +519,7 @@ export function dockTalk(state: GameState): void {
           a.purse += BRIBE
           told = true
         }
-        if (told) tellPrices(beliefOf(state, a.id).prices, beliefOf(state, b.id).prices)
+        if (told) tellAll(state, a.id, b.id)
       }
     }
     // The guild's offices: at the seat the book itself; at any other dockyard port of the empire a factor who takes
@@ -577,7 +597,19 @@ function factorsReport(state: GameState, g: Guild): void {
 export function listenAtBar(state: GameState): number {
   const at = characterLocation(state, state.player)
   if (at === null) return 0
-  return tellPrices(state.worlds[at].gossip, beliefOf(state, state.player).prices)
+  const b = beliefOf(state, state.player)
+  let n = tellPrices(state.worlds[at].gossip, b.prices)
+  for (const w of Object.keys(state.worlds[at].gossipTraffic) as WorldId[]) n += learnTraffic(b, w, state.worlds[at].gossipTraffic[w].map((k) => k.movement), 'heard', state.week)
+  return n
+}
+
+/** One captain tells another everything: prices, and who they saw come and go. */
+export function tellAll(state: GameState, from: CharacterId, to: CharacterId): number {
+  const a = beliefOf(state, from)
+  const b = beliefOf(state, to)
+  let n = tellPrices(a.prices, b.prices)
+  for (const w of Object.keys(a.traffic) as WorldId[]) n += learnTraffic(b, w, a.traffic[w].filter((k) => state.week - k.movement.week <= 12).map((k) => k.movement), 'heard', state.week)
+  return n
 }
 
 export type Answer = 'told' | 'refused' | 'already' | 'absent' | 'no_use'
@@ -609,7 +641,7 @@ export function askCaptain(state: GameState, who: CharacterId, bribe = false): A
     me.purse -= BRIBE
     them.purse += BRIBE
     prior.told = true
-    tellPrices(beliefOf(state, who).prices, beliefOf(state, state.player).prices)
+    tellAll(state, who, state.player)
     return 'told'
   }
   if (prior && prior.week === state.week) return 'already'

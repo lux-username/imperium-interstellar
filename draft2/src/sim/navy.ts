@@ -18,7 +18,7 @@ import { SHIP_CLASSES, type Character, type CharacterId, type Duty, type EmpireI
 const CORVETTES = 2
 
 /** Outlaw hulls at the start. */
-const OUTLAWS = 2
+const OUTLAWS = 3
 
 function newCaptain(state: GameState, id: CharacterId, empire: EmpireId, ship: ShipId, purse: number, outlaw = false): Character {
   const core = state.empires[empire].core
@@ -121,7 +121,8 @@ export function huntersAct(state: GameState): void {
       else if (ship.hold.length > 0 || ship.damage >= 2 || ship.fuel <= 1) to = at === duty.haven ? null : duty.haven
       else {
         const within = reachable(state, at, SHIP_CLASSES[ship.type].jump).filter((w) => w !== duty.haven && state.worlds[w].profile.population > 0)
-        const good = within.filter((w) => ['A', 'B'].includes(state.worlds[w].profile.starport) && hexDistance(state.worlds[w].hex, state.worlds[duty.haven].hex) <= 4)
+        // Any port a trader calls at is worth lying off; the busy ones nearer home first.
+        const good = within.filter((w) => ['A', 'B', 'C'].includes(state.worlds[w].profile.starport) && hexDistance(state.worlds[w].hex, state.worlds[duty.haven].hex) <= 4)
         const marks = good.length > 0 ? good : within.filter((w) => ['A', 'B', 'C'].includes(state.worlds[w].profile.starport))
         to = marks.length > 0 ? marks[nextInt(state.rng, 0, marks.length - 1)] : null
       }

@@ -9,6 +9,7 @@ import { hexDistance } from './hex'
 import { nextInt, roll, type Rng } from './rng'
 import { SHIP_CLASSES, type CargoLot, type CharacterId, type EmpireId, type GameState, type Owner, type Ship, type ShipId, type ShipType, type WorldId } from './types'
 import type { Good } from './economy'
+import { recordSailing } from './register'
 
 const POOL: Record<ShipType, NamedHull> = {
   scout: 'scout',
@@ -157,6 +158,7 @@ export function departOnAccount(state: GameState): void {
       state.worlds[from].news.push({ week: state.week, text: `${ship.name}'s drive failed on the jump; she lies in port, overdue for her maintenance.` })
       continue
     }
+    recordSailing(state, state.worlds[from], ship, ship.course)
     ship.location = { kind: 'transit', from, to: ship.course, arrives: state.week + 1 }
     ship.course = null
   }

@@ -97,7 +97,9 @@ export function snapshotWorld(state: GameState, world: World): Snapshot {
   for (const guild of Object.values(state.guilds).sort((a, b) => (a.empire < b.empire ? -1 : 1))) {
     for (const l of guild.lines) if (l.from === id || l.to === id) lines.push({ from: l.from, to: l.to, empire: guild.empire })
   }
-  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, empire, ships, people: peopleAt(state, id), board, market, news: world.news.map((n) => ({ ...n })), lines } }
+  // This week's page of the register is there for anyone on the dock to see.
+  const traffic = world.register.filter((m) => m.week === state.week).map((m) => ({ ...m, sold: m.sold.map((x) => ({ ...x })), bought: m.bought.map((x) => ({ ...x })) }))
+  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, empire, ships, people: peopleAt(state, id), board, market, news: world.news.map((n) => ({ ...n })), lines, traffic } }
 }
 
 // ---------------------------------------------------------------------------
