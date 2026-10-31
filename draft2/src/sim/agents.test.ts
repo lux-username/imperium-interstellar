@@ -63,8 +63,8 @@ describe('captain-agents', () => {
       advanceWeek(state)
       const at = characterLocation(state, PLAYER)
       if (at === null) continue
-      // What the captains told is a superset of what they let slip, so count gossip on the docks rather than what was news.
-      gossip += Object.keys(state.worlds[at].gossip).length
+      // What the captains told is a superset of what they let slip, so count gossip on the docks, anywhere, rather than what was news here.
+      gossip += Object.values(state.worlds).reduce((n, w) => n + Object.keys(w.gossip).length, 0)
       talkAtBar(state)
       for (const s of Object.values(state.ships)) {
         if (!s.captain || s.captain === PLAYER || s.duty || characterLocation(state, s.captain) !== at) continue

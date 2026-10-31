@@ -286,7 +286,7 @@ export interface PacketRun {
 
 /** A lot in a hold: bought on the owner's account to sell, or freight carried for a fee. */
 export type CargoLot =
-  | { kind: 'cargo'; good: Good; tons: number; paid: number; from: WorldId; week: Week }
+  | { kind: 'cargo'; good: Good; tons: number; paid: number; from: WorldId; week: Week; tip?: CharacterId | null }
   | { kind: 'freight'; good: Good; tons: number; to: WorldId; rate: number; from: WorldId; week: Week }
 
 export interface Ship {
@@ -389,15 +389,41 @@ export interface Traits {
   loyalty: number
 }
 
-/** How one person stands to another: regard from −3 to 3, trust in their word from 0 to 1, and the lines of their dealings. */
+/** What kind of thing passed between two people; the Book and a greeting are made from it. */
+export type NoteKind = 'told' | 'refused' | 'round' | 'tip_paid' | 'tip_cost' | 'undercut' | 'robbed' | 'released' | 'stood_together' | 'ransomed' | 'request_kept' | 'request_broken' | 'request_made' | 'tie' | 'other'
+
+export interface Note {
+  week: Week
+  kind: NoteKind
+  text: string
+}
+
+/** One captain's ask of another: leave this good at this world to me. One at a time per asker. */
+export interface RouteRequest {
+  world: WorldId
+  good: string
+  since: Week
+  /** How it was put: as a favour between friends, or as a warning. */
+  tone: 'solid' | 'orelse'
+}
+
+/**
+ * How one person stands to another: regard from −3 (enemy) to 3 (friend);
+ * trust in their word from 0 to 1; esteem, how much they are worth
+ * knowing, built only from what has been seen of them; the lines of their
+ * dealings; and any standing ask.
+ */
 export interface Relation {
   regard: number
   trust: number
+  esteem: number
   dealings: number
   since: Week
   last: Week
-  /** The last few things that passed between them, as the Book will show them. */
-  notes: string[]
+  notes: Note[]
+  request?: RouteRequest | null
+  /** The last week a round was stood for its own sake, so it cannot be bought weekly. */
+  lastRound?: Week
 }
 
 /** A mortgage: a payment falls due every `every` weeks; missed payments pile up as arrears. */
@@ -470,6 +496,8 @@ export interface Encounter {
   log: string[]
   /** How it ended, or null while it goes on. */
   outcome: EncounterOutcome | null
+  /** A hull standing with the defender, if one has. */
+  ally: ShipId | null
 }
 
 export type EncounterOutcome = 'escaped' | 'let_pass' | 'struck' | 'driven_off' | 'docked'

@@ -8,11 +8,14 @@
  * lanes with mail and news, every body at a port seeing the port, and a
  * player who can take passage. Nothing trades or fights yet.
  */
-import { askCaptain, captainsAct, dockTalk, guildPost, listenAtBar, noticeUndercut, seedTraderKnowledge, spawnTraders } from './agents'
+import { askCaptain, captainsAct, dockTalk, guildPost, listenAtBar, noticeUndercut, seedTraderKnowledge, settleTip, spawnTraders } from './agents'
 import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, type Hail } from './combat'
 import { huntersAct, spawnHunters } from './navy'
 import { GUILD_PURSE, guildsPlan, haulersAct, spawnHaulers } from './guild'
-import { captivityTick, landCaptives, payRansom, ransomFor } from './captivity'
+import { captivityTick, landCaptives, payRansom, ransomAnother, ransomFor } from './captivity'
+import { joinEncounter, possibleAllies, willStand } from './combat'
+import { askRoute, checkRequests, noticeImpressive, standRound } from './agents'
+import { regardOf } from './people'
 import { pruneRegisters, registerSince } from './register'
 import { postNewsItem } from './news'
 import { hexLabel } from './hex'
@@ -27,7 +30,7 @@ import { plainTraits, proved } from './people'
 import { createRng, nextInt, roll } from './rng'
 import { departOnAccount, fuelPrice, holdFree, holding, MAINTENANCE_WEEKS, maintenanceCost, newShip, reachable, setCourse, unload } from './ships'
 import { departScouts, landShips, packetScouts } from './scouts'
-import { SHIP_CLASSES, stanceKey, stancePair, type CharacterId, type Declaration, type EmpireId, type FreightOffer, type GameState, type Mail, type ReportId, type Ship, type ShipId, type Week, type World, type WorldId } from './types'
+import { SHIP_CLASSES, stanceKey, stancePair, type CargoLot, type CharacterId, type Declaration, type EmpireId, type FreightOffer, type GameState, type Mail, type ReportId, type Ship, type ShipId, type Week, type World, type WorldId } from './types'
 import type { Report } from './view'
 
 export const PLAYER = 'c-player' as CharacterId
@@ -353,6 +356,7 @@ export function approaches(state: GameState, landed: Ship[]): void {
         state.pending = e
         break
       }
+      for (const ally of possibleAllies(state, e)) if (willStand(state, ally, e)) { joinEncounter(state, e, ally); break }
       while (!e.outcome) resolveRound(state, e, npcChoice(state, e))
       postNewsItem(state, at, settle(state, e))
       break
@@ -386,6 +390,8 @@ export function advanceWeek(state: GameState): void {
   captainsAct(state)
   huntersAct(state)
   observeTraffic(state)
+  noticeImpressive(state)
+  checkRequests(state)
   pruneMail(state)
   pruneRegisters(state)
 }
@@ -521,7 +527,7 @@ export function buyGoods(state: GameState, good: Good, tons: number, smuggle = f
     const caught = inspected(state, h.at, good, deal.tons, deal.tons * deal.price)
     if (caught) return caught
   }
-  h.ship.hold.push({ kind: 'cargo', good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: h.at.id, week: state.week })
+  h.ship.hold.push({ kind: 'cargo', good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: h.at.id, week: state.week, tip: null })
   return { kind: 'ok', tons: deal.tons, credits: deal.credits, duty: deal.duty }
 }
 
@@ -533,9 +539,12 @@ export function sellGoods(state: GameState, good: Good, tons: number, smuggle = 
   if (portClosed(state, h.at) && !smuggle) return { kind: 'refused' }
   const paidFor = holding(h.ship, good)
   if (paidFor) noticeUndercut(state, me, h.ship, h.at, good, paidFor.paid)
+  const tips = h.ship.hold.filter((l): l is Extract<CargoLot, { kind: 'cargo' }> => l.kind === 'cargo' && l.good === good && !!l.tip)
   const n = unload(h.ship, good, tons)
   if (n === 0) return { kind: 'refused' }
   const deal = sell(h.at, good, n, me.empire, { smuggle })
+  // A lot bought on someone's word: the word is settled by the sale.
+  for (const lot of tips) if (lot.tip) settleTip(state, me.id, lot, Math.round((deal.credits / n) * Math.min(n, lot.tons) - lot.paid * Math.min(n, lot.tons)), h.at)
   trade(state, h.at, deal, smuggle ? undefined : h.ship, 'sold', good)
   if (smuggle) {
     const caught = inspected(state, h.at, good, n, n * deal.price)
@@ -578,6 +587,11 @@ export function takeFreight(state: GameState, offer: string): boolean {
 export function sail(state: GameState, to: WorldId | null): boolean {
   const ship = playerShip(state)
   if (!ship || ship.inYard !== null) return false
+  // Setting course for a world someone told you the prices of: the lots aboard ride on their word.
+  if (to) {
+    const known = state.beliefs[state.player]?.prices[to]
+    for (const lot of ship.hold) if (lot.kind === 'cargo' && lot.tip === null) { const w = known?.[lot.good]; lot.tip = w?.heard && w.from ? w.from : null }
+  }
   const me = state.characters[state.player]
   if (me.captive) return false
   if (me.body.kind !== 'aboard' || me.body.ship !== ship.id) {
@@ -691,6 +705,41 @@ export function buyRegister(state: GameState): number {
   const before = (state.beliefs[state.player]?.traffic[at.id] ?? []).length
   observe(state, state.player, report)
   return (state.beliefs[state.player].traffic[at.id] ?? []).length - before
+}
+
+/** Ask a hull here to stand with you against the hail. She decides by how she stands to you. */
+export function askToStand(state: GameState, ship: ShipId): boolean {
+  const e = state.pending
+  if (!e || e.ally || e.defender !== playerShip(state)?.id) return false
+  const ally = possibleAllies(state, e).find((s) => s.id === ship)
+  if (!ally) return false
+  if (!willStand(state, ally, e)) {
+    e.log.push(`${state.ships[ship].name} will not come out for you.`)
+    return false
+  }
+  joinEncounter(state, e, ally)
+  return true
+}
+
+/** Pay another's ransom where they are held. */
+export function ransomFor_(state: GameState, who: CharacterId): boolean {
+  const c = state.characters[who]
+  return c ? ransomAnother(state, state.player, c) : false
+}
+
+/** Stand a captain a round for its own sake. */
+export function round(state: GameState, who: CharacterId): boolean {
+  return standRound(state, who)
+}
+
+/** Ask a captain who thinks well of you to leave a good at a world to you. They must be here and well disposed. */
+export function askForRoute(state: GameState, who: CharacterId, world: WorldId, good: Good): boolean {
+  const at = characterLocation(state, state.player)
+  if (at === null || characterLocation(state, who) !== at) return false
+  if (regardOf(state, who, state.player) < 1) return false
+  if (state.relations[`${state.player}|${who}`]?.request) return false
+  askRoute(state, state.player, who, world, good)
+  return true
 }
 
 /** Lay the player's hull up for maintenance here. */

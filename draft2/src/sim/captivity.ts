@@ -7,7 +7,7 @@
  * scene waits for the People phase; this is the plumbing it will sit on.
  */
 import { postNewsItem } from './news'
-import { deal } from './people'
+import { deal, impressed } from './people'
 import { nextInt } from './rng'
 import { stanceKey, type Character, type CharacterId, type GameState, type Ship, type WorldId } from './types'
 
@@ -54,12 +54,41 @@ export function landCaptives(state: GameState, landed: Ship[]): void {
 export function release(state: GameState, c: Character, why: string): void {
   const at = c.captive?.at
   const captor = c.captive?.by ? state.ships[c.captive.by]?.captain : null
-  if (captor) deal(state, c.id, captor, why === 'paroled' ? 0.5 : why === 'ransomed' ? 0 : 0.3, `${state.characters[captor]?.name ?? 'my captor'} let me go: ${why}`)
+  if (captor) deal(state, c.id, captor, why === 'paroled' ? 0.5 : why === 'ransomed' ? 0 : 0.3, `${state.characters[captor]?.name ?? 'my captor'} let me go: ${why}`, 'released')
   c.captive = null
   if (at !== null && at !== undefined) {
     c.body = { kind: 'world', world: at }
     postNewsItem(state, at, `${c.name}, ${why}, is at liberty.`)
   }
+}
+
+/**
+ * Someone else pays a prisoner's ransom: the strongest gesture there is.
+ * The prisoner owes their liberty; everyone at the port who saw it thinks
+ * the more of the payer.
+ */
+export function ransomAnother(state: GameState, payer: CharacterId, c: Character): boolean {
+  const cap = c.captive
+  if (!cap || cap.at === null) return false
+  const p = state.characters[payer]
+  const sum = ransomFor(c)
+  if (!p || p.purse < sum) return false
+  const atPort = cap.at
+  const payerAt = p.body.kind === 'world' ? p.body.world : state.ships[p.body.ship]?.location.kind === 'world' ? (state.ships[p.body.ship].location as { world: WorldId }).world : null
+  if (payerAt !== atPort) return false
+  p.purse -= sum
+  const captor = cap.by ? state.ships[cap.by]?.captain : null
+  if (captor && state.characters[captor]) state.characters[captor].purse += sum
+  else if (cap.of) state.empires[cap.of].treasury += sum
+  deal(state, c.id, payer, 3, `${p.name} paid my ransom at ${state.worlds[atPort].name}`, 'ransomed')
+  for (const id of Object.keys(state.characters).sort() as CharacterId[]) {
+    if (id === payer || id === c.id) continue
+    const w = state.characters[id]
+    const at = w.body.kind === 'world' ? w.body.world : state.ships[w.body.ship]?.location.kind === 'world' ? (state.ships[w.body.ship].location as { world: WorldId }).world : null
+    if (at === atPort) impressed(state, id, payer, 0.8, `saw ${p.name} pay ${c.name}'s ransom at ${state.worlds[atPort].name}`)
+  }
+  release(state, c, `ransomed by ${p.name}`)
+  return true
 }
 
 /** Pay the captor what they ask. Only from where the prisoner is held. */

@@ -10,7 +10,7 @@
  * the player was never part of.
  */
 import { roll, type Rng } from './rng'
-import type { Character, CharacterId, GameState, Relation, Traits, Week } from './types'
+import type { Character, CharacterId, GameState, NoteKind, Relation, Traits, Week } from './types'
 
 /** 2d6 to a trait in [0, 1]: the middle of the curve is ordinary. */
 function spread(rng: Rng): number {
@@ -68,7 +68,7 @@ export function relation(state: GameState, a: CharacterId, b: CharacterId): Rela
       if (cb.outlaw && !ca.outlaw) regard -= 1
       regard *= 0.5 + traitsOf(ca).loyalty
     }
-    r = { regard, trust: 0.5, dealings: 0, since: state.week, last: state.week, notes: [] }
+    r = { regard, trust: 0.5, esteem: 0, dealings: 0, since: state.week, last: state.week, notes: [], request: null }
     state.relations[key] = r
   }
   return r
@@ -80,7 +80,7 @@ export function regardOf(state: GameState, a: CharacterId, b: CharacterId): numb
 }
 
 /** Something passed between them: `a`'s regard for `b` moves by `delta`, bounded, and the Book keeps a line. */
-export function deal(state: GameState, a: CharacterId, b: CharacterId, delta: number, note: string, week: Week = state.week): void {
+export function deal(state: GameState, a: CharacterId, b: CharacterId, delta: number, note: string, kind: NoteKind = 'other', week: Week = state.week): void {
   if (a === b || !state.characters[a] || !state.characters[b]) return
   const r = relation(state, a, b)
   // A proud person holds a slight; an easygoing one lets it go.
@@ -89,8 +89,64 @@ export function deal(state: GameState, a: CharacterId, b: CharacterId, delta: nu
   r.regard = Math.max(-3, Math.min(3, r.regard + d))
   r.dealings += 1
   r.last = week
-  r.notes.push(`wk ${week}: ${note}`)
-  if (r.notes.length > 8) r.notes.shift()
+  r.notes.push({ week, kind, text: note })
+  if (r.notes.length > 10) r.notes.shift()
+}
+
+/** `a` has seen `b` do something worth remarking: esteem rises, and does not fall. */
+export function impressed(state: GameState, a: CharacterId, b: CharacterId, by: number, note?: string): void {
+  if (a === b || !state.characters[a] || !state.characters[b]) return
+  const r = relation(state, a, b)
+  r.esteem = Math.min(5, r.esteem + by)
+  if (note) {
+    r.notes.push({ week: state.week, kind: 'other', text: note })
+    if (r.notes.length > 10) r.notes.shift()
+  }
+}
+
+export function esteemOf(state: GameState, a: CharacterId, b: CharacterId): number {
+  return state.relations[relKey(a, b)]?.esteem ?? 0
+}
+
+export function esteemWord(e: number): string {
+  if (e >= 3) return 'a name to conjure with'
+  if (e >= 1.5) return 'somebody'
+  if (e >= 0.5) return 'worth knowing'
+  return 'nobody in particular'
+}
+
+/** What `a` says on meeting `b`, from the last thing of note that passed between them; null if nothing worth a word. */
+export function greeting(state: GameState, a: CharacterId, b: CharacterId): string | null {
+  const r = state.relations[relKey(a, b)]
+  if (!r) return null
+  const notable = [...r.notes].reverse().find((n) => n.kind !== 'told' && n.kind !== 'refused' && n.kind !== 'tie' && n.kind !== 'other' && state.week - n.week <= 52)
+  if (!notable) return null
+  const ago = state.week - notable.week
+  const when = ago <= 1 ? 'the other day' : ago <= 8 ? 'a few weeks back' : 'a while back'
+  switch (notable.kind) {
+    case 'tip_paid':
+      return `Thanks for that tip ${when}. I made good money on it.`
+    case 'tip_cost':
+      return `That tip of yours ${when} cost me. I have not forgotten.`
+    case 'stood_together':
+      return `${notable.text}. Still can't believe we fought them off.`
+    case 'ransomed':
+      return `I owe you my liberty. I do not forget a thing like that.`
+    case 'robbed':
+      return `You. I have not forgotten the ${notable.text.replace(/^.*took the /, '').replace(/ from me.*$/, '')}.`
+    case 'released':
+      return `You let me go ${when}. That was decently done.`
+    case 'request_kept':
+      return `You left that route to me as you said you would. I remember it.`
+    case 'request_broken':
+      return `I asked you one thing, and you went and did it anyway.`
+    case 'round':
+      return `Good to see you. That round ${when} went down well.`
+    case 'undercut':
+      return `You got in ahead of me ${when}. Sharp of you.`
+    default:
+      return null
+  }
 }
 
 /** `a` finds `b`'s word good or bad: trust moves. */

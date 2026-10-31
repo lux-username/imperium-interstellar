@@ -5,11 +5,11 @@
  * development only.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { advanceWeek, askCaptain, buyGoods, buyRegister, goAshore, hail, lieOff, maintain, newGame, quoteBuy, quoteSale, ransomSelf, registerFee, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
+import { advanceWeek, askCaptain, askForRoute, askToStand, buyGoods, buyRegister, goAshore, hail, lieOff, maintain, newGame, quoteBuy, quoteSale, ransomFor_, ransomSelf, registerFee, round, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
-import { stanceKey, type EmpireId, type Good, type PlayerView, type WorldId } from '../sim/view'
+import { stanceKey, type CharacterId, type EmpireId, type Good, type PlayerView, type WorldId } from '../sim/view'
 import { Map } from './Map'
 import { ago, empireClass, empireName, profileString, TYPE_WORDS } from './format'
 import type { Overlay } from './geometry'
@@ -177,9 +177,21 @@ function EncounterPane({ view, state, act }: PaneProps) {
         ))}
       </ul>
       {p.mine === 'defender' ? (
-        <p>
-          <button onClick={act(() => respond(state, 'run'))}>run for the port</button> <button onClick={act(() => respond(state, 'fight'))}>fight</button> <button onClick={act(() => respond(state, 'strike'))}>strike</button>
-        </p>
+        <>
+          {p.ally && <p className="muted">{p.ally} stands with you.</p>}
+          {view.allies.length > 0 && (
+            <p>
+              {view.allies.map((a) => (
+                <button key={a.ship} onClick={act(() => askToStand(state, a.ship))}>
+                  ask {a.captain} of the {a.name} ({a.guns} gun{a.guns === 1 ? '' : 's'}) to stand with you
+                </button>
+              ))}
+            </p>
+          )}
+          <p>
+            <button onClick={act(() => respond(state, 'run'))}>run for the port</button> <button onClick={act(() => respond(state, 'fight'))}>fight</button> <button onClick={act(() => respond(state, 'strike'))}>strike</button>
+          </p>
+        </>
       ) : (
         <p>
           <button disabled={!p.quarrel} onClick={act(() => hail(state, 'attack'))}>
@@ -313,6 +325,21 @@ function Docks({ view, state, act }: PaneProps) {
         {here.hulls.length === 0 && <li className="muted">No other hull lies here.</li>}
       </ul>
       {view.body.kind === 'aboard' && !ship && <button onClick={act(() => goAshore(state))}>go ashore</button>}
+      {view.prisoners.length > 0 && (
+        <>
+          <h3>Held here</h3>
+          <ul>
+            {view.prisoners.map((pr) => (
+              <li key={pr.id} className={empireClass(view, pr.empire)}>
+                <span className="dot" /> <b>{pr.name}</b>, a prisoner. Their captors ask {cr(pr.ransom)}.{' '}
+                <button disabled={view.purse < pr.ransom} onClick={act(() => ransomFor_(state, pr.id))}>
+                  pay their ransom
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <h3>Mail</h3>
       <ul className="mail">
         {view.inbox.slice(0, 10).map((r) => (
@@ -510,6 +537,48 @@ function Captain({ view, state, act }: PaneProps) {
   )
 }
 
+/** Ask a well-disposed captain to leave a good at a world to you. */
+function AskRoute({ view, captain, state, act }: { view: PlayerView; captain: CharacterId; state: GameState; act: PaneProps['act'] }) {
+  const [open, setOpen] = useState(false)
+  const [world, setWorld] = useState<string>(view.here?.destinations[0]?.world ?? '')
+  const [good, setGood] = useState<string>('grain')
+  if (!open)
+    return (
+      <button className="tiny" onClick={() => setOpen(true)}>
+        ask them to leave a route to you
+      </button>
+    )
+  return (
+    <span className="askroute">
+      leave the{' '}
+      <select value={good} onChange={(e) => setGood(e.target.value)}>
+        {(view.here?.market ?? []).map((r) => (
+          <option key={r.good} value={r.good}>
+            {r.good}
+          </option>
+        ))}
+      </select>{' '}
+      at{' '}
+      <select value={world} onChange={(e) => setWorld(e.target.value)}>
+        {[view.here!.world, ...(view.here?.destinations.map((d) => d.world) ?? [])].map((w) => (
+          <option key={w} value={w}>
+            {view.chart[w].name}
+          </option>
+        ))}
+      </select>{' '}
+      to me{' '}
+      <button
+        onClick={act(() => {
+          askForRoute(state, captain, world as WorldId, good as Good)
+          setOpen(false)
+        })}
+      >
+        ask
+      </button>
+    </span>
+  )
+}
+
 function Bar({ view, state, act }: PaneProps) {
   const here = view.here!
   const [heard, setHeard] = useState<string | null>(null)
@@ -530,6 +599,13 @@ function Bar({ view, state, act }: PaneProps) {
           <li key={h.id}>
             <b>{h.captainName}</b> of the {h.name}, {TYPE_WORDS[h.type]}, {empireName(view, h.empire)}
             {h.guild ? ', guild' : ''} · {MOOD[h.mood ?? 'tight']}
+            {h.greeting && <div className="greeting">“{h.greeting}”</div>}
+            {h.roundWelcome && (
+              <button disabled={view.purse < 500} onClick={act(() => round(state, h.captain!))}>
+                stand a round (500 Cr)
+              </button>
+            )}
+            {h.wouldGrant && <AskRoute view={view} captain={h.captain!} state={state} act={act} />}
             {!h.asked && (
               <>
                 {' '}
@@ -568,6 +644,16 @@ function Book({ view }: { view: PlayerView }) {
           </button>
         )}
       </h2>
+      {view.book.some((p) => p.askedOfYou) && (
+        <p className="warn">
+          Asked of you:{' '}
+          {view.book
+            .filter((p) => p.askedOfYou)
+            .map((p) => `${p.name}: the ${p.askedOfYou!.good} at ${view.chart[p.askedOfYou!.world].name}`)
+            .join('; ')}
+          .
+        </p>
+      )}
       {view.book.length === 0 && <p className="muted">Nobody yet. Ask at the bar; watch the docks.</p>}
       <ul>
         {pages.map((p) => (
@@ -580,7 +666,7 @@ function Book({ view }: { view: PlayerView }) {
               {p.hull ? `of the ${p.hull}, ` : ''}
               {empireName(view, p.empire)}
               {p.guild ? ', guild' : ''}
-              {p.outlaw ? ', outlaw' : ''} · {p.standing}
+              {p.outlaw ? ', outlaw' : ''} · {p.standing} · {p.esteem}
               {p.impression.length ? ` · ${p.impression.join(', ')}` : ''}
             </span>
             {open === p.id && (
@@ -588,6 +674,16 @@ function Book({ view }: { view: PlayerView }) {
                 {p.lastSeen && (
                   <p className="muted">
                     Last seen at {view.chart[p.lastSeen.world].name}, {ago(view.week, p.lastSeen.week)}. Their word has proved {p.trust >= 0.7 ? 'good' : p.trust <= 0.3 ? 'bad' : 'neither here nor there'}.
+                  </p>
+                )}
+                {p.askedOfYou && (
+                  <p className="warn">
+                    {p.askedOfYou.tone === 'solid' ? 'Asked you, as a favour,' : 'Warned you'} to leave the {p.askedOfYou.good} at {view.chart[p.askedOfYou.world].name} to them, week {p.askedOfYou.since}.
+                  </p>
+                )}
+                {p.askedByYou && (
+                  <p className="muted">
+                    You asked them to leave the {p.askedByYou.good} at {view.chart[p.askedByYou.world].name} to you, week {p.askedByYou.since}.
                   </p>
                 )}
                 {(p.friends.length > 0 || p.enemies.length > 0) && (

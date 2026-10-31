@@ -9,7 +9,8 @@ import { route } from './chart'
 import { dutyRate, GOODS, inspectionChance } from './economy'
 import { onTheFence, roundWouldHelp, willingness } from './agents'
 import { ransomFor } from './captivity'
-import { remarkable, standingWord, traitsOf } from './people'
+import { esteemWord, greeting, regardOf, remarkable, standingWord, traitsOf } from './people'
+import { possibleAllies } from './combat'
 import { quarrel } from './combat'
 import { playerShip, portClosed } from './game'
 import { beliefOf, characterLocation, readerOf, shipsAt } from './mail'
@@ -70,7 +71,7 @@ export function buildPlayerView(state: GameState): PlayerView {
               const next = sailsOn(state, s, at, state.week + 1)
               const cap = s.captain ? state.characters[s.captain] : null
               const w = cap ? willingness(cap, me) : null
-              return { id: s.id, name: s.name, type: s.type, empire: s.empire, captain: s.captain, captainName: cap?.name ?? null, mood: w === null ? null : w >= 0.7 ? 'glad' : onTheFence(w) ? 'fence' : 'tight', guild: !!cap?.guild, asked: !!s.captain && state.asked[s.captain]?.week === state.week, told: !!s.captain && state.asked[s.captain]?.week === state.week && state.asked[s.captain].told, roundWouldHelp: !!s.captain && roundWouldHelp(state, s.captain), sailsTo: s.run ? otherEnd(state.lanes[s.run.lane], at) : null, sailsOn: next }
+              return { id: s.id, name: s.name, type: s.type, empire: s.empire, captain: s.captain, captainName: cap?.name ?? null, mood: w === null ? null : w >= 0.7 ? 'glad' : onTheFence(w) ? 'fence' : 'tight', guild: !!cap?.guild, asked: !!s.captain && state.asked[s.captain]?.week === state.week, told: !!s.captain && state.asked[s.captain]?.week === state.week && state.asked[s.captain].told, roundWouldHelp: !!s.captain && roundWouldHelp(state, s.captain), greeting: s.captain ? greeting(state, s.captain, me.id) : null, roundWelcome: !!s.captain && (state.relations[`${s.captain}|${me.id}`]?.lastRound === undefined || state.week - (state.relations[`${s.captain}|${me.id}`]?.lastRound ?? -99) >= 4), wouldGrant: !!s.captain && regardOf(state, s.captain, me.id) >= 1 && !state.relations[`${me.id}|${s.captain}`]?.request, sailsTo: s.run ? otherEnd(state.lanes[s.run.lane], at) : null, sailsOn: next }
             }),
           market: GOODS.map((good) => ({ good, price: world.market[good].price, stock: world.market[good].stock, holding: own ? holding(own, good) : null })),
           freight: world.freight.map((f) => ({ ...f })),
@@ -89,7 +90,7 @@ export function buildPlayerView(state: GameState): PlayerView {
     return { id: s.id, name: s.name, type: s.type, empire: s.empire, guns: SHIP_CLASSES[s.type].guns }
   }
   const pending = pend
-    ? { attacker: hull(pend.attacker), defender: hull(pend.defender), mine: (pend.attacker === own?.id ? 'attacker' : 'defender') as 'attacker' | 'defender', round: pend.round, log: [...pend.log], quarrel: own ? quarrel(state, state.ships[pend.attacker], state.ships[pend.defender]) : false }
+    ? { attacker: hull(pend.attacker), defender: hull(pend.defender), mine: (pend.attacker === own?.id ? 'attacker' : 'defender') as 'attacker' | 'defender', round: pend.round, log: [...pend.log], quarrel: own ? quarrel(state, state.ships[pend.attacker], state.ships[pend.defender]) : false, ally: pend.ally ? (state.ships[pend.ally]?.name ?? null) : null }
     : null
   const cap = me.captive ?? null
   const captive = cap ? { of: cap.of, since: cap.since, at: cap.at, aboard: cap.at || !cap.by ? null : (state.ships[cap.by]?.name ?? null), ransom: ransomFor(me), term: cap.term ?? null } : null
@@ -119,7 +120,10 @@ export function buildPlayerView(state: GameState): PlayerView {
       regard: r?.regard ?? 0,
       trust: r?.trust ?? 0.5,
       dealings,
-      notes: r ? [...r.notes].reverse() : [],
+      notes: r ? [...r.notes].reverse().map((n) => `wk ${n.week}: ${n.text}`) : [],
+      esteem: esteemWord(r?.esteem ?? 0),
+      askedOfYou: (() => { const t = state.relations[`${id}|${state.player}`]?.request; return t ? { world: t.world, good: t.good, since: t.since, tone: t.tone } : null })(),
+      askedByYou: r?.request ? { world: r.request.world, good: r.request.good, since: r.request.since } : null,
       impression,
       seenTrading: [],
       friends: [],
@@ -150,6 +154,7 @@ export function buildPlayerView(state: GameState): PlayerView {
     const px = pageFor(x)
     const other = state.characters[y]
     if (!px || !other) continue
+    void px
     const from = state.characters[t.from]?.name ?? 'someone'
     if (t.regard >= 1.5) px.friends.push({ name: other.name, from })
     else if (t.regard <= -1.5) px.enemies.push({ name: other.name, from })
@@ -168,6 +173,8 @@ export function buildPlayerView(state: GameState): PlayerView {
     purse: me.purse,
     debt: me.debt ? { ...me.debt } : null,
     ship,
+    prisoners: at === null ? [] : (Object.keys(state.characters).sort() as CharacterId[]).filter((c) => c !== me.id && state.characters[c].captive?.at === at).map((c) => ({ id: c, name: state.characters[c].name, empire: state.characters[c].empire, ransom: ransomFor(state.characters[c]) })),
+    allies: pend && pend.defender === own?.id && !pend.ally ? possibleAllies(state, pend).map((s) => ({ ship: s.id, name: s.name, captain: s.captain ? (state.characters[s.captain]?.name ?? '') : '', guns: SHIP_CLASSES[s.type].guns })) : [],
     pending,
     lyingOff: own?.lyingOff ?? false,
     captive,

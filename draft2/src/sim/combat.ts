@@ -8,9 +8,9 @@
  * The player's encounters stand as `state.pending` until they choose; an
  * NPC's are resolved on the spot with the same rules and the same menu.
  */
-import { deal, traitsOf } from './people'
+import { deal, impressed, regardOf, traitsOf } from './people'
 import { roll } from './rng'
-import { SHIP_CLASSES, stanceKey, type Encounter, type EncounterOutcome, type GameState, type Ship, type Week, type WorldId } from './types'
+import { SHIP_CLASSES, stanceKey, type CharacterId, type Encounter, type EncounterOutcome, type GameState, type Ship, type ShipId, type Week, type WorldId } from './types'
 
 export type Choice = 'run' | 'fight' | 'strike'
 export type Hail = 'attack' | 'let_pass'
@@ -66,7 +66,39 @@ function getsAway(state: GameState, runner: Ship, chaser: Ship): boolean {
 }
 
 export function beginEncounter(state: GameState, attacker: Ship, defender: Ship, at: WorldId): Encounter {
-  return { attacker: attacker.id, defender: defender.id, at, round: 0, log: [`${who(state, attacker)} hails ${who(state, defender)} in the approaches of ${state.worlds[at].name}.`], outcome: null }
+  return { attacker: attacker.id, defender: defender.id, at, round: 0, log: [`${who(state, attacker)} hails ${who(state, defender)} in the approaches of ${state.worlds[at].name}.`], outcome: null, ally: null }
+}
+
+/**
+ * Hulls at the port that could stand with the defender: armed, in the
+ * approaches this week or lying off, not scouts, not the attacker, with a
+ * captain. Whether they will is another matter.
+ */
+export function possibleAllies(state: GameState, e: Encounter): Ship[] {
+  const d = state.ships[e.defender]
+  return (Object.keys(state.ships).sort() as ShipId[])
+    .map((id) => state.ships[id])
+    .filter((s) => s.id !== e.attacker && s.id !== e.defender && s.captain && s.type !== 'scout' && SHIP_CLASSES[s.type].guns > 0 && s.location.kind === 'world' && s.location.world === e.at && s.docked >= state.week - 1 && s.empire === d.empire && !state.characters[s.captain]?.captive)
+}
+
+/** Whether a captain will stand with the defender: a friend will; a stranger of bold temper will if the odds are fair; nobody stands with an outlaw. */
+export function willStand(state: GameState, ally: Ship, e: Encounter): boolean {
+  const d = state.ships[e.defender]
+  const a = state.ships[e.attacker]
+  if (!ally.captain || !d.captain) return false
+  if (state.characters[d.captain]?.outlaw) return false
+  const regard = regardOf(state, ally.captain, d.captain)
+  const t = traitsOf(state.characters[ally.captain])
+  const odds = (SHIP_CLASSES[ally.type].guns + SHIP_CLASSES[d.type].guns) / Math.max(1, SHIP_CLASSES[a.type].guns)
+  if (regard >= 1) return true
+  if (regard <= -1) return false
+  return t.caution <= 0.4 && odds >= 0.8
+}
+
+/** An ally joins: her guns fire beside the defender's from the next round. */
+export function joinEncounter(state: GameState, e: Encounter, ally: Ship): void {
+  e.ally = ally.id
+  e.log.push(`${who(state, ally)} stands with ${state.ships[e.defender].name}.`)
 }
 
 /**
@@ -93,7 +125,8 @@ export function resolveRound(state: GameState, e: Encounter, choice: Choice): vo
     d.damage += hit
     e.log.push(`${d.name} runs; ${a.name} closes and fires${hit ? `, ${hit} point${hit === 1 ? '' : 's'} told` : ' and misses'}.`)
   } else {
-    const hitA = fire(state, d, a)
+    const ally = e.ally ? state.ships[e.ally] : null
+    const hitA = fire(state, d, a) + (ally ? fire(state, ally, a) : 0)
     const hitD = fire(state, a, d)
     a.damage += hitA
     d.damage += hitD
@@ -141,6 +174,18 @@ export function settle(state: GameState, e: Encounter): string {
   const at = e.at
   const week: Week = state.week
   const outcome: EncounterOutcome = e.outcome ?? 'docked'
+  if (e.ally && outcome !== 'struck') {
+    const ally = state.ships[e.ally]
+    if (ally?.captain && d.captain) {
+      const line = `we fought off the ${a.name} together off ${state.worlds[at].name}`
+      deal(state, d.captain, ally.captain, 1, line, 'stood_together')
+      deal(state, ally.captain, d.captain, 0.7, line, 'stood_together')
+      for (const c of Object.keys(state.characters).sort() as CharacterId[]) {
+        if (c === ally.captain || c === d.captain) continue
+        if (state.characters[c].body.kind === 'aboard' && state.ships[state.characters[c].body.ship]?.location.kind === 'world' && (state.ships[state.characters[c].body.ship].location as { world: WorldId }).world === at) impressed(state, c, ally.captain, 0.5, `saw ${state.characters[ally.captain].name} stand with ${state.characters[d.captain].name} against the ${a.name}`)
+      }
+    }
+  }
   if (outcome !== 'struck') {
     d.lyingOff = false
     return outcome === 'driven_off' ? `${d.name} drove off ${a.name} in the approaches.` : outcome === 'escaped' ? `${d.name} ran in from ${a.name} under the guns.` : `${a.name} let ${d.name} pass.`
@@ -151,8 +196,8 @@ export function settle(state: GameState, e: Encounter): string {
   const captor = a.captain ? state.characters[a.captain] : null
   const victim = d.captain ? state.characters[d.captain] : null
   if (victim && captor) {
-    deal(state, victim.id, captor.id, -3, `${captor.name} took the ${d.name} from me off ${state.worlds[at].name}`)
-    deal(state, captor.id, victim.id, 0.2, `took ${victim.name}'s ${d.name} off ${state.worlds[at].name}`)
+    deal(state, victim.id, captor.id, -3, `${captor.name} took the ${d.name} from me off ${state.worlds[at].name}`, 'robbed')
+    deal(state, captor.id, victim.id, 0.2, `took ${victim.name}'s ${d.name} off ${state.worlds[at].name}`, 'other')
   }
   if (victim) {
     // The cash aboard is the captor's; the rest is at home, and is what a ransom comes out of.

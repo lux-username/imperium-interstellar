@@ -42,6 +42,8 @@ export interface PersonSnapshot {
   empire: EmpireId
   at: WorldId
   aboard: ShipId | null
+  /** Held here as a prisoner, and what their captor asks. */
+  held?: number
 }
 
 export interface WorldSnapshot {
@@ -208,6 +210,12 @@ export interface HullHere {
   /** Whether the player has already asked them this week, and whether they told. */
   asked: boolean
   told: boolean
+  /** Something they say on seeing you, from what last passed between you. */
+  greeting: string | null
+  /** Whether a round for its own sake would be welcome this week. */
+  roundWelcome: boolean
+  /** Whether they would grant you a route if asked: they must think well of you. */
+  wouldGrant: boolean
   /** They refused, but a round would bring them round. */
   roundWouldHelp: boolean
   /** For a scout on the packets: where she sails to next and when. */
@@ -279,6 +287,11 @@ export interface BookEntry {
   dealings: number
   /** The last few things that passed between you. */
   notes: string[]
+  /** How much you have seen them to be worth knowing, in a word. */
+  esteem: string
+  /** What they have asked of you, if anything, and what you have asked of them. */
+  askedOfYou: { world: WorldId; good: string; since: Week; tone: 'solid' | 'orelse' } | null
+  askedByYou: { world: WorldId; good: string; since: Week } | null
   /** What you have made of their character so far: a word or two, more with acquaintance. */
   impression: string[]
   /** Trades of theirs you have seen or heard of, newest first, a few. */
@@ -309,8 +322,12 @@ export interface PlayerView {
   debt: Debt | null
   /** The player's own hull, or null if they have none. */
   ship: OwnShip | null
+  /** Prisoners held at this port, whose ransom the player could pay. */
+  prisoners: { id: CharacterId; name: string; empire: EmpireId; ransom: number }[]
+  /** Hulls here that could be asked to stand with the player in a fight, by name. */
+  allies: { ship: ShipId; name: string; captain: string; guns: number }[]
   /** A meeting in the approaches waiting on the player. */
-  pending: { attacker: { id: ShipId; name: string; type: ShipType; empire: EmpireId; guns: number }; defender: { id: ShipId; name: string; type: ShipType; empire: EmpireId; guns: number }; mine: 'attacker' | 'defender'; round: number; log: string[]; quarrel: boolean } | null
+  pending: { attacker: { id: ShipId; name: string; type: ShipType; empire: EmpireId; guns: number }; defender: { id: ShipId; name: string; type: ShipType; empire: EmpireId; guns: number }; mine: 'attacker' | 'defender'; round: number; log: string[]; quarrel: boolean; ally: string | null } | null
   /** Whether the player's hull lies off the port rather than docked. */
   lyingOff: boolean
   /** The player is a prisoner: whose, since when, where held if landed, and what is asked. */

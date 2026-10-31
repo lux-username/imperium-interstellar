@@ -14,13 +14,13 @@ import { hexDistance } from './hex'
 import { buy, demandLevel, dutyRate, FINE_TIMES_DUTY, GOOD_SPECS, GOODS, inspectionChance, levelOf, marketScale, production, sell, supplyLevel, valueScale, type Good } from './economy'
 import { postNewsItem } from './news'
 import { learnTraffic } from './belief'
-import { deal, regardOf, rollTraits, traitsOf } from './people'
+import { deal, esteemOf, impressed, regardOf, relation, rollTraits, traitsOf } from './people'
 import { beliefOf, characterLocation } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { nextFloat, nextInt, roll, type Rng } from './rng'
 import { fuelPrice, holdFree, maintenanceCost, newShip, overdue, reachable, setCourse, unload } from './ships'
 import { layUp } from './game'
-import { stanceKey, SHIP_CLASSES, type Character, type CharacterId, type EmpireId, type GameState, type Guild, type PriceBook, type Ship, type ShipId, type Week, type World, type WorldId, type WorldProfile } from './types'
+import { stanceKey, SHIP_CLASSES, type Character, type CharacterId, type EmpireId, type GameState, type Guild, type PriceBook, type RouteRequest, type Ship, type ShipId, type Week, type World, type WorldId, type WorldProfile } from './types'
 import { lineKey, type Belief } from './view'
 
 /** A trader's purse at the start: enough for half a hold of something ordinary. */
@@ -235,6 +235,7 @@ export function bestPlan(state: GameState, captain: Character, ship: Ship, at: W
   const here = state.worlds[at]
   const belief = beliefOf(state, captain.id)
   const room = holdFree(ship)
+  const avoid = routesToAvoid(state, captain)
   let best: Plan | null = null
   for (const to of reachable(state, at, SHIP_CLASSES[ship.type].jump)) {
     if (!belief.prices[to] && !belief.worlds[to]) continue
@@ -245,7 +246,8 @@ export function bestPlan(state: GameState, captain: Character, ship: Ship, at: W
     const freight = here.freight.filter((f) => f.to === to)
     // Freight first where it pays better a ton than the best cargo margin would.
     const spend = Math.max(0, captain.purse - reserve(ship) * (0.5 + traitsOf(captain).caution))
-    const lots = lotsFor(state, belief, captain, here, to, room, spend, true)
+    // A promise made is kept: nothing asked of them is bought here for there.
+    const lots = lotsFor(state, belief, captain, here, to, room, spend, true).filter((l) => !avoid.some((x) => x.world === at && x.good === l.good))
     const cargoPerTon = lots.length > 0 ? lots[0].profit / lots[0].tons : 0
     let left = room
     let freightProfit = 0
@@ -256,7 +258,7 @@ export function bestPlan(state: GameState, captain: Character, ship: Ship, at: W
       left -= f.tons
       freightProfit += f.tons * f.rate
     }
-    const cargo = taken.length > 0 ? lotsFor(state, belief, captain, here, to, left, spend, true) : lots
+    const cargo = taken.length > 0 ? lotsFor(state, belief, captain, here, to, left, spend, true).filter((l) => !avoid.some((x) => x.world === at && x.good === l.good)) : lots
     let profit = freightProfit + cargo.reduce((s, l) => s + l.profit, 0)
     // Danger weighs on the careful far more than on the bold.
     if (dangerous(state, belief, to)) profit = Math.round(profit * (0.9 - 0.6 * traitsOf(captain).caution))
@@ -336,8 +338,19 @@ export function noticeUndercut(state: GameState, me: Character, ship: Ship, here
   if (net >= paid) return
   for (const m of here.register) {
     if (m.ship === ship.id || !m.captain || state.week - m.week > 1 || !m.sold.some((x) => x.good === good)) continue
-    deal(state, me.id, m.captain, -0.4, `${m.captainName} undercut me on ${good} at ${here.name}`)
+    deal(state, me.id, m.captain, -0.4, `${m.captainName} undercut me on ${good} at ${here.name}`, 'undercut')
   }
+}
+
+/**
+ * A lot bought on someone's word is sold: the word is settled. A tip
+ * that made money weighs a great deal; one that lost money is held
+ * against the teller, though less, since markets move.
+ */
+export function settleTip(state: GameState, me: CharacterId, lot: { tip?: CharacterId | null; good: Good }, made: number, here: World): void {
+  if (!lot.tip || lot.tip === me) return
+  if (made > 0) deal(state, me, lot.tip, Math.min(1.5, 0.4 + made / 5000), `made ${made} on ${state.characters[lot.tip]?.name ?? 'a'}'s tip about ${lot.good} at ${here.name}`, 'tip_paid')
+  else deal(state, me, lot.tip, -0.5, `${state.characters[lot.tip]?.name ?? 'a'}'s tip about ${lot.good} at ${here.name} cost me`, 'tip_cost')
 }
 
 /** One captain's week in port. */
@@ -353,10 +366,16 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
     const net = here.market[lot.good].price * (1 - duty)
     if (stale && !betterElsewhere(state, belief, captain, ship, at, lot.good, net)) {
       const n = unload(ship, lot.good, lot.tons)
-      if (n > 0) captain.purse += trade(state, here, sell(here, lot.good, n, captain.empire), ship, 'sold', lot.good).credits
+      if (n > 0) {
+        const credits = trade(state, here, sell(here, lot.good, n, captain.empire), ship, 'sold', lot.good).credits
+        captain.purse += credits
+        settleTip(state, captain.id, lot, credits - lot.paid * n, here)
+      }
       continue
     }
     let tons = lot.tons
+    let made = 0
+    let soldTons = 0
     while (tons > 0) {
       const n = Math.min(10, tons)
       const priceNow = here.market[lot.good].price * (1 - duty)
@@ -364,9 +383,13 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
       if (!stale && betterElsewhere(state, belief, captain, ship, at, lot.good, priceNow)) break
       const sold = unload(ship, lot.good, n)
       if (sold === 0) break
-      captain.purse += trade(state, here, sell(here, lot.good, sold, captain.empire), ship, 'sold', lot.good).credits
+      const credits = trade(state, here, sell(here, lot.good, sold, captain.empire), ship, 'sold', lot.good).credits
+      captain.purse += credits
+      made += credits - lot.paid * sold
+      soldTons += sold
       tons -= sold
     }
+    if (soldTons > 0) settleTip(state, captain.id, lot, made, here)
   }
   // Fuel, if it can be had and afforded.
   const fuel = fuelPrice(here.profile.starport)
@@ -406,7 +429,8 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
       }
       trade(state, here, deal, ship, 'bought', lot.good)
       captain.purse -= deal.credits
-      ship.hold.push({ kind: 'cargo', good: lot.good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: at, week: state.week })
+      const word = belief.prices[plan.to]?.[lot.good]
+      ship.hold.push({ kind: 'cargo', good: lot.good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: at, week: state.week, tip: word?.heard && word.from ? word.from : null })
     }
     setCourse(state, ship, plan.to)
     return
@@ -497,7 +521,7 @@ export function willingness(teller: Character, asker: Character, state?: GameSta
   else w = 0.5
   // An open-handed captain tells more, a close-mouthed one less; and a friend is told what a stranger is not.
   w += (traitsOf(teller).openness - 0.5) * 0.3
-  if (state) w += 0.15 * regardOf(state, teller.id, asker.id)
+  if (state) w += 0.15 * regardOf(state, teller.id, asker.id) + 0.05 * esteemOf(state, teller.id, asker.id)
   return Math.max(0.02, Math.min(0.98, w))
 }
 
@@ -587,13 +611,14 @@ export function dockTalk(state: GameState): void {
         if (!told && onTheFence(w) && r < w + 0.3 && wantsInfo(state, b, ship, port) && b.purse >= BRIBE + reserve(ship) + 2000) {
           b.purse -= BRIBE
           a.purse += BRIBE
-          deal(state, a.id, b.id, 0.3, `${b.name} stood me a round at ${here.name}`)
+          deal(state, a.id, b.id, 0.3, `${b.name} stood me a round at ${here.name}`, 'round')
           told = true
         }
         if (told) {
           tellAll(state, a.id, b.id)
-          deal(state, b.id, a.id, 0.2, `${a.name} told me what they knew at ${here.name}`)
-        } else deal(state, b.id, a.id, -0.1, `${a.name} would not talk at ${here.name}`)
+          deal(state, b.id, a.id, 0.2, `${a.name} told me what they knew at ${here.name}`, 'told')
+          maybeAskRoute(state, a, b, here)
+        } else deal(state, b.id, a.id, -0.1, `${a.name} would not talk at ${here.name}`, 'refused')
       }
     }
     // The guild's offices: at the seat the book itself; at any other dockyard port of the empire a factor who takes
@@ -667,6 +692,96 @@ function factorsReport(state: GameState, g: Guild): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Route requests: "leave the metals at Londinium to me"
+
+/** Weeks a request stands before a kept one is counted kept. */
+export const REQUEST_WEEKS = 12
+
+/** The route `a` would keep to themselves: where they buy the cargo aboard, and what. "Leave the metals at Londinium to me." */
+function myRoute(state: GameState, a: Character): { world: WorldId; good: Good } | null {
+  if (a.body.kind !== 'aboard') return null
+  const ship = state.ships[a.body.ship]
+  const lot = ship?.hold.find((l) => l.kind === 'cargo')
+  if (!lot || lot.kind !== 'cargo') return null
+  return { world: lot.from, good: lot.good }
+}
+
+/**
+ * Having told `b` what they know, a captain with a route of their own
+ * may ask `b` to leave it alone: as a favour if they are friends, as a
+ * warning if not. A proud or grasping captain asks; an easygoing one
+ * lets the world be. One ask per person at a time.
+ */
+export function maybeAskRoute(state: GameState, a: Character, b: Character, here: World): void {
+  const r = relation(state, a.id, b.id)
+  if (r.request) return
+  const t = traitsOf(a)
+  if (t.pride + t.greed < 1.1) return
+  const route = myRoute(state, a)
+  if (!route) return
+  askRoute(state, a.id, b.id, route.world, route.good)
+  void here
+}
+
+/** `a` asks `b` to leave a good at a world to them. The tone follows how `a` stands to `b`. */
+export function askRoute(state: GameState, a: CharacterId, b: CharacterId, world: WorldId, good: Good): RouteRequest {
+  const r = relation(state, a, b)
+  const tone: RouteRequest['tone'] = regardOf(state, a, b) >= 1 ? 'solid' : 'orelse'
+  r.request = { world, good, since: state.week, tone }
+  const wn = state.worlds[world].name
+  const an = state.characters[a].name
+  deal(state, b, a, 0, tone === 'solid' ? `${an} asked me, as a favour, to leave the ${good} at ${wn} to them` : `${an} told me to stay off the ${good} at ${wn}, or else`, 'request_made')
+  return r.request
+}
+
+/** Whether `b` will leave the route alone: a friend's ask is honoured; a warning is honoured by the careful; the rest ignore it. */
+export function honours(state: GameState, b: Character, a: CharacterId, req: RouteRequest): boolean {
+  const regard = regardOf(state, b.id, a)
+  if (regard >= 0.5) return true
+  if (req.tone === 'orelse' && traitsOf(b).caution >= 0.6) return true
+  return false
+}
+
+/** The routes `b` has been asked to leave alone and means to. */
+export function routesToAvoid(state: GameState, b: Character): { world: WorldId; good: Good }[] {
+  const out: { world: WorldId; good: Good }[] = []
+  for (const key of Object.keys(state.relations)) {
+    if (!key.endsWith(`|${b.id}`)) continue
+    const a = key.slice(0, key.indexOf('|')) as CharacterId
+    const req = state.relations[key].request
+    if (req && honours(state, b, a, req)) out.push({ world: req.world, good: req.good as Good })
+  }
+  return out
+}
+
+/**
+ * Each week every standing request is checked against what the asker
+ * can see of the register: the asked captain buying that good at that
+ * world since the ask breaks it and makes an enemy; twelve weeks
+ * without is a promise kept, and makes a friend.
+ */
+export function checkRequests(state: GameState): void {
+  for (const key of Object.keys(state.relations).sort()) {
+    const r = state.relations[key]
+    if (!r.request) continue
+    const [a, b] = key.split('|') as [CharacterId, CharacterId]
+    const req = r.request
+    const bName = state.characters[b]?.name ?? b
+    const wn = state.worlds[req.world]?.name ?? req.world
+    const seen = (beliefOf(state, a).traffic[req.world] ?? []).some((k) => k.movement.captain === b && k.movement.week > req.since && k.movement.bought.some((x) => x.good === req.good))
+    if (seen) {
+      r.request = null
+      deal(state, a, b, -1.5, `${bName} went for the ${req.good} at ${wn} after I asked them not to`, 'request_broken')
+      continue
+    }
+    if (state.week - req.since >= REQUEST_WEEKS) {
+      r.request = null
+      deal(state, a, b, 0.8, `${bName} left the ${req.good} at ${wn} to me, as asked`, 'request_kept')
+    }
+  }
+}
+
 /** The player listens at the bar: the docks' gossip. Returns how many prices were news. */
 export function listenAtBar(state: GameState): number {
   const at = characterLocation(state, state.player)
@@ -719,10 +834,43 @@ export function tellTies(state: GameState, from: CharacterId, to: CharacterId): 
     if (h.teller !== from || x !== from) continue
     const myRegard = regardOf(state, to, from)
     if (myRegard < 1) continue
-    if (h.regard <= -1.5) deal(state, to, y, -0.3, `${state.characters[from].name} counts ${state.characters[y]?.name ?? y} an enemy`)
-    else if (h.regard >= 1.5) deal(state, to, y, 0.2, `${state.characters[from].name} counts ${state.characters[y]?.name ?? y} a friend`)
+    if (h.regard <= -1.5) deal(state, to, y, -0.3, `${state.characters[from].name} counts ${state.characters[y]?.name ?? y} an enemy`, 'tie')
+    else if (h.regard >= 1.5) deal(state, to, y, 0.2, `${state.characters[from].name} counts ${state.characters[y]?.name ?? y} a friend`, 'tie')
   }
   return n
+}
+
+/** The player stands a captain a round for its own sake: a small warmth, once a month a person. */
+export function standRound(state: GameState, who: CharacterId): boolean {
+  const me = state.characters[state.player]
+  const at = characterLocation(state, state.player)
+  if (at === null || characterLocation(state, who) !== at || me.purse < BRIBE) return false
+  const r = relation(state, who, state.player)
+  if (r.lastRound !== undefined && state.week - r.lastRound < 4) return false
+  me.purse -= BRIBE
+  state.characters[who].purse += BRIBE
+  r.lastRound = state.week
+  deal(state, who, state.player, 0.15, `${me.name} stood me a round at ${state.worlds[at].name}`, 'round')
+  return true
+}
+
+/**
+ * What the week's page says of people worth knowing: a sale worth twenty
+ * thousand, or a prize taken, raises the esteem of everyone at the port
+ * who saw it for whoever did it.
+ */
+export function noticeImpressive(state: GameState): void {
+  for (const id of Object.keys(state.worlds).sort() as WorldId[]) {
+    const world = state.worlds[id]
+    const page = world.register.filter((m) => m.week === state.week && m.captain)
+    const present = (Object.keys(state.characters).sort() as CharacterId[]).filter((c) => characterLocation(state, c) === id)
+    if (present.length < 2) continue
+    for (const m of page) {
+      const value = m.sold.reduce((s, x) => s + x.tons * x.price, 0)
+      if (value < 20000) continue
+      for (const c of present) if (c !== m.captain) impressed(state, c, m.captain!, 0.3, `saw ${m.captainName} sell ${Math.round(value / 1000)}k of cargo at ${world.name}`)
+    }
+  }
 }
 
 export type Answer = 'told' | 'refused' | 'already' | 'absent' | 'no_use'
@@ -755,8 +903,8 @@ export function askCaptain(state: GameState, who: CharacterId, bribe = false): A
     me.purse -= BRIBE
     them.purse += BRIBE
     prior.told = true
-    deal(state, who, state.player, 0.3, `${me.name} stood me a round at ${where}`)
-    deal(state, state.player, who, 0.1, `came round for a drink at ${where}`)
+    deal(state, who, state.player, 0.3, `${me.name} stood me a round at ${where}`, 'round')
+    deal(state, state.player, who, 0.1, `came round for a drink at ${where}`, 'round')
     tellAll(state, who, state.player)
     return 'told'
   }
@@ -766,11 +914,11 @@ export function askCaptain(state: GameState, who: CharacterId, bribe = false): A
   const told = roll < w
   state.asked[who] = { week: state.week, roll, told }
   if (!told) {
-    deal(state, state.player, who, -0.1, `would not talk at ${where}`)
+    deal(state, state.player, who, -0.1, `would not talk at ${where}`, 'refused')
     return 'refused'
   }
-  deal(state, state.player, who, 0.2, `told me what they knew at ${where}`)
-  deal(state, who, state.player, 0.1, `${me.name} asked civilly at ${where}`)
+  deal(state, state.player, who, 0.2, `told me what they knew at ${where}`, 'told')
+  deal(state, who, state.player, 0.1, `${me.name} asked civilly at ${where}`, 'told')
   tellAll(state, who, state.player)
   return 'told'
 }

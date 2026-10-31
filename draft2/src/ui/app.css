@@ -106,3 +106,5 @@ button.link:hover { text-decoration: underline; }
 .book .page { margin: 4px 0 8px 14px; font-size: 12px; }
 .book ul.notes { margin: 2px 0; padding-left: 12px; list-style: disc; }
 .book ul.notes li { color: var(--muted); font-size: 11px; }
+.greeting { font-style: italic; color: #cfd3dc; margin: 2px 0 4px; }
+.askroute select { max-width: 120px; }

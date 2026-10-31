@@ -15,6 +15,7 @@
  * on ground truth.
  */
 import { absorb, emptyBelief, hear } from './belief'
+import { ransomFor } from './captivity'
 import { expectedArrival, route } from './chart'
 import type { CharacterId, Declaration, DispatchId, GameState, Mail, MailId, ReportId, Ship, Week, World, WorldId } from './types'
 import { stanceKey } from './types'
@@ -66,7 +67,7 @@ export function peopleAt(state: GameState, world: WorldId): PersonSnapshot[] {
   const ids = Object.keys(state.characters).sort() as CharacterId[]
   for (const id of ids) {
     const c = state.characters[id]
-    if (c.body.kind === 'world' && c.body.world === world) out.push({ id, name: c.name, empire: c.empire, at: world, aboard: null })
+    if (c.body.kind === 'world' && c.body.world === world) out.push({ id, name: c.name, empire: c.empire, at: world, aboard: null, ...(c.captive?.at === world ? { held: ransomFor(c) } : {}) })
     else if (c.body.kind === 'aboard') {
       const loc = state.ships[c.body.ship]?.location
       if (loc?.kind === 'world' && loc.world === world) out.push({ id, name: c.name, empire: c.empire, at: world, aboard: c.body.ship })
