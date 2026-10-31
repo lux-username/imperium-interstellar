@@ -207,7 +207,7 @@ export function newGame(seed: number): GameState {
     relations: {},
     asked: {},
   }
-  for (const e of Object.values(empires)) state.guilds[e.id] = { empire: e.id, seat: e.seat, book: {}, danger: {}, purse: GUILD_PURSE, lines: [], planned: 0, post: [] }
+  for (const e of Object.values(empires)) state.guilds[e.id] = { empire: e.id, seat: e.seat, book: {}, danger: {}, purse: GUILD_PURSE, lines: [], planned: 0, post: [], offices: {} }
   const eids = Object.keys(empires).sort() as EmpireId[]
   for (let i = 0; i < eids.length; i++) {
     for (let j = i + 1; j < eids.length; j++) {

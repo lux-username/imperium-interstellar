@@ -143,6 +143,8 @@ export interface Guild {
   planned: Week
   /** Books deposited at the guild's offices elsewhere, on their way to the seat by the next sailings. */
   post: { arrives: Week; book: PriceBook; danger: Record<WorldId, Week> }[]
+  /** Cash banked with the factor at each world on the lines, waiting for a hauler bound toward the seat. */
+  offices: Record<WorldId, number>
 }
 
 export interface NewsItem {
@@ -323,6 +325,8 @@ export interface Ship {
   run: PacketRun | null
   /** The week she last came into port. She sails no sooner than the week after. */
   docked: Week
+  /** Cash aboard on an organisation's account: a hauler's takings and float, which a captor takes with the hull. */
+  strongbox: number
   /** Lying off the port in the approaches rather than docked: hunting what comes in, or waiting to. */
   lyingOff: boolean
   /** The week her last maintenance was finished. Due again MAINTENANCE_EVERY weeks on; overdue, her drive is a risk. */

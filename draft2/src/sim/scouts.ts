@@ -43,6 +43,7 @@ export function packetScouts(rng: Rng, lanes: Record<LaneId, Lane>, worlds: Reco
       news: {},
       run: { lane: id },
       docked: -1,
+      strongbox: 0,
       lyingOff: false,
       duty: null,
       maintained: 0,

@@ -210,7 +210,13 @@ export function settle(state: GameState, e: Encounter): string {
     d.lyingOff = false
     return outcome === 'driven_off' ? `${d.name} drove off ${a.name} in the approaches.` : outcome === 'escaped' ? `${d.name} ran in from ${a.name} under the guns.` : `${a.name} let ${d.name} pass.`
   }
-  // Plunder: the hold and the purse aboard. A navy hull takes no cargo: it stays on the prize, which is the navy's now.
+  // Plunder: the hold, the strongbox and the purse aboard. A navy hull takes no cargo: it stays on the prize, which is the navy's now.
+  const captorChar = a.captain ? state.characters[a.captain] : null
+  if (d.strongbox > 0) {
+    if (a.duty?.kind === 'patrol') a.strongbox += d.strongbox
+    else if (captorChar) captorChar.purse += d.strongbox
+    d.strongbox = 0
+  }
   if (a.duty?.kind !== 'patrol') {
     for (const lot of d.hold) a.hold.push({ kind: 'cargo', good: lot.good, tons: lot.tons, paid: 0, from: at, week })
     d.hold = []

@@ -31,6 +31,29 @@ const FRESH = 26
 /** The least a line must clear a week to be worth a hauler. */
 const WORTH_A_HAULER = 1500
 
+/** Cash a hauler keeps aboard to load with: her float, drawn at the seat and topped up at offices. */
+export const FLOAT = 80000
+
+/**
+ * The lines as a tree rooted at the seat: each world's depth in hops of
+ * line from the seat, or absent if no chain of lines reaches it. Cash
+ * walks home down this tree, and a line is run only on it.
+ */
+export function lineTree(g: Guild, lines: Line[] = g.lines): Record<string, number> {
+  const depth: Record<string, number> = { [g.seat]: 0 }
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const l of lines) {
+      const a = depth[l.from]
+      const b = depth[l.to]
+      if (a !== undefined && (b === undefined || b > a + 1)) { depth[l.to] = a + 1; grew = true }
+      if (b !== undefined && (a === undefined || a > b + 1)) { depth[l.from] = b + 1; grew = true }
+    }
+  }
+  return depth
+}
+
 /** Each guild's haulers at its seat, with guild officers for captains. */
 export function spawnHaulers(state: GameState, taken: Set<string>): void {
   let n = 1
@@ -46,6 +69,8 @@ export function spawnHaulers(state: GameState, taken: Set<string>): void {
       state.characters[cid] = c
       const ship = newShip(state.rng, sid, 'bulk_freighter', g.empire, { kind: 'organisation', empire: g.empire, arm: 'guild' }, g.seat, taken, cid)
       ship.duty = { kind: 'haul', line: null, waited: 0 }
+      ship.strongbox = FLOAT
+      g.purse -= FLOAT
       state.ships[sid] = ship
     }
   }
@@ -165,14 +190,14 @@ function nextHaulerPrice(fleet: number): number {
   return Math.round(SHIP_CLASSES.bulk_freighter.price * (1 + 0.3 * Math.max(0, fleet - 2)))
 }
 /** A guild buys another hauler when it can pay for her and keep this much by: the dues and the lines together build the fleet, a hull a year or so where trade is good. */
-const CUSHION = 100000
+const CUSHION = 60000
 
 /** A guild flush with money adds a hauler at its seat, if its lines have work for one; one that has lost haulers replaces them as soon as it can. */
 function growFleet(state: GameState, g: Guild, work: boolean): void {
   const fleet = Object.values(state.ships).filter((s) => s.duty?.kind === 'haul' && s.owner.kind === 'organisation' && s.owner.empire === g.empire).length
   const price = nextHaulerPrice(fleet)
   const need = fleet < HAULERS ? SHIP_CLASSES.bulk_freighter.price + 50000 : CUSHION + price
-  if (fleet >= MOST_HAULERS || g.purse < need || (fleet >= HAULERS && !work)) return
+  if (fleet >= MOST_HAULERS || g.purse < need + FLOAT || (fleet >= HAULERS && !work)) return
   const taken = new Set(Object.values(state.ships).map((s) => s.name))
   const n = state.nextId++
   const sid = `s-hauler-${g.empire.slice(2)}-${n}` as ShipId
@@ -183,12 +208,30 @@ function growFleet(state: GameState, g: Guild, work: boolean): void {
   state.characters[cid] = { id: cid, name: personName(state.rng, culture, sex), culture, sex, empire: g.empire, body: { kind: 'aboard', ship: sid }, purse: 1000, debt: null, guild: g.empire, traits: rollTraits(state.rng) }
   const ship = newShip(state.rng, sid, 'bulk_freighter', g.empire, { kind: 'organisation', empire: g.empire, arm: 'guild' }, g.seat, taken, cid)
   ship.duty = { kind: 'haul', line: null, waited: 0 }
+  ship.strongbox = FLOAT
   state.ships[sid] = ship
-  g.purse -= fleet < HAULERS ? SHIP_CLASSES.bulk_freighter.price : price
+  g.purse -= (fleet < HAULERS ? SHIP_CLASSES.bulk_freighter.price : price) + FLOAT
   postNewsItem(state, g.seat, `The guild has taken delivery of a new bulk freighter, the ${ship.name}.`)
 }
 
 type Haul = { kind: 'haul'; line: Line | null; waited: number }
+
+/** Every pair of worlds the book knows that would make a line worth a hauler. */
+function candidatesFor(state: GameState, g: Guild): Line[] {
+  const worlds = (Object.keys(g.book) as WorldId[]).filter((w) => state.worlds[w] && (g.danger[w] === undefined || state.week - g.danger[w] > 12) && !closedTo(state, g, w)).sort()
+  const candidates: Line[] = []
+  for (let i = 0; i < worlds.length; i++) {
+    for (let j = i + 1; j < worlds.length; j++) {
+      const from = worlds[i]
+      const to = worlds[j]
+      if (hexDistance(state.worlds[from].hex, state.worlds[to].hex) > SHIP_CLASSES.bulk_freighter.jump) continue
+      const reckoned = reckon(state, g, from, to)
+      if (reckoned < WORTH_A_HAULER) continue
+      candidates.push({ from, to, reckoned, since: state.week, earned: 0, haulers: 0 })
+    }
+  }
+  return candidates
+}
 
 /**
  * Every eight weeks: rank every pair of worlds the book knows as a line,
@@ -200,20 +243,12 @@ export function guildsPlan(state: GameState): void {
   for (const g of Object.values(state.guilds).sort((a, b) => (a.empire < b.empire ? -1 : 1))) {
     if (state.week - g.planned < PLAN_EVERY) continue
     g.planned = state.week
-    // Work for another hauler: a running line whose value, shared among its haulers, still clears the bar twice over.
-    growFleet(state, g, g.lines.some((l) => l.reckoned / 2 ** l.haulers >= 2 * WORTH_A_HAULER))
-    const worlds = (Object.keys(g.book) as WorldId[]).filter((w) => state.worlds[w] && (g.danger[w] === undefined || state.week - g.danger[w] > 12) && !closedTo(state, g, w)).sort()
-    const candidates: Line[] = []
-    for (let i = 0; i < worlds.length; i++) {
-      for (let j = i + 1; j < worlds.length; j++) {
-        const from = worlds[i]
-        const to = worlds[j]
-        if (hexDistance(state.worlds[from].hex, state.worlds[to].hex) > SHIP_CLASSES.bulk_freighter.jump) continue
-        const reckoned = reckon(state, g, from, to)
-        if (reckoned < WORTH_A_HAULER) continue
-        candidates.push({ from, to, reckoned, since: state.week, earned: 0, haulers: 0 })
-      }
-    }
+    // Work for another hauler: a running line whose value, shared among its haulers, still clears the bar twice over,
+    // or a worthwhile line joining the tree that nobody runs for want of a hull.
+    const tree0 = lineTree(g)
+    const unrun = g.lines.length > 0 && candidatesFor(state, g).some((c) => c.reckoned >= WORTH_A_HAULER && !g.lines.some((l) => l.from === c.from && l.to === c.to) && (tree0[c.from] !== undefined || tree0[c.to] !== undefined))
+    growFleet(state, g, unrun || g.lines.some((l) => l.reckoned / 2 ** l.haulers >= 2 * WORTH_A_HAULER))
+    const candidates = candidatesFor(state, g)
     // A running line is judged on what it earns a week per hauler, not on a book its own loads have depressed.
     const earning = (l: Line) => l.earned / Math.max(1, state.week - l.since) / Math.max(1, l.haulers)
     const standing = (l: Line) => (state.week - l.since >= 8 ? Math.round(earning(l) * 2) : l.reckoned)
@@ -231,16 +266,45 @@ export function guildsPlan(state: GameState): void {
     // by half again, and every hauler is spoken for, the worst line goes and the better route takes its place.
     const fleetSize = Object.values(state.ships).filter((s) => s.duty?.kind === 'haul' && s.owner.kind === 'organisation' && s.owner.empire === g.empire).length
     const fresh = candidates.filter((c) => !lines.some((l) => l.from === c.from && l.to === c.to)).sort((a, b) => b.reckoned - a.reckoned)
-    for (const c of fresh) {
-      if (lines.length < fleetSize) {
-        if (c.reckoned >= WORTH_A_HAULER) lines.push(c)
-        continue
+    // A line is run only where a chain of lines reaches the seat: the guild's cash walks home along them, and a line
+    // cut off from the seat is dropped. New lines are added where they join the tree, best first, until none can.
+    const connected = (c: Line, tree: Record<string, number>) => tree[c.from] !== undefined || tree[c.to] !== undefined
+    for (;;) {
+      const tree = lineTree(g, lines)
+      const cut = lines.filter((l) => tree[l.from] === undefined || tree[l.to] === undefined)
+      if (cut.length === 0) break
+      for (const l of cut) {
+        postNewsItem(state, g.seat, `The guild has taken its bulk line off ${state.worlds[l.from].name} to ${state.worlds[l.to].name}: no line reaches it from the seat.`)
+        lines.splice(lines.indexOf(l), 1)
       }
-      const worst = [...lines].sort((a, b) => a.reckoned - b.reckoned)[0]
-      if (!worst || c.reckoned < worst.reckoned * 1.5) break
-      postNewsItem(state, g.seat, `The guild has taken its bulk line off ${state.worlds[worst.from].name} to ${state.worlds[worst.to].name} for a better one.`)
-      lines.splice(lines.indexOf(worst), 1)
-      lines.push(c)
+    }
+    let added = true
+    while (added) {
+      added = false
+      const tree = lineTree(g, lines)
+      for (const c of fresh) {
+        if (lines.includes(c) || !connected(c, tree)) continue
+        if (lines.length < fleetSize) {
+          if (c.reckoned >= WORTH_A_HAULER) { lines.push(c); added = true; break }
+          continue
+        }
+        // Only a leaf may be given up for a better line, or the tree would come apart.
+        const leaves = lines.filter((l) => { const t = lineTree(g, lines.filter((o) => o !== l)); return lines.every((o) => o === l || (t[o.from] !== undefined && t[o.to] !== undefined)) })
+        const worst = [...leaves].sort((a, b) => a.reckoned - b.reckoned)[0]
+        if (!worst || c.reckoned < worst.reckoned * 1.5) continue
+        postNewsItem(state, g.seat, `The guild has taken its bulk line off ${state.worlds[worst.from].name} to ${state.worlds[worst.to].name} for a better one.`)
+        lines.splice(lines.indexOf(worst), 1)
+        lines.push(c)
+        added = true
+        break
+      }
+    }
+    // A swap may have left a line cut off: prune once more.
+    for (;;) {
+      const tree = lineTree(g, lines)
+      const cut = lines.filter((l) => tree[l.from] === undefined || tree[l.to] === undefined)
+      if (cut.length === 0) break
+      for (const l of cut) lines.splice(lines.indexOf(l), 1)
     }
     // Assign every hauler to the line with the most value left.
     const haulers = Object.values(state.ships).filter((s) => s.duty?.kind === 'haul' && s.owner.kind === 'organisation' && s.owner.empire === g.empire).sort((a, b) => (a.id < b.id ? -1 : 1))
@@ -264,7 +328,19 @@ export function guildsPlan(state: GameState): void {
       best.haulers += 1
       if (best.haulers === 1 && !g.lines.includes(best)) postNewsItem(state, g.seat, `The guild has put a bulk line on ${state.worlds[best.from].name} to ${state.worlds[best.to].name}.`)
     }
-    g.lines = lines.filter((l) => l.haulers > 0)
+    // Lines nobody runs are dropped; what that cuts off from the seat is dropped too, and its haulers stood down.
+    let kept = lines.filter((l) => l.haulers > 0)
+    for (;;) {
+      const tree = lineTree(g, kept)
+      const cut = kept.filter((l) => tree[l.from] === undefined || tree[l.to] === undefined)
+      if (cut.length === 0) break
+      for (const l of cut) {
+        postNewsItem(state, g.seat, `The guild has taken its bulk line off ${state.worlds[l.from].name} to ${state.worlds[l.to].name}: no line reaches it from the seat.`)
+        for (const h of haulers) if ((h.duty as Haul).line === l) (h.duty as Haul).line = null
+      }
+      kept = kept.filter((l) => !cut.includes(l))
+    }
+    g.lines = kept
   }
 }
 
@@ -327,14 +403,20 @@ export function haulersAct(state: GameState): void {
     }
     d.waited = 0
     for (const l of lots) {
-      const tons = Math.min(l.tons, Math.floor(g.purse / Math.max(1, here.market[l.good].price * 1.3)))
+      const tons = Math.min(l.tons, Math.floor(ship.strongbox / Math.max(1, here.market[l.good].price * 1.3)))
       if (tons <= 0) continue
       const deal = buy(here, l.good, tons, g.empire)
       if (!deal) continue
-      g.purse -= deal.credits
+      ship.strongbox -= deal.credits
       state.empires[here.empire].treasury += deal.duty
       recordTrade(state, here, ship, 'bought', l.good, deal.tons, deal.price)
       ship.hold.push({ kind: 'cargo', good: l.good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: at, week: state.week })
+    }
+    // Sailing toward the seat along the tree, she takes the factor's cash home with her.
+    const tree = lineTree(g)
+    if (at !== g.seat && tree[dest] !== undefined && tree[at] !== undefined && tree[dest] < tree[at] && (g.offices[at] ?? 0) > 0) {
+      ship.strongbox += g.offices[at]
+      g.offices[at] = 0
     }
     ship.course = hopTo(dest)
   }
