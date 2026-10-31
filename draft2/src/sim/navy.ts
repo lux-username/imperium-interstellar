@@ -19,7 +19,7 @@ import { SHIP_CLASSES, type Character, type CharacterId, type Duty, type EmpireI
 const CORVETTES = 2
 
 /** Outlaw hulls at the start. */
-const OUTLAWS = 3
+const OUTLAWS = 0
 
 function newCaptain(state: GameState, id: CharacterId, empire: EmpireId, ship: ShipId, purse: number, outlaw = false): Character {
   const core = state.empires[empire].core

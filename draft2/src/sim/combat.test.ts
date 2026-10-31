@@ -12,15 +12,15 @@ function outlawAt(state: GameState, at: WorldId): ShipId {
   state.ships[sid] = newShip(createRng(1), sid, 'corvette', state.worlds[at].empire, { kind: 'personal', character: cid }, at, new Set(), cid)
   state.ships[sid].lyingOff = true
   state.ships[sid].duty = { kind: 'raid', haven: at, until: 999 }
-  state.characters[cid] = { id: cid, name: 'Red', culture: 'English', sex: 'm', empire: state.worlds[at].empire, body: { kind: 'aboard', ship: sid }, purse: 0, debt: null, outlaw: true }
+  state.characters[cid] = { id: cid, name: 'Red', culture: 'English', sex: 'm', empire: state.worlds[at].empire, body: { kind: 'aboard', ship: sid }, purse: 0, debt: null, outlaw: true, traits: { greed: 0.8, caution: 0.2, openness: 0.5, pride: 0.5, loyalty: 0 } }
   return sid
 }
 
 describe('encounters', () => {
   it('an outlaw has a quarrel with a trader but not with a scout or a patrol; a navy hull only with outlaws and enemies she has heard of', () => {
     const state = newGame(41)
-    const outlaw = Object.values(state.ships).find((s) => s.duty?.kind === 'raid')!
     const navy = Object.values(state.ships).find((s) => s.duty?.kind === 'patrol')!
+    const outlaw = state.ships[outlawAt(state, (navy.location as { world: WorldId }).world)]
     const trader = Object.values(state.ships).find((s) => s.type === 'free_trader' && s.captain !== PLAYER)!
     const scout = Object.values(state.ships).find((s) => s.run)!
     expect(quarrel(state, outlaw, trader)).toBe(true)

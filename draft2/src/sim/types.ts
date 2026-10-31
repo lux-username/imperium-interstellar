@@ -329,7 +329,7 @@ export type Duty =
   /** Cruising the empire's worlds, lying off each a week or two. `until`: when to move on. */
   | { kind: 'patrol'; until: Week }
   /** An outlaw: lying off ports to take what comes, and selling it at a haven. */
-  | { kind: 'raid'; haven: WorldId; until: Week }
+  | { kind: 'raid'; haven: WorldId; until: Week; since?: Week }
   /** A guild bulk hauler on a line, or idle at the seat when `line` is null. `waited`: weeks spent at a loading end with too little to carry. */
   | { kind: 'haul'; line: Line | null; waited: number }
 

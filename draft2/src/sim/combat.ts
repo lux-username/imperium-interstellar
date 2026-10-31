@@ -42,7 +42,18 @@ export function quarrel(state: GameState, hunter: Ship, prey: Ship): boolean {
   if (SHIP_CLASSES[hunter.type].guns === 0) return false
   const h = hunter.captain ? state.characters[hunter.captain] : null
   const p = prey.captain ? state.characters[prey.captain] : null
-  if (h?.outlaw) return !p?.outlaw && prey.duty?.kind !== 'patrol'
+  // A robber: a captain lying off on the raid, or one whose standing is already burned.
+  if (h && (hunter.duty?.kind === 'raid' || h.outlaw)) {
+    if (prey.duty?.kind === 'patrol') return false
+    if (SHIP_CLASSES[prey.type].guns > SHIP_CLASSES[hunter.type].guns) return false
+    if (!p) return true
+    const regard = regardOf(state, h.id, p.id)
+    // Never a friend; an enemy gladly; a countryman only with reluctance.
+    if (regard >= 1) return false
+    if (regard <= -1) return true
+    if (p.empire === h.empire) return traitsOf(h).loyalty <= 0.3
+    return true
+  }
   if (p?.outlaw) return true
   if (hunter.empire === prey.empire) return false
   const belief = h ? state.beliefs[h.id] : null
@@ -205,6 +216,8 @@ export function settle(state: GameState, e: Encounter): string {
     deal(state, victim.id, captor.id, -3, `${captor.name} took the ${d.name} from me off ${state.worlds[at].name}`, 'robbed')
     deal(state, captor.id, victim.id, 0.2, `took ${victim.name}'s ${d.name} off ${state.worlds[at].name}`, 'other')
   }
+  // A captain not in a navy who takes a hull has burned her standing: an outlaw from this day, and hunted as one.
+  if (captor && a.duty?.kind !== 'patrol' && captor.id !== state.player) captor.outlaw = true
   if (victim) {
     // The cash aboard is the captor's; the rest is at home, and is what a ransom comes out of.
     if (captor && victim.purse > 0) {

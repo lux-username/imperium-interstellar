@@ -12,7 +12,7 @@ function outlawAt(state: GameState, at: WorldId, haven: WorldId): ShipId {
   const cid = 'co' as CharacterId
   state.ships[sid] = newShip(createRng(1), sid, 'corvette', state.worlds[at].empire, { kind: 'personal', character: cid }, at, new Set(), cid)
   state.ships[sid].duty = { kind: 'raid', haven, until: 0 }
-  state.characters[cid] = { id: cid, name: 'Red', culture: 'English', sex: 'f', empire: state.worlds[at].empire, body: { kind: 'aboard', ship: sid }, purse: 0, debt: null, outlaw: true }
+  state.characters[cid] = { id: cid, name: 'Red', culture: 'English', sex: 'f', empire: state.worlds[at].empire, body: { kind: 'aboard', ship: sid }, purse: 0, debt: null, outlaw: true, traits: { greed: 0.8, caution: 0.2, openness: 0.5, pride: 0.5, loyalty: 0 } }
   return sid
 }
 

@@ -13,6 +13,7 @@ import { recordTrade } from './register'
 import { hexDistance } from './hex'
 import { buy, demandLevel, dutyRate, FINE_TIMES_DUTY, GOOD_SPECS, GOODS, inspectionChance, levelOf, marketScale, production, sell, supplyLevel, valueScale, type Good } from './economy'
 import { postNewsItem } from './news'
+import { havens } from './navy'
 import { learnTraffic } from './belief'
 import { deal, esteemOf, impressed, regardOf, relation, rollTraits, traitsOf } from './people'
 import { beliefOf, characterLocation } from './mail'
@@ -338,7 +339,7 @@ export function noticeUndercut(state: GameState, me: Character, ship: Ship, here
   if (net >= paid) return
   for (const m of here.register) {
     if (m.ship === ship.id || !m.captain || state.week - m.week > 1 || !m.sold.some((x) => x.good === good)) continue
-    deal(state, me.id, m.captain, -0.4, `${m.captainName} undercut me on ${good} at ${here.name}`, 'undercut')
+    deal(state, me.id, m.captain, -1, `${m.captainName} undercut me on ${good} at ${here.name}`, 'undercut')
   }
 }
 
@@ -351,6 +352,27 @@ export function settleTip(state: GameState, me: CharacterId, lot: { tip?: Charac
   if (!lot.tip || lot.tip === me) return
   if (made > 0) deal(state, me, lot.tip, Math.min(1.5, 0.4 + made / 5000), `made ${made} on ${state.characters[lot.tip]?.name ?? 'a'}'s tip about ${lot.good} at ${here.name}`, 'tip_paid')
   else deal(state, me, lot.tip, -0.5, `${state.characters[lot.tip]?.name ?? 'a'}'s tip about ${lot.good} at ${here.name} cost me`, 'tip_cost')
+}
+
+/**
+ * Desperate and brave enough: a captain whose purse is under half her
+ * reserve, or who is in arrears, with little caution and some greed,
+ * turns to robbing. She lies off the port she is at, where traders come
+ * in, with the nearest slack-law port as her haven to sell at, and goes
+ * back to trading once her purse is mended (see huntersAct).
+ */
+export function turnsRobber(state: GameState, captain: Character, ship: Ship, here: World): boolean {
+  if (SHIP_CLASSES[ship.type].guns === 0 || ship.hold.length > 0) return false
+  const t = traitsOf(captain)
+  // Desperate: too poor to fill a hold and nothing worth carrying from here anyway, or in arrears.
+  const desperate = (captain.debt?.arrears ?? 0) > 0 || (captain.purse < 12000 && bestPlan(state, captain, ship, here.id) === null)
+  if (!desperate || t.caution > 0.4 || t.greed < 0.4) return false
+  const dens = havens(state).sort((a, b) => hexDistance(state.worlds[a].hex, here.hex) - hexDistance(state.worlds[b].hex, here.hex) || (a < b ? -1 : 1))
+  const haven = dens[0] ?? here.id
+  ship.duty = { kind: 'raid', haven, until: state.week + 2, since: state.week }
+  ship.lyingOff = true
+  ship.course = null
+  return true
 }
 
 /** One captain's week in port. */
@@ -398,6 +420,8 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
     ship.fuel += 1
   }
   if (ship.fuel < 1) return
+  // A captain with nothing left and the nerve for it turns robber: lies off this port and takes what comes.
+  if (turnsRobber(state, captain, ship, here)) return
   // Maintenance when due, if this is a dockyard and the purse allows; a captain lets it slide a while if short.
   if (state.week - ship.maintained >= 26 - 4 * traitsOf(captain).caution && ['A', 'B'].includes(here.profile.starport) && captain.purse >= maintenanceCost(ship) + 5000 && (overdue(ship, state.week) > 0 || roll(state.rng) >= 7)) {
     if (layUp(state, ship, here)) return
@@ -618,7 +642,7 @@ export function dockTalk(state: GameState): void {
           tellAll(state, a.id, b.id)
           deal(state, b.id, a.id, 0.2, `${a.name} told me what they knew at ${here.name}`, 'told')
           maybeAskRoute(state, a, b, here)
-        } else deal(state, b.id, a.id, -0.1, `${a.name} would not talk at ${here.name}`, 'refused')
+        } else deal(state, b.id, a.id, -0.05, `${a.name} would not talk at ${here.name}`, 'refused')
       }
     }
     // The guild's offices: at the seat the book itself; at any other dockyard port of the empire a factor who takes
@@ -914,7 +938,7 @@ export function askCaptain(state: GameState, who: CharacterId, bribe = false): A
   const told = roll < w
   state.asked[who] = { week: state.week, roll, told }
   if (!told) {
-    deal(state, state.player, who, -0.1, `would not talk at ${where}`, 'refused')
+    deal(state, state.player, who, -0.05, `would not talk at ${where}`, 'refused')
     return 'refused'
   }
   deal(state, state.player, who, 0.2, `told me what they knew at ${where}`, 'told')
