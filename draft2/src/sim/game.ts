@@ -348,8 +348,8 @@ export function approaches(state: GameState, landed: Ship[]): void {
     for (const hunter of lying(at)) {
       // The player lying off is told of everything that comes in and chooses; an NPC hails only what she has a quarrel with.
       if (hunter.captain === state.player ? ship.type === 'scout' || ship.id === hunter.id : !quarrel(state, hunter, ship)) continue
-      // Half the arrivals slip by unseen.
-      if (roll(state.rng) < 7) continue
+      // One arrival in four slips by unseen; a hunter lying off is watching for them.
+      if (roll(state.rng) < 5) continue
       const e = beginEncounter(state, hunter, ship, at)
       const mine = hunter.captain === state.player || ship.captain === state.player
       if (mine) {
