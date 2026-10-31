@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { tellPrices } from './agents'
 import { emptyBelief } from './belief'
 import { advanceWeek, newGame, PLAYER, talkAtBar } from './game'
+import { askCaptain } from './agents'
 import { characterLocation } from './mail'
 import type { WorldId } from './types'
 
@@ -47,18 +48,32 @@ describe('captain-agents', () => {
     const b = emptyBelief()
     a.prices['w' as WorldId] = { grain: { price: 10, stock: 1, observed: 5 }, ore: { price: 7, stock: 1, observed: 2 } }
     b.prices['w' as WorldId] = { grain: { price: 12, stock: 1, observed: 8 } }
-    expect(tellPrices(a, b)).toBe(1)
+    expect(tellPrices(a.prices, b.prices)).toBe(1)
     expect(b.prices['w' as WorldId].grain!.price).toBe(12)
     expect(b.prices['w' as WorldId].ore!.price).toBe(7)
+    expect(b.prices['w' as WorldId].ore!.heard).toBe(true)
   })
 
-  it('the player learns prices at the bar from captains in port', () => {
+  it('the player learns prices at the bar: from the gossip going round, and by asking captains who will tell', () => {
     const state = newGame(33)
-    let learned = 0
-    for (let i = 0; i < 20 && learned === 0; i++) {
+    let gossip = 0
+    let told = 0
+    let refused = 0
+    for (let i = 0; i < 40 && (gossip === 0 || told === 0); i++) {
       advanceWeek(state)
-      if (characterLocation(state, PLAYER) !== null) learned = talkAtBar(state)
+      const at = characterLocation(state, PLAYER)
+      if (at === null) continue
+      gossip += talkAtBar(state)
+      for (const s of Object.values(state.ships)) {
+        if (!s.captain || s.captain === PLAYER || s.duty || characterLocation(state, s.captain) !== at) continue
+        const a = askCaptain(state, s.captain)
+        if (a === 'told') told++
+        else if (a === 'refused') refused++
+        expect(askCaptain(state, s.captain)).toBe('already')
+      }
     }
-    expect(learned).toBeGreaterThan(0)
+    expect(gossip).toBeGreaterThan(0)
+    expect(told).toBeGreaterThan(0)
+    void refused
   })
 })

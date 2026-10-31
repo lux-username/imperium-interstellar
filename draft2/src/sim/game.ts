@@ -8,7 +8,7 @@
  * lanes with mail and news, every body at a port seeing the port, and a
  * player who can take passage. Nothing trades or fights yet.
  */
-import { askAround, captainsAct, dockTalk, seedTraderKnowledge, spawnTraders } from './agents'
+import { askCaptain, captainsAct, dockTalk, listenAtBar, seedTraderKnowledge, spawnTraders } from './agents'
 import { beginEncounter, npcChoice, quarrel, resolveRound, settle, type Choice, type Hail } from './combat'
 import { huntersAct, spawnHunters } from './navy'
 import { captivityTick, landCaptives, payRansom, ransomFor } from './captivity'
@@ -163,7 +163,10 @@ export function newGame(seed: number): GameState {
     beliefs: {},
     player: PLAYER,
     pending: null,
+    guilds: {},
+    asked: {},
   }
+  for (const e of Object.values(empires)) state.guilds[e.id] = { empire: e.id, seat: e.seat, book: {} }
   const eids = Object.keys(empires).sort() as EmpireId[]
   for (let i = 0; i < eids.length; i++) {
     for (let j = i + 1; j < eids.length; j++) {
@@ -560,10 +563,12 @@ export function repair(state: GameState): boolean {
   return true
 }
 
-/** Ask around the bar. Once a visit is enough; the same captains say the same things. Returns how many prices were news. */
+/** Listen at the bar: the docks' gossip, free to anyone. Returns how many prices were news. */
 export function talkAtBar(state: GameState): number {
-  return askAround(state)
+  return listenAtBar(state)
 }
+
+export { askCaptain }
 
 /** The world the player's body is at, if not in jump. */
 export function playerWorld(state: GameState): World | null {

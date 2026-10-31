@@ -178,6 +178,12 @@ export interface HullHere {
   empire: EmpireId
   captain: CharacterId | null
   captainName: string | null
+  /** How the captain stands toward telling the player what they know: glad, on the fence, or tight. Null for an unnamed crew. */
+  mood: 'glad' | 'fence' | 'tight' | null
+  /** Whether the captain wears the guild's ticket. */
+  guild: boolean
+  /** Whether the player has already asked them this week. */
+  asked: boolean
   /** For a scout on the packets: where she sails to next and when. */
   sailsTo: WorldId | null
   sailsOn: Week | null

@@ -12,10 +12,10 @@ import { hexDistance } from './hex'
 import { buy, demandLevel, dutyRate, GOOD_SPECS, GOODS, marketScale, sell, supplyLevel, valueScale, type Good } from './economy'
 import { beliefOf, characterLocation } from './mail'
 import { officerCulture, personName, rollSex } from './names'
-import { nextInt, roll, type Rng } from './rng'
+import { nextFloat, nextInt, roll, type Rng } from './rng'
 import { fuelPrice, holdFree, maintenanceCost, newShip, overdue, reachable, setCourse, unload } from './ships'
 import { layUp } from './game'
-import { stanceKey, SHIP_CLASSES, type Character, type CharacterId, type EmpireId, type GameState, type Ship, type ShipId, type Week, type World, type WorldId, type WorldProfile } from './types'
+import { stanceKey, SHIP_CLASSES, type Character, type CharacterId, type EmpireId, type GameState, type PriceBook, type Ship, type ShipId, type Week, type World, type WorldId, type WorldProfile } from './types'
 import type { Belief } from './view'
 
 /** A trader's purse at the start: enough for half a hold of something ordinary. */
@@ -60,7 +60,9 @@ export function spawnTraders(state: GameState, taken: Set<string>): void {
       const core = state.empires[empire].core
       const culture = officerCulture(rng, core)
       const sex = rollSex(rng)
-      const captain: Character = { id: cid, name: personName(rng, culture, sex), culture, sex, empire, body: { kind: 'aboard', ship: sid }, purse: TRADER_PURSE + nextInt(rng, -5000, 10000), debt: null, clique: n % 2 === 0 ? 'A' : 'B' }
+      const captain: Character = { id: cid, name: personName(rng, culture, sex), culture, sex, empire, body: { kind: 'aboard', ship: sid }, purse: TRADER_PURSE + nextInt(rng, -5000, 10000), debt: null }
+      // About half carry the guild's ticket.
+      if (roll(rng) >= 7) captain.guild = empire
       state.characters[cid] = captain
       state.ships[sid] = newShip(rng, sid, roll(rng) >= 10 ? 'far_trader' : 'free_trader', empire, { kind: 'personal', character: cid }, id, taken, cid)
     }
@@ -384,19 +386,22 @@ export function captainsAct(state: GameState): void {
 }
 
 // ---------------------------------------------------------------------------
-// Talk
+// Talk: who tells whom what, and at what price
 
-/** Prices one reader knows that are newer than what another holds, copied across. Returns how many entries were news. */
-export function tellPrices(from: Belief, to: Belief): number {
+/** What a round of drinks, or a plainer bribe, costs to loosen a tongue. */
+export const BRIBE = 500
+
+/** Prices one book holds that are newer than another's, copied across; `heard` marks hearsay. Returns how many entries were news. */
+export function tellPrices(from: PriceBook, to: PriceBook, heard = true): number {
   let news = 0
-  for (const w of Object.keys(from.prices) as WorldId[]) {
-    const mine = (to.prices[w] ??= {})
-    for (const g of Object.keys(from.prices[w]) as Good[]) {
-      const theirs = from.prices[w][g]
+  for (const w of Object.keys(from) as WorldId[]) {
+    const mine = (to[w] ??= {})
+    for (const g of Object.keys(from[w]) as Good[]) {
+      const theirs = from[w][g]
       if (!theirs) continue
       const known = mine[g]
       if (!known || theirs.observed > known.observed) {
-        mine[g] = { ...theirs, heard: true }
+        mine[g] = { ...theirs, heard: heard || theirs.heard }
         news += 1
       }
     }
@@ -404,27 +409,138 @@ export function tellPrices(from: Belief, to: Belief): number {
   return news
 }
 
-/** Captains of a clique lying in the same port swap what they know of prices. Other cliques keep their own counsel. The player is in no circle: they must go to the bar themselves. */
+/**
+ * How readily `teller` tells `asker` what they know of prices: a score
+ * from 0 to 1. Guild-fellows tell each other everything; subjects of one
+ * empire outside the guild stick together; free traders have a fellow
+ * feeling across borders; a guild member tells an outsider little and a
+ * rival guild less. Between 0.3 and 0.7 a captain is on the fence, and a
+ * round of drinks moves them.
+ */
+export function willingness(teller: Character, asker: Character): number {
+  if (teller.id === asker.id) return 1
+  if (teller.outlaw || asker.outlaw) return 0.1
+  if (teller.guild && asker.guild) return teller.guild === asker.guild ? 0.95 : 0.1
+  if (teller.guild || asker.guild) return 0.25
+  if (teller.empire === asker.empire) return 0.65
+  return 0.5
+}
+
+export function onTheFence(w: number): boolean {
+  return w >= 0.3 && w < 0.7
+}
+
+/** Whether a captain's knowledge of the worlds within two jumps is thin or stale enough to be worth asking about. */
+export function wantsInfo(state: GameState, captain: Character, ship: Ship, at: WorldId): boolean {
+  const belief = beliefOf(state, captain.id)
+  const near = reachable(state, at, SHIP_CLASSES[ship.type].jump * 2)
+  if (near.length === 0) return false
+  let stale = 0
+  for (const w of near) {
+    const p = belief.prices[w]
+    const newest = p ? Math.max(...Object.values(p).map((e) => e?.observed ?? -999)) : -999
+    if (state.week - newest > 8) stale++
+  }
+  return stale / near.length > 0.4
+}
+
+/** Leak one world's prices from a captain's book into the port's gossip. */
+function leak(state: GameState, captain: Character, port: World): void {
+  const belief = beliefOf(state, captain.id)
+  const worlds = Object.keys(belief.prices).sort() as WorldId[]
+  if (worlds.length === 0) return
+  const w = worlds[nextInt(state.rng, 0, worlds.length - 1)]
+  tellPrices({ [w]: belief.prices[w] } as PriceBook, port.gossip)
+}
+
+/** Gossip older than this is forgotten on the docks. */
+const GOSSIP_WEEKS = 12
+
+/**
+ * The docks each week. Guild-fellows swap books as a matter of course.
+ * Everyone lets something slip now and then, and everyone picks up what
+ * is going round. A captain whose knowledge is thin asks the others, and
+ * is told or not by their willingness; one on the fence can be bought a
+ * round if the asker can spare it. At a guild's seat, members put what
+ * they know into the guild's book and take out what is newer. The player
+ * is in none of it: they go to the bar themselves.
+ */
 export function dockTalk(state: GameState): void {
-  const byPort: Record<string, CharacterId[]> = {}
-  for (const { captain, at } of tradingCaptains(state)) (byPort[`${at}/${captain.clique ?? ''}`] ??= []).push(captain.id)
-  for (const port of Object.keys(byPort).sort()) {
-    const ids = byPort[port]
-    if (ids.length < 2) continue
-    for (const a of ids) for (const b of ids) if (a !== b) tellPrices(beliefOf(state, a), beliefOf(state, b))
+  const byPort: Record<string, Character[]> = {}
+  for (const { captain, at } of tradingCaptains(state)) (byPort[at] ??= []).push(captain)
+  for (const port of Object.keys(byPort).sort() as WorldId[]) {
+    const here = state.worlds[port]
+    const captains = byPort[port]
+    // Gossip ages off.
+    for (const w of Object.keys(here.gossip) as WorldId[]) {
+      for (const g of Object.keys(here.gossip[w]) as Good[]) if (state.week - (here.gossip[w][g]?.observed ?? 0) > GOSSIP_WEEKS) delete here.gossip[w][g]
+      if (Object.keys(here.gossip[w]).length === 0) delete here.gossip[w]
+    }
+    for (const c of captains) {
+      // Something always slips: one world's prices, one captain in four, each week.
+      if (roll(state.rng) >= 10) leak(state, c, here)
+    }
+    for (const c of captains) tellPrices(here.gossip, beliefOf(state, c.id).prices)
+    for (const a of captains) {
+      for (const b of captains) {
+        if (a === b) continue
+        if (a.guild && a.guild === b.guild) {
+          tellPrices(beliefOf(state, a.id).prices, beliefOf(state, b.id).prices)
+          continue
+        }
+        const ship = state.ships[(b.body as { ship: ShipId }).ship]
+        if (!ship || !wantsInfo(state, b, ship, port)) continue
+        let w = willingness(a, b)
+        if (onTheFence(w) && b.purse >= BRIBE + reserve(ship) + 2000) {
+          b.purse -= BRIBE
+          a.purse += BRIBE
+          w += 0.3
+        }
+        if (nextFloat(state.rng) < w) tellPrices(beliefOf(state, a.id).prices, beliefOf(state, b.id).prices)
+      }
+    }
+    // The guild's book at its seat.
+    const guild = Object.values(state.guilds).find((g) => g.seat === port)
+    if (guild) {
+      for (const c of captains) {
+        if (c.guild !== guild.empire) continue
+        tellPrices(beliefOf(state, c.id).prices, guild.book, false)
+        tellPrices(guild.book, beliefOf(state, c.id).prices, false)
+      }
+    }
   }
 }
 
-/** The player asks around the bar: every captain in port tells what they know. Returns how much was news. */
-export function askAround(state: GameState): number {
+/** The player listens at the bar: the docks' gossip. Returns how many prices were news. */
+export function listenAtBar(state: GameState): number {
   const at = characterLocation(state, state.player)
   if (at === null) return 0
-  let news = 0
-  for (const { captain } of tradingCaptains(state)) {
-    if (characterLocation(state, captain.id) !== at) continue
-    news += tellPrices(beliefOf(state, captain.id), beliefOf(state, state.player))
+  return tellPrices(state.worlds[at].gossip, beliefOf(state, state.player).prices)
+}
+
+export type Answer = 'told' | 'refused' | 'already' | 'absent'
+
+/**
+ * The player asks a captain in port what they know. Once a week each; a
+ * round of drinks, if offered, moves one on the fence. The answer is
+ * rolled against their willingness.
+ */
+export function askCaptain(state: GameState, who: CharacterId, bribe = false): Answer {
+  const me = state.characters[state.player]
+  const them = state.characters[who]
+  const at = characterLocation(state, state.player)
+  if (!them || at === null || characterLocation(state, who) !== at) return 'absent'
+  if (state.asked[who] === state.week) return 'already'
+  let w = willingness(them, me)
+  if (bribe && onTheFence(w) && me.purse >= BRIBE) {
+    me.purse -= BRIBE
+    them.purse += BRIBE
+    w += 0.3
   }
-  return news
+  state.asked[who] = state.week
+  if (nextFloat(state.rng) >= w) return 'refused'
+  tellPrices(beliefOf(state, who).prices, beliefOf(state, state.player).prices)
+  return 'told'
 }
 
 /**

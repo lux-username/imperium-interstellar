@@ -5,7 +5,7 @@
  * development only.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { advanceWeek, buyGoods, goAshore, hail, lieOff, maintain, newGame, ransomSelf, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
+import { advanceWeek, askCaptain, buyGoods, goAshore, hail, lieOff, maintain, newGame, ransomSelf, refuel, repair, respond, sail, seeLender, sellGoods, takeFreight, takePassage, talkAtBar } from '../sim/game'
 import { buildPlayerView } from '../sim/player'
 import { deserialize, serialize } from '../sim/save'
 import type { GameState } from '../sim/types'
@@ -450,26 +450,39 @@ function Captain({ view }: { view: PlayerView }) {
 
 function Bar({ view, state, act }: PaneProps) {
   const here = view.here!
-  const [heard, setHeard] = useState<number | null>(null)
-  const captains = here.hulls.filter((h) => h.captainName)
+  const [heard, setHeard] = useState<string | null>(null)
+  const captains = here.hulls.filter((h) => h.captain && h.captainName)
+  const MOOD = { glad: 'would gladly tell you what they know', fence: 'might, for a round', tight: 'keeps their own counsel' }
+  const ask = (h: (typeof captains)[number], bribe: boolean) => () => {
+    const a = askCaptain(state, h.captain!, bribe)
+    setHeard(a === 'told' ? `${h.captainName} tells you what they know of prices.` : a === 'refused' ? `${h.captainName} talks of anything but prices.` : a === 'already' ? 'You asked already this week.' : 'They are not here.')
+  }
   return (
     <div className="scene">
-      <p>The bar by the docks.</p>
-      {captains.length > 0 ? (
-        <>
-          <ul>
-            {captains.map((h) => (
-              <li key={h.id}>
-                <b>{h.captainName}</b> of the {h.name}, {TYPE_WORDS[h.type]}, {empireName(view, h.empire)}
-              </li>
-            ))}
-          </ul>
-          <button onClick={act(() => setHeard(talkAtBar(state)))}>ask around about prices</button>
-          {heard !== null && <p className="muted">{heard > 0 ? `${heard} prices you had not heard, or had heard older. They are in your book of the worlds concerned.` : 'Nothing you did not already know.'}</p>}
-        </>
-      ) : (
-        <p className="muted">Quiet. {here.hulls.length > 0 ? 'Only scouts\' crews, who go unnamed and say nothing.' : 'Nobody in from anywhere.'}</p>
-      )}
+      <p>
+        The bar by the docks. <button onClick={act(() => setHeard(((n) => (n > 0 ? `You pick up ${n} prices going round the docks.` : 'Nothing going round you had not heard.'))(talkAtBar(state))))}>listen</button>
+      </p>
+      {heard && <p>{heard}</p>}
+      <ul>
+        {captains.map((h) => (
+          <li key={h.id}>
+            <b>{h.captainName}</b> of the {h.name}, {TYPE_WORDS[h.type]}, {empireName(view, h.empire)}
+            {h.guild ? ', guild' : ''} · {MOOD[h.mood ?? 'tight']}
+            {!h.asked && (
+              <>
+                {' '}
+                <button onClick={act(ask(h, false))}>ask</button>
+                {h.mood === 'fence' && (
+                  <button disabled={view.purse < 500} onClick={act(ask(h, true))}>
+                    stand a round (500 Cr)
+                  </button>
+                )}
+              </>
+            )}
+          </li>
+        ))}
+        {captains.length === 0 && <li className="muted">{here.hulls.length > 0 ? "Only scouts' crews, who go unnamed and say nothing." : 'Nobody in from anywhere.'}</li>}
+      </ul>
     </div>
   )
 }

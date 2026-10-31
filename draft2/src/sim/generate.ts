@@ -108,6 +108,7 @@ function newWorld(rng: Rng, hex: Hex, taken: Set<string>): World {
     market: newMarket(rng, profile),
     freight: [],
     news: [],
+    gossip: {},
   }
 }
 

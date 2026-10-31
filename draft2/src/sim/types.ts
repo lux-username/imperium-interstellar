@@ -85,6 +85,18 @@ export interface World {
   freight: FreightOffer[]
   /** What happened here lately, as the port tells it: the newest last. Kept for NEWS_WEEKS. */
   news: NewsItem[]
+  /** Prices let slip on the docks: what anyone in port may pick up as hearsay. */
+  gossip: PriceBook
+}
+
+/** Prices by world and good, with when each was seen. The shape of a guild's book, a port's gossip, and the price slice of a belief. */
+export type PriceBook = Record<WorldId, Partial<Record<string, { price: number; stock: number; observed: Week; heard?: boolean }>>>
+
+/** An empire's merchant guild: for now, the book of prices kept at its headquarters at the seat. */
+export interface Guild {
+  empire: EmpireId
+  seat: WorldId
+  book: PriceBook
 }
 
 export interface NewsItem {
@@ -293,8 +305,8 @@ export interface Character {
   purse: number
   /** What they owe on their hull, if anything. */
   debt: Debt | null
-  /** Which circle of captains they talk prices with on the docks. Captains of different cliques keep their own counsel. */
-  clique?: string
+  /** A member of their empire's merchant guild, if so. Members share freely among themselves and keep the guild's book. */
+  guild?: EmpireId
   /** An outlaw has burned their standing with every empire: fair game for any navy, and welcome only at a haven. */
   outlaw?: boolean
   /** Held by a captor: where, and since when. Null when free. */
@@ -366,6 +378,9 @@ export interface GameState {
   player: CharacterId
   /** An encounter waiting on the player's choice. The week cannot advance while it stands. */
   pending: Encounter | null
+  guilds: Record<EmpireId, Guild>
+  /** Captains the player has asked this week, so an answer is given once. */
+  asked: Record<CharacterId, Week>
 }
 
 /** A meeting in the approaches, resolved a round at a time. */

@@ -28,7 +28,7 @@ describe('trade codes and prices', () => {
 
   it('buying takes stock and lifts the price; selling lowers it; everyone pays duty and a foreigner pays more', () => {
     const rng = createRng(1)
-    const world = { id: 'w' as WorldId, name: 'w', hex: { col: 1, row: 1 }, cultures: [], profile: farm, empire: 'e-a' as never, board: {}, market: newMarket(rng, farm), freight: [], news: [] }
+    const world = { id: 'w' as WorldId, name: 'w', hex: { col: 1, row: 1 }, cultures: [], profile: farm, empire: 'e-a' as never, board: {}, market: newMarket(rng, farm), freight: [], news: [], gossip: {} }
     const before = world.market.grain.price
     const stock = world.market.grain.stock
     expect(stock).toBeGreaterThan(0)
@@ -53,7 +53,7 @@ describe('trade codes and prices', () => {
 
   it('goods a world does not want go on the dock for resale; goods it wants are consumed', () => {
     const rng = createRng(2)
-    const world = { id: 'w' as WorldId, name: 'w', hex: { col: 1, row: 1 }, cultures: [], profile: farm, empire: 'e-a' as never, board: {}, market: newMarket(rng, farm), freight: [], news: [] }
+    const world = { id: 'w' as WorldId, name: 'w', hex: { col: 1, row: 1 }, cultures: [], profile: farm, empire: 'e-a' as never, board: {}, market: newMarket(rng, farm), freight: [], news: [], gossip: {} }
     expect(demandLevel(farm, 'metals')).toBeGreaterThan(0)
     const metals = world.market.metals.stock
     sell(world, 'metals', 40, 'e-a' as never)
