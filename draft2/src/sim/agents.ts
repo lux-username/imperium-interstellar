@@ -454,7 +454,7 @@ function leak(state: GameState, captain: Character, port: World): void {
 }
 
 /** Gossip older than this is forgotten on the docks. */
-const GOSSIP_WEEKS = 12
+const GOSSIP_WEEKS = 16
 
 /**
  * The docks each week. Guild-fellows swap books as a matter of course.
@@ -477,8 +477,8 @@ export function dockTalk(state: GameState): void {
       if (Object.keys(here.gossip[w]).length === 0) delete here.gossip[w]
     }
     for (const c of captains) {
-      // Something always slips: one world's prices, one captain in four, each week.
-      if (roll(state.rng) >= 10) leak(state, c, here)
+      // Something always slips: one world's prices from about two captains in five, each week.
+      if (roll(state.rng) >= 8) leak(state, c, here)
     }
     for (const c of captains) tellPrices(here.gossip, beliefOf(state, c.id).prices)
     for (const a of captains) {
