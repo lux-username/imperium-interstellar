@@ -32,3 +32,7 @@
 - **Smuggling** is chiefly trading with an enemy empire's worlds during war, and trading regular goods around guild monopolies and taxes. Weapons and forbidden pharmaceuticals come later.
 - **Career length**: Claude's call, judged by how long the game stays fun. Add **timeskips**: a season at the capital building political connections; a stretch in training for skills (later); languishing in prison until a war ends.
 - **Ship types**: courier and packet merge into the scout. Types: scout, free trader, far trader, bulk freighter, patrol corvette, frigate.
+
+## 2026-10-30 — fourth round
+
+- **Empire flavour**: English-like, Spanish-like, French-like. Names: the Wessmere Crown, the Castellar Throne, the Vauclair Concord. See `design/empires.md`. A Spanish name pool was added; seats are named from their empire's core.

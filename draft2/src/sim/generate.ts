@@ -15,7 +15,8 @@
 import { allHexes, hexDistance, hexLabel, SUBSECTOR_COLS, SUBSECTOR_ROWS, type Hex } from './hex'
 import { neighbours } from './chart'
 import { chartLanes } from './lanes'
-import { worldCultures, worldName } from './names'
+import { seatName, worldCultures, worldName } from './names'
+import type { CoreName } from './data/names'
 import { createRng, nextInt, roll, type Rng } from './rng'
 import type { Empire, EmpireId, Lane, LaneId, StarportClass, World, WorldId, WorldProfile } from './types'
 
@@ -108,13 +109,14 @@ function newWorld(rng: Rng, hex: Hex, taken: Set<string>): World {
 // The three empires
 
 /**
- * The powers that share the borderland. Names are ours and placeholders
- * until the setting bible says otherwise; the ids are what the sim uses.
+ * The powers that share the borderland: one English-like, one
+ * Spanish-like, one French-like, by decision. The names are ours; `core`
+ * says which culture table names their people and their seats.
  */
-export const EMPIRES: readonly { id: EmpireId; name: string }[] = [
-  { id: 'e-aurel' as EmpireId, name: 'The Aurelian Throne' },
-  { id: 'e-varan' as EmpireId, name: 'The Varanid Concord' },
-  { id: 'e-kess' as EmpireId, name: 'The Kessrin Dominion' },
+export const EMPIRES: readonly { id: EmpireId; name: string; core: CoreName }[] = [
+  { id: 'e-wessmere' as EmpireId, name: 'The Wessmere Crown', core: 'english' },
+  { id: 'e-castellar' as EmpireId, name: 'The Castellar Throne', core: 'spanish' },
+  { id: 'e-vauclair' as EmpireId, name: 'The Vauclair Concord', core: 'french' },
 ]
 
 /** The fewest parsecs between any two seats for a layout to count as a borderland rather than a brawl. */
@@ -213,7 +215,10 @@ export function generateWorlds(rng: Rng): Generated {
   const order: Empire[] = []
   EMPIRES.forEach((e, i) => {
     // 12–16 weeks round trip to the imperial capital, per spec.
-    const empire: Empire = { id: e.id, name: e.name, seat: seats[i].id, capitalWeeks: nextInt(rng, 6, 8) }
+    const empire: Empire = { id: e.id, name: e.name, core: e.core, seat: seats[i].id, capitalWeeks: nextInt(rng, 6, 8) }
+    // The seat is named by the power that sits there.
+    taken.delete(seats[i].name)
+    seats[i].name = seatName(rng, e.core, taken)
     empires[e.id] = empire
     order.push(empire)
   })

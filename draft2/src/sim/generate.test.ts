@@ -4,6 +4,8 @@ import { EMPIRES, generateFromSeed, generateProfile, generateSubsector, layoutFa
 import { hexDistance, SUBSECTOR_COLS, SUBSECTOR_ROWS } from './hex'
 import { chartLanes } from './lanes'
 import { createRng } from './rng'
+import { CORES } from './data/names'
+import { officerCulture } from './names'
 
 describe('subsector generation', () => {
   it('is deterministic from the seed', () => {
@@ -92,5 +94,29 @@ describe('three empires', () => {
     const a = generateFromSeed(11)
     const b = generateFromSeed(11)
     expect(chartLanes(a.rng, a.worlds)).toEqual(chartLanes(b.rng, b.worlds))
+  })
+})
+
+describe('empire flavour', () => {
+  it('names each seat from its empire\'s core culture and keeps names unique', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const { worlds, empires } = generateFromSeed(seed)
+      const names = Object.values(worlds).map((w) => w.name)
+      expect(new Set(names).size).toBe(names.length)
+      for (const e of Object.values(empires)) {
+        const places = CORES[e.core].flatMap((c) => c.culture.places)
+        const seat = worlds[e.seat].name.replace(/^(New|Port) /, '')
+        expect(places, `${e.name} seat ${worlds[e.seat].name}`).toContain(seat)
+      }
+    }
+  })
+
+  it('names officers from their empire\'s core six times in ten', () => {
+    const rng = createRng(5)
+    const spanish = new Set(CORES.spanish.map((c) => c.culture.name))
+    let hits = 0
+    for (let i = 0; i < 1000; i++) if (spanish.has(officerCulture(rng, 'spanish'))) hits++
+    expect(hits).toBeGreaterThan(540)
+    expect(hits).toBeLessThan(680)
   })
 })

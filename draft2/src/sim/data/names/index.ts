@@ -19,6 +19,7 @@ import { bengali } from './bengali'
 import { deccani } from './deccani'
 import { russian } from './russian'
 import { french } from './french'
+import { spanish } from './spanish'
 import { german } from './german'
 import { turkish } from './turkish'
 import { persian } from './persian'
@@ -46,17 +47,32 @@ export interface Weighted {
   weight: number
 }
 
-export const CORE: Weighted[] = [
-  { culture: english, weight: 65 },
-  { culture: irish, weight: 25 },
-  { culture: scottish, weight: 8 },
-  { culture: welsh, weight: 2 },
-]
+/**
+ * Each empire's core: where its officers, factors and governors are named
+ * from six times in ten. The three are English-like, Spanish-like and
+ * French-like by decision (draft2/decisions.md, 2026-10-30, fourth round).
+ */
+export const CORES: Record<CoreName, Weighted[]> = {
+  english: [
+    { culture: english, weight: 65 },
+    { culture: irish, weight: 25 },
+    { culture: scottish, weight: 8 },
+    { culture: welsh, weight: 2 },
+  ],
+  spanish: [{ culture: spanish, weight: 100 }],
+  french: [{ culture: french, weight: 100 }],
+}
+
+export type CoreName = 'english' | 'spanish' | 'french'
+
+/** The first empire's core, kept under the old name for the tests and tools that read one table. */
+export const CORE: Weighted[] = CORES.english
 
 export const WORLD: Weighted[] = [
-  { culture: han, weight: 14 },
-  { culture: japanese, weight: 13 },
-  { culture: korean, weight: 13 },
+  { culture: han, weight: 12 },
+  { culture: japanese, weight: 12 },
+  { culture: korean, weight: 10 },
+  { culture: spanish, weight: 6 },
   { culture: gangetic, weight: 7 },
   { culture: bengali, weight: 7 },
   { culture: deccani, weight: 7 },
@@ -84,4 +100,4 @@ export const WORLD: Weighted[] = [
 ]
 
 /** Every culture in either table, for lookups by name. */
-export const CULTURES: Culture[] = [...CORE, ...WORLD].map((w) => w.culture)
+export const CULTURES: Culture[] = [...new Set([...CORES.english, ...CORES.spanish, ...CORES.french, ...WORLD].map((w) => w.culture))]

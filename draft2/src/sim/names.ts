@@ -8,7 +8,7 @@
  * enough. See design/culture-tables.md for the tables and the reasoning.
  * Ships are named by class from src/sim/data/ships.ts, in ./fleet.ts.
  */
-import { CORE, CULTURES, WORLD, type Culture } from './data/names'
+import { CORES, CULTURES, WORLD, type CoreName, type Culture } from './data/names'
 import type { Community } from './data/names/culture'
 import { nextInt, type Rng } from './rng'
 
@@ -74,9 +74,14 @@ export function worldName(rng: Rng, cultures: readonly string[], taken: Set<stri
 // ---------------------------------------------------------------------------
 // People
 
-/** Which culture an officer's name comes from: the core six times in ten, the wider world the other four. */
-export function officerCulture(rng: Rng): string {
-  return weighted(rng, nextInt(rng, 1, 10) <= 6 ? CORE : WORLD).culture.name
+/** Which culture an officer's name comes from: their empire's core six times in ten, the wider world the other four. */
+export function officerCulture(rng: Rng, core: CoreName = 'english'): string {
+  return weighted(rng, nextInt(rng, 1, 10) <= 6 ? CORES[core] : WORLD).culture.name
+}
+
+/** A seat is named by the empire that sits there: a place from its core culture, not from whoever settled the world first. */
+export function seatName(rng: Rng, core: CoreName, taken: Set<string>): string {
+  return worldName(rng, [weighted(rng, CORES[core]).culture.name], taken)
 }
 
 export function rollSex(rng: Rng): Sex {

@@ -11,6 +11,7 @@
  * Keel phase: worlds, lanes and the three empires. Ships, characters,
  * organisations, prizes and relationships land with their phases.
  */
+import type { CoreName } from './data/names'
 import type { Hex } from './hex'
 
 // ---------------------------------------------------------------------------
@@ -93,6 +94,8 @@ export interface Lane {
 export interface Empire {
   id: EmpireId
   name: string
+  /** Which culture table names its people and its seat. */
+  core: CoreName
   /** The world where its governor sits, and where its prize court will sit. */
   seat: WorldId
   /** One-way weeks to the imperial capital beyond the subsector's edge. */

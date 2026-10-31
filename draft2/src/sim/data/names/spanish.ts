@@ -1,0 +1,52 @@
+import type { Culture } from './culture'
+
+export const spanish: Culture = {
+  name: 'Spanish',
+  group: 'European',
+  order: 'given-family',
+  pattern: { m: '{given} {family}', f: '{given} {family}' },
+  notes: 'Isabelline and Restoration Spain. One surname rather than the paternal-maternal pair, which is how a port register abroad would have written them.',
+  given: {
+    m: [
+      'José', 'Juan', 'Antonio', 'Manuel', 'Francisco', 'Pedro', 'Miguel', 'Ramón', 'Luis', 'Joaquín',
+      'Rafael', 'Vicente', 'Andrés', 'Diego', 'Fernando', 'Alonso', 'Tomás', 'Mateo', 'Ignacio', 'Jaime',
+      'Gonzalo', 'Rodrigo', 'Sebastián', 'Lorenzo', 'Esteban', 'Félix', 'Agustín', 'Bartolomé', 'Benito', 'Bernardo',
+      'Blas', 'Carlos', 'Casimiro', 'Cayetano', 'Cipriano', 'Clemente', 'Cristóbal', 'Damián', 'Domingo', 'Eduardo',
+      'Emilio', 'Enrique', 'Eugenio', 'Fabián', 'Faustino', 'Florencio', 'Gabriel', 'Gaspar', 'Gregorio', 'Guillermo',
+      'Hilario', 'Isidro', 'Jacinto', 'Jerónimo', 'Julián', 'Justo', 'Leandro', 'Lucas', 'Marcelino', 'Marcos',
+      'Martín', 'Melchor', 'Narciso', 'Nicolás', 'Pablo', 'Pascual', 'Patricio', 'Plácido', 'Prudencio', 'Raimundo',
+      'Remigio', 'Ricardo', 'Roque', 'Salvador', 'Santiago', 'Saturnino', 'Severo', 'Teodoro', 'Valentín', 'Ventura',
+    ],
+    f: [
+      'María', 'Josefa', 'Juana', 'Antonia', 'Francisca', 'Manuela', 'Dolores', 'Carmen', 'Isabel', 'Ana',
+      'Teresa', 'Rosa', 'Catalina', 'Mercedes', 'Pilar', 'Concepción', 'Encarnación', 'Rosario', 'Ramona', 'Vicenta',
+      'Joaquina', 'Rafaela', 'Micaela', 'Petra', 'Tomasa', 'Inés', 'Luisa', 'Magdalena', 'Margarita', 'Beatriz',
+      'Leonor', 'Elvira', 'Amparo', 'Asunción', 'Soledad', 'Consuelo', 'Remedios', 'Milagros', 'Purificación', 'Presentación',
+      'Angustias', 'Esperanza', 'Adela', 'Amalia', 'Aurora', 'Bárbara', 'Benita', 'Casilda', 'Cecilia', 'Clara',
+      'Dominga', 'Emilia', 'Engracia', 'Eulalia', 'Eusebia', 'Felipa', 'Felisa', 'Fermina', 'Filomena', 'Gertrudis',
+      'Gregoria', 'Hipólita', 'Ignacia', 'Jacinta', 'Justa', 'Lucía', 'Marcela', 'Matilde', 'Modesta', 'Nicolasa',
+      'Paula', 'Perfecta', 'Práxedes', 'Rufina', 'Sabina', 'Serafina', 'Simona', 'Tecla', 'Úrsula', 'Valentina',
+    ],
+  },
+  family: [
+    'García', 'Fernández', 'González', 'Rodríguez', 'López', 'Martínez', 'Sánchez', 'Pérez', 'Gómez', 'Martín',
+    'Jiménez', 'Ruiz', 'Hernández', 'Díaz', 'Moreno', 'Álvarez', 'Muñoz', 'Romero', 'Alonso', 'Gutiérrez',
+    'Navarro', 'Torres', 'Domínguez', 'Vázquez', 'Ramos', 'Gil', 'Ramírez', 'Serrano', 'Blanco', 'Molina',
+    'Morales', 'Suárez', 'Ortega', 'Delgado', 'Castro', 'Ortiz', 'Rubio', 'Marín', 'Sanz', 'Iglesias',
+    'Medina', 'Garrido', 'Cortés', 'Castillo', 'Santos', 'Lozano', 'Guerrero', 'Cano', 'Prieto', 'Méndez',
+    'Cruz', 'Calvo', 'Gallego', 'Vidal', 'León', 'Herrera', 'Márquez', 'Peña', 'Flores', 'Cabrera',
+    'Campos', 'Vega', 'Fuentes', 'Carrasco', 'Diez', 'Caballero', 'Reyes', 'Nieto', 'Aguilar', 'Pascual',
+    'Herrero', 'Santana', 'Lorenzo', 'Montero', 'Hidalgo', 'Giménez', 'Ibáñez', 'Ferrer', 'Durán', 'Vicente',
+    'Benítez', 'Mora', 'Arias', 'Vargas', 'Carmona', 'Crespo', 'Román', 'Pastor', 'Soto', 'Sáez',
+  ],
+  places: [
+    'Madrid', 'Sevilla', 'Cádiz', 'Málaga', 'Granada', 'Córdoba', 'Toledo', 'Valladolid', 'Burgos', 'León',
+    'Salamanca', 'Zamora', 'Segovia', 'Ávila', 'Soria', 'Logroño', 'Pamplona', 'Zaragoza', 'Huesca', 'Teruel',
+    'Valencia', 'Alicante', 'Murcia', 'Cartagena', 'Almería', 'Jaén', 'Badajoz', 'Cáceres', 'Mérida', 'Plasencia',
+    'Santander', 'Oviedo', 'Gijón', 'Coruña', 'Vigo', 'Ferrol', 'Lugo', 'Orense', 'Pontevedra', 'Bilbao',
+    'Vitoria', 'San Sebastián', 'Tarragona', 'Lérida', 'Gerona', 'Palma', 'Mahón', 'Ibiza', 'Santa Cruz', 'Las Palmas',
+    'Algeciras', 'Jerez', 'Huelva', 'Ronda', 'Antequera', 'Úbeda', 'Baeza', 'Cuenca', 'Guadalajara', 'Albacete',
+    'Ciudad Real', 'Talavera', 'Aranjuez', 'Alcalá', 'Tudela', 'Calatayud', 'Tarazona', 'Sigüenza', 'Medina', 'Tordesillas',
+    'Castellar', 'Valdoria', 'Ebro', 'Tajo', 'Duero', 'Guadiana', 'Guadalquivir', 'Segura', 'Miño', 'Júcar',
+  ],
+}
