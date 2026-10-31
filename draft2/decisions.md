@@ -45,3 +45,9 @@
 ## 2026-10-31 — running costs
 
 - **No weekly upkeep.** A hull costs fuel, and a month in a dockyard twice a year at a tenth of her price. Overdue, her drive is a risk on every jump: a fault costs the jump, a tank and a point of damage, and the odds climb with every eight weeks overdue. (User's call, replacing the weekly upkeep tried first.)
+
+## 2026-10-31 — duty, smuggling, and what a dock sells
+
+- **All trade is taxed.** Duty on every purchase and sale goes to the port's empire's treasury: 8% at an A port to 15% at D or E, plus 5% where law is 7 or more, less 2% where it is 2 or less, plus 10% for a foreigner. At war there is no lawful trade with an enemy port. (User's call.)
+- **Smuggling** is a trade off the books: no duty, and the customs house looks into a share of such trades that rises with law level, with an A port's staff, with being foreign, and with war. Caught: the goods are seized and a fine of three times the duty dodged is due; a purse that cannot pay means arrest and a term held by that empire. NPC captains do not smuggle yet; that waits for the drives layer.
+- **A dock sells what came through it, not only what the world makes.** Goods sold at a world that does not itself want them go on the dock for resale at half the tonnage; goods it wants are consumed. Price pressure and duty stop the sell-and-rebuy loop. Chosen over "only what a port produces" so hub ports can become entrepôts and NPC trade can make secondary markets. (Claude's call, as asked.)

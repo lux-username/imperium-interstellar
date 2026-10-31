@@ -243,7 +243,7 @@ export interface PlayerView {
   empires: Record<EmpireId, EmpireEntry>
   known: Belief
   /** What the player sees for themselves where they are this week. Null in jump. */
-  here: { world: WorldId; empire: EmpireId; starport: StarportClass; hulls: HullHere[]; market: MarketRow[]; freight: FreightRow[]; tariff: number; refuel: number | null; destinations: Destination[] } | null
+  here: { world: WorldId; empire: EmpireId; starport: StarportClass; hulls: HullHere[]; market: MarketRow[]; freight: FreightRow[]; duty: number; closed: boolean; inspection: number; refuel: number | null; destinations: Destination[] } | null
   /** Purse and debt: certain. */
   purse: number
   debt: Debt | null

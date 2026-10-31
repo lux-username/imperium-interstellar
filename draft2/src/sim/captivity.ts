@@ -66,8 +66,9 @@ export function payRansom(state: GameState, c: Character): boolean {
   const sum = ransomFor(c)
   if (c.purse < sum) return false
   c.purse -= sum
-  const captor = state.ships[cap.by]?.captain
+  const captor = cap.by ? state.ships[cap.by]?.captain : null
   if (captor && state.characters[captor]) state.characters[captor].purse += sum
+  else if (cap.of) state.empires[cap.of].treasury += sum
   release(state, c, 'ransomed')
   return true
 }

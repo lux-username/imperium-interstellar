@@ -143,6 +143,8 @@ export interface Empire {
   seat: WorldId
   /** One-way weeks to the imperial capital beyond the subsector's edge. */
   capitalWeeks: number
+  /** Duty collected at its ports, so far unspent: the governor's purse to be. */
+  treasury: number
 }
 
 /** Each pair of empires is at war or at peace; the three pairs change independently. */
@@ -298,8 +300,8 @@ export interface Character {
 }
 
 export interface Captivity {
-  /** Who took them, by hull. */
-  by: ShipId
+  /** Who took them, by hull; null when it was a port's customs house. */
+  by: ShipId | null
   /** The empire whose prisoner they are, or null for an outlaw's. */
   of: EmpireId | null
   since: Week

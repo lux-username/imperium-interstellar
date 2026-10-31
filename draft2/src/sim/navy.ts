@@ -107,7 +107,8 @@ export function huntersAct(state: GameState): void {
     if (duty.kind === 'raid' && at === duty.haven && ship.hold.length > 0) {
       for (const lot of [...ship.hold]) {
         const n = unload(ship, lot.good, lot.tons)
-        if (n > 0) captain.purse += sell(here, lot.good, n, captain.empire).credits
+        // A haven asks no questions and takes no duty.
+        if (n > 0) captain.purse += sell(here, lot.good, n, captain.empire, { smuggle: true }).credits
       }
     }
     if (state.week < duty.until) continue

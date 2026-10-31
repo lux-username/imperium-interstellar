@@ -76,11 +76,12 @@ describe('encounters', () => {
     outlawAt(state, to)
     // Try until the outlaw sees her come in.
     let hailed = false
-    for (let i = 0; i < 10 && !hailed; i++) {
+    for (let i = 0; i < 40 && !hailed; i++) {
       advanceWeek(state)
       advanceWeek(state)
       if (state.pending) hailed = true
       else {
+        ship.fuel = 2
         const back = (ship.location as { world: WorldId }).world
         const next = Object.keys(state.worlds).find((w) => w !== back && w === (back === to ? here : to) && sail(state, w as WorldId))
         if (!next) sail(state, back === to ? here : to)

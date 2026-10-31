@@ -328,9 +328,23 @@ function Docks({ view, state, act }: PaneProps) {
 function Brokers({ view, state, act }: PaneProps) {
   const here = view.here!
   const ship = view.ship
+  const [smuggle, setSmuggle] = useState(false)
+  const [last, setLast] = useState<string | null>(null)
+  const tell = (o: ReturnType<typeof buyGoods>) => {
+    if (o.kind === 'ok') setLast(o.duty > 0 ? `${o.tons} t, ${cr(o.credits)}, of which ${cr(o.duty)} duty.` : `${o.tons} t, ${cr(o.credits)}, off the books.`)
+    else if (o.kind === 'refused') setLast(here.closed ? 'The brokers will not deal with an enemy. Not on the books, anyway.' : 'No deal.')
+    else setLast(`The customs house was waiting. ${o.tons} t seized and a fine of ${cr(o.fine)}${o.arrested ? ', which you could not pay: you are under arrest.' : '.'}`)
+  }
   return (
     <div className="scene">
-      {here.tariff > 0 && <p className="muted">A foreign port: {Math.round(here.tariff * 100)}% duty on what you buy and what you sell.</p>}
+      <p className="muted">
+        {here.closed ? `At war: no lawful trade here for a subject of ${empireName(view, view.player.empire)}. ` : `Duty here is ${Math.round(here.duty * 100)}% on what you buy and what you sell. `}
+        <label>
+          <input type="checkbox" checked={smuggle || here.closed} disabled={here.closed} onChange={(e) => setSmuggle(e.target.checked)} /> off the books
+        </label>{' '}
+        {(smuggle || here.closed) && <span className="warn">(the customs house looks into about {Math.round(here.inspection * 100)} in 100 such trades)</span>}
+      </p>
+      {last && <p>{last}</p>}
       <table className="market">
         <thead>
           <tr>
@@ -351,16 +365,16 @@ function Brokers({ view, state, act }: PaneProps) {
               <td>
                 {ship && (
                   <>
-                    <button disabled={r.stock === 0} onClick={act(() => buyGoods(state, r.good, 10))}>
+                    <button disabled={r.stock === 0} onClick={act(() => tell(buyGoods(state, r.good, 10, smuggle || here.closed)))}>
                       buy 10
                     </button>
-                    <button disabled={r.stock === 0} onClick={act(() => buyGoods(state, r.good, 999))}>
+                    <button disabled={r.stock === 0} onClick={act(() => tell(buyGoods(state, r.good, 999, smuggle || here.closed)))}>
                       fill
                     </button>
-                    <button disabled={!r.holding} onClick={act(() => sellGoods(state, r.good, 10))}>
+                    <button disabled={!r.holding} onClick={act(() => tell(sellGoods(state, r.good, 10, smuggle || here.closed)))}>
                       sell 10
                     </button>
-                    <button disabled={!r.holding} onClick={act(() => sellGoods(state, r.good, 999))}>
+                    <button disabled={!r.holding} onClick={act(() => tell(sellGoods(state, r.good, 999, smuggle || here.closed)))}>
                       sell all
                     </button>
                   </>

@@ -6,10 +6,10 @@
  */
 import { hexDistance } from './hex'
 import { route } from './chart'
-import { GOODS, tariffFor } from './economy'
+import { dutyRate, GOODS, inspectionChance } from './economy'
 import { ransomFor } from './captivity'
 import { quarrel } from './combat'
-import { playerShip } from './game'
+import { playerShip, portClosed } from './game'
 import { beliefOf, characterLocation, readerOf, shipsAt } from './mail'
 import { sailsOn, otherEnd } from './scouts'
 import { fuelPrice, holdUsed, holding, MAINTENANCE_EVERY, maintenanceCost, reachable } from './ships'
@@ -69,7 +69,9 @@ export function buildPlayerView(state: GameState): PlayerView {
             }),
           market: GOODS.map((good) => ({ good, price: world.market[good].price, stock: world.market[good].stock, holding: own ? holding(own, good) : null })),
           freight: world.freight.map((f) => ({ ...f })),
-          tariff: tariffFor(world.empire, me.empire),
+          duty: dutyRate(world, me.empire),
+          closed: portClosed(state, world),
+          inspection: inspectionChance(world, me.empire, portClosed(state, world)),
           refuel: fuelPrice(world.profile.starport),
           destinations: own
             ? reachable(state, at, SHIP_CLASSES[own.type].jump).map((w) => ({ world: w, parsecs: hexDistance(state.worlds[w].hex, world.hex), charted: route(state.lanes, at, w)?.length === 2 }))
@@ -85,7 +87,7 @@ export function buildPlayerView(state: GameState): PlayerView {
     ? { attacker: hull(pend.attacker), defender: hull(pend.defender), mine: (pend.attacker === own?.id ? 'attacker' : 'defender') as 'attacker' | 'defender', round: pend.round, log: [...pend.log], quarrel: own ? quarrel(state, state.ships[pend.attacker], state.ships[pend.defender]) : false }
     : null
   const cap = me.captive ?? null
-  const captive = cap ? { of: cap.of, since: cap.since, at: cap.at, aboard: cap.at ? null : (state.ships[cap.by]?.name ?? null), ransom: ransomFor(me), term: cap.term ?? null } : null
+  const captive = cap ? { of: cap.of, since: cap.since, at: cap.at, aboard: cap.at || !cap.by ? null : (state.ships[cap.by]?.name ?? null), ransom: ransomFor(me), term: cap.term ?? null } : null
   const lenderHere = !own && !cap && world !== null && world.empire === me.empire && ['A', 'B'].includes(world.profile.starport)
 
   return {

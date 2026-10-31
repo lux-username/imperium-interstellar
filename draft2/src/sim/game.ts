@@ -15,7 +15,8 @@ import { captivityTick, landCaptives, payRansom, ransomFor } from './captivity'
 import { postNewsItem } from './news'
 import { hexLabel } from './hex'
 import { route } from './chart'
-import { buy, GOODS, sell, tickMarkets, type Good } from './economy'
+import { buy, dutyRate, FINE_TIMES_DUTY, GOODS, inspectionChance, sell, tickMarkets, type Good } from './economy'
+import { trade } from './agents'
 import { generateSubsector } from './generate'
 import { characterLocation, copyDeclaration, deliverHeld, observe, postLetter, postNews, pruneMail, snapshotWorld } from './mail'
 import { officerCulture, personName, rollSex } from './names'
@@ -357,32 +358,81 @@ function ownHullHere(state: GameState): { ship: Ship; at: World } | null {
   return { ship, at }
 }
 
-/** Buy at the brokers: as many tons as asked, the hold allows and the purse covers. Returns tons bought. */
-export function buyGoods(state: GameState, good: Good, tons: number): number {
-  const h = ownHullHere(state)
-  if (!h) return 0
+/** Whether the port's own board says the player's empire and the port's are at war: then there is no lawful trade. */
+export function portClosed(state: GameState, at: World): boolean {
   const me = state.characters[state.player]
-  const price = h.at.market[good].price
-  const affordable = Math.floor(me.purse / (price * 1.2))
-  const n = Math.min(tons, holdFree(h.ship), affordable)
-  if (n <= 0) return 0
-  const deal = buy(h.at, good, n, me.empire)
-  if (!deal) return 0
-  me.purse -= deal.credits
-  h.ship.hold.push({ kind: 'cargo', good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: h.at.id, week: state.week })
-  return deal.tons
+  return at.empire !== me.empire && at.board[stanceKey(at.empire, me.empire)]?.stance === 'war'
 }
 
-/** Sell at the brokers what is in the hold of a good. Returns credits taken. */
-export function sellGoods(state: GameState, good: Good, tons: number): number {
-  const h = ownHullHere(state)
-  if (!h) return 0
+/** What the last trade off the books came to, for the UI to tell. */
+export type Outcome = { kind: 'ok'; tons: number; credits: number; duty: number } | { kind: 'refused' } | { kind: 'caught'; tons: number; fine: number; arrested: boolean }
+
+/**
+ * The customs house looks into a trade off the books. Caught: the goods
+ * are seized and a fine of three times the duty dodged is due; a purse
+ * that cannot pay means arrest, and the hull waits at the port.
+ */
+function inspected(state: GameState, at: World, good: Good, tons: number, value: number): Outcome | null {
   const me = state.characters[state.player]
+  if (nextInt(state.rng, 1, 100) > inspectionChance(at, me.empire, portClosed(state, at)) * 100) return null
+  const fine = Math.round(value * dutyRate(at, me.empire) * FINE_TIMES_DUTY)
+  at.market[good].stock += tons
+  state.empires[at.empire].treasury += Math.min(fine, Math.max(0, me.purse))
+  if (me.purse >= fine) {
+    me.purse -= fine
+    postNewsItem(state, at.id, `The customs house seized ${tons} t of ${good} off the ${playerShip(state)?.name ?? 'a trader'} and fined her master.`)
+    return { kind: 'caught', tons, fine, arrested: false }
+  }
+  me.purse = Math.max(0, me.purse - fine)
+  me.captive = { by: null, of: at.empire, since: state.week, at: at.id, term: state.week + nextInt(state.rng, 8, 16) }
+  me.body = { kind: 'world', world: at.id }
+  postNewsItem(state, at.id, `${me.name} of the ${playerShip(state)?.name ?? 'a trader'} was arrested for smuggling ${good}.`)
+  return { kind: 'caught', tons, fine, arrested: true }
+}
+
+/** Buy at the brokers: as many tons as asked, the hold allows and the purse covers. Off the books there is no duty and the customs house may look. */
+export function buyGoods(state: GameState, good: Good, tons: number, smuggle = false): Outcome {
+  const h = ownHullHere(state)
+  if (!h) return { kind: 'refused' }
+  const me = state.characters[state.player]
+  if (portClosed(state, h.at) && !smuggle) return { kind: 'refused' }
+  const price = h.at.market[good].price
+  const rate = smuggle ? 0 : dutyRate(h.at, me.empire)
+  const affordable = Math.floor(me.purse / (price * (1 + rate)))
+  const n = Math.min(tons, holdFree(h.ship), affordable)
+  if (n <= 0) return { kind: 'refused' }
+  const deal = buy(h.at, good, n, me.empire, { smuggle })
+  if (!deal) return { kind: 'refused' }
+  me.purse -= deal.credits
+  trade(state, h.at, deal)
+  if (smuggle) {
+    const caught = inspected(state, h.at, good, deal.tons, deal.tons * deal.price)
+    if (caught) return caught
+  }
+  h.ship.hold.push({ kind: 'cargo', good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: h.at.id, week: state.week })
+  return { kind: 'ok', tons: deal.tons, credits: deal.credits, duty: deal.duty }
+}
+
+/** Sell at the brokers what is in the hold of a good. Off the books there is no duty and the customs house may look. */
+export function sellGoods(state: GameState, good: Good, tons: number, smuggle = false): Outcome {
+  const h = ownHullHere(state)
+  if (!h) return { kind: 'refused' }
+  const me = state.characters[state.player]
+  if (portClosed(state, h.at) && !smuggle) return { kind: 'refused' }
   const n = unload(h.ship, good, tons)
-  if (n === 0) return 0
-  const deal = sell(h.at, good, n, me.empire)
+  if (n === 0) return { kind: 'refused' }
+  const deal = sell(h.at, good, n, me.empire, { smuggle })
+  trade(state, h.at, deal)
+  if (smuggle) {
+    const caught = inspected(state, h.at, good, n, n * deal.price)
+    if (caught) {
+      // The goods are seized before the money changes hands.
+      h.at.market[good].stock -= n
+      return caught
+    }
+  }
   me.purse += deal.credits
-  return deal.credits
+  return { kind: 'ok', tons: n, credits: deal.credits, duty: deal.duty }
 }
 
 /** Fill a tank at the docks. Returns false if there is no fuel here, no room, or no money. */

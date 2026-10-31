@@ -9,7 +9,7 @@
  * about any world but the one the captain is standing on.
  */
 import { hexDistance } from './hex'
-import { buy, GOODS, sell, tariffFor, type Good } from './economy'
+import { buy, dutyRate, GOODS, sell, type Good } from './economy'
 import { beliefOf, characterLocation } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { nextInt, roll, type Rng } from './rng'
@@ -55,6 +55,12 @@ export function spawnTraders(state: GameState, taken: Set<string>): void {
   }
 }
 
+/** Book a deal's duty to the port's governor. Returns the deal for chaining. */
+export function trade(state: GameState, world: { empire: EmpireId }, deal: { duty: number; credits: number }): { duty: number; credits: number } {
+  state.empires[world.empire].treasury += deal.duty
+  return deal
+}
+
 /** The captains in port with hulls of their own to run: everyone but the player. */
 function tradingCaptains(state: GameState): { captain: Character; ship: Ship; at: WorldId }[] {
   const out: { captain: Character; ship: Ship; at: WorldId }[] = []
@@ -95,8 +101,9 @@ function bestLeg(state: GameState, captain: Character, ship: Ship, at: WorldId):
     for (const good of GOODS) {
       const sellAt = known[good]
       if (!sellAt) continue
-      const cost = here.market[good].price * (1 + tariffFor(here.empire, captain.empire))
-      const proceeds = sellAt.price * (1 - tariffFor(toEmpire, captain.empire))
+      const cost = here.market[good].price * (1 + dutyRate(here, captain.empire))
+      const toWorld = belief.worlds[to]?.snapshot.kind === 'world' ? belief.worlds[to].snapshot.world : state.worlds[to]
+      const proceeds = sellAt.price * (1 - dutyRate(toWorld, captain.empire))
       const margin = proceeds - cost
       if (margin <= 0) continue
       const tons = Math.min(room, here.market[good].stock, Math.floor(captain.purse / cost))
@@ -135,14 +142,14 @@ function somewhereToLook(state: GameState, captain: Character, ship: Ship, at: W
 /** One captain's week in port. */
 function captainActs(state: GameState, captain: Character, ship: Ship, at: WorldId): void {
   const here = state.worlds[at]
-  const duty = tariffFor(here.empire, captain.empire)
+  const duty = dutyRate(here, captain.empire)
   // Sell what pays, or what has been aboard too long.
   for (const lot of [...ship.hold]) {
     if (lot.kind !== 'cargo') continue
     const price = here.market[lot.good].price * (1 - duty)
     if (price > lot.paid || state.week - lot.week >= PATIENCE) {
       const n = unload(ship, lot.good, lot.tons)
-      if (n > 0) captain.purse += sell(here, lot.good, n, captain.empire).credits
+      if (n > 0) captain.purse += trade(state, here, sell(here, lot.good, n, captain.empire)).credits
     }
   }
   // Fuel, if it can be had and afforded.
@@ -161,6 +168,7 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
   if (leg) {
     const deal = buy(here, leg.good, leg.tons, captain.empire)
     if (deal) {
+      trade(state, here, deal)
       captain.purse -= deal.credits
       ship.hold.push({ kind: 'cargo', good: leg.good, tons: deal.tons, paid: Math.round(deal.credits / deal.tons), from: at, week: state.week })
     }

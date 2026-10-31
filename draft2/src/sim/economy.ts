@@ -148,13 +148,43 @@ export function tickMarket(rng: Rng, world: World): void {
   }
 }
 
-/** Duty at a port of another empire, on both buying and selling. */
-export const TARIFF = 0.2
+// ---------------------------------------------------------------------------
+// Duty and the customs house
 
-/** The duty a subject of `trader` pays at a port of `port`: none at home. */
-export function tariffFor(port: EmpireId, trader: EmpireId): number {
-  return port === trader ? 0 : TARIFF
+/**
+ * Every trade at a port pays duty to the governor of its empire. The rate
+ * turns on the port (a big port is a cheap one), the law (a strict world
+ * is a dear one), and whether the trader is a subject or a foreigner. At
+ * war there is no lawful trade at all; see `smuggling`.
+ */
+export function dutyRate(world: Pick<World, 'profile' | 'empire'>, trader: EmpireId): number {
+  const port = { A: 0.08, B: 0.1, C: 0.12, D: 0.15, E: 0.15, X: 0 }[world.profile.starport]
+  const law = world.profile.law >= 7 ? 0.05 : world.profile.law <= 2 ? -0.02 : 0
+  const foreign = world.empire === trader ? 0 : 0.1
+  return Math.max(0, Math.round((port + law + foreign) * 100) / 100)
 }
+
+/** Kept for callers that only want to know whether a foreigner pays more here than a subject. */
+export function tariffFor(port: EmpireId, trader: EmpireId): number {
+  return port === trader ? 0 : 0.1
+}
+
+/**
+ * The odds, per transaction, that the customs house looks into a trade
+ * made off the books: slack worlds hardly bother, strict ones do, a big
+ * port has the staff, and an enemy's goods are watched for.
+ */
+export function inspectionChance(world: Pick<World, 'profile' | 'empire'>, trader: EmpireId, atWar: boolean): number {
+  const law = world.profile.law
+  let p = law <= 2 ? 0.05 : law <= 5 ? 0.15 : law <= 8 ? 0.3 : 0.5
+  if (world.profile.starport === 'A') p += 0.1
+  if (world.empire !== trader) p += 0.05
+  if (atWar) p += 0.2
+  return Math.min(0.9, p)
+}
+
+/** What a smuggler caught pays, on top of losing the goods: three times the duty dodged. */
+export const FINE_TIMES_DUTY = 3
 
 export interface Deal {
   tons: number
@@ -162,33 +192,47 @@ export interface Deal {
   credits: number
   /** Credits per ton before duty. */
   price: number
+  /** Duty paid to the port's governor. Zero off the books. */
+  duty: number
+}
+
+export interface Terms {
+  /** Off the books: no duty, and the customs house may look. */
+  smuggle?: boolean
 }
 
 /**
  * Buy up to `tons` of a good off the dock at `world`. Takes what is there,
- * at this week's price plus duty for a foreigner; the buying moves the
- * price for next week. Returns the deal, or null if nothing was there.
+ * at this week's price plus duty; the buying moves the price for next
+ * week. Returns the deal, or null if nothing was there.
  */
-export function buy(world: World, good: Good, tons: number, trader: EmpireId): Deal | null {
+export function buy(world: World, good: Good, tons: number, trader: EmpireId, terms: Terms = {}): Deal | null {
   const e = world.market[good]
   const n = Math.max(0, Math.min(tons, e.stock))
   if (n === 0) return null
   const price = e.price
-  const credits = Math.round(n * price * (1 + tariffFor(world.empire, trader)))
+  const rate = terms.smuggle ? 0 : dutyRate(world, trader)
+  const duty = Math.round(n * price * rate)
   e.stock -= n
   e.pressure -= n
   e.price = priceOf(world.profile, good, e)
-  return { tons: n, credits, price }
+  return { tons: n, credits: n * price + duty, price, duty }
 }
 
-/** Sell `tons` of a good at `world` at this week's price less duty. The selling moves the price for next week. */
-export function sell(world: World, good: Good, tons: number, trader: EmpireId): Deal {
+/**
+ * Sell `tons` of a good at `world` at this week's price less duty. The
+ * selling moves the price for next week. What the world does not want
+ * itself goes on the dock for resale; what it wants is consumed.
+ */
+export function sell(world: World, good: Good, tons: number, trader: EmpireId, terms: Terms = {}): Deal {
   const e = world.market[good]
   const price = e.price
-  const credits = Math.round(tons * price * (1 - tariffFor(world.empire, trader)))
+  const rate = terms.smuggle ? 0 : dutyRate(world, trader)
+  const duty = Math.round(tons * price * rate)
   e.pressure += tons
+  if (demandLevel(world.profile, good) === 0) e.stock += Math.round(tons / 2)
   e.price = priceOf(world.profile, good, e)
-  return { tons, credits, price }
+  return { tons, credits: tons * price - duty, price, duty }
 }
 
 /** Every world's market moves on a week. */
