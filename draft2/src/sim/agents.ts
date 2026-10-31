@@ -60,7 +60,7 @@ export function spawnTraders(state: GameState, taken: Set<string>): void {
       const core = state.empires[empire].core
       const culture = officerCulture(rng, core)
       const sex = rollSex(rng)
-      const captain: Character = { id: cid, name: personName(rng, culture, sex), culture, sex, empire, body: { kind: 'aboard', ship: sid }, purse: TRADER_PURSE + nextInt(rng, -5000, 10000), debt: null }
+      const captain: Character = { id: cid, name: personName(rng, culture, sex), culture, sex, empire, body: { kind: 'aboard', ship: sid }, purse: TRADER_PURSE + nextInt(rng, -5000, 10000), debt: null, clique: n % 2 === 0 ? 'A' : 'B' }
       state.characters[cid] = captain
       state.ships[sid] = newShip(rng, sid, roll(rng) >= 10 ? 'far_trader' : 'free_trader', empire, { kind: 'personal', character: cid }, id, taken, cid)
     }
@@ -404,10 +404,10 @@ export function tellPrices(from: Belief, to: Belief): number {
   return news
 }
 
-/** Captains lying in the same port swap what they know of prices. The player is not in the circle: they must go to the bar themselves. */
+/** Captains of a clique lying in the same port swap what they know of prices. Other cliques keep their own counsel. The player is in no circle: they must go to the bar themselves. */
 export function dockTalk(state: GameState): void {
   const byPort: Record<string, CharacterId[]> = {}
-  for (const { captain, at } of tradingCaptains(state)) (byPort[at] ??= []).push(captain.id)
+  for (const { captain, at } of tradingCaptains(state)) (byPort[`${at}/${captain.clique ?? ''}`] ??= []).push(captain.id)
   for (const port of Object.keys(byPort).sort()) {
     const ids = byPort[port]
     if (ids.length < 2) continue

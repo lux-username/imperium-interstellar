@@ -293,6 +293,8 @@ export interface Character {
   purse: number
   /** What they owe on their hull, if anything. */
   debt: Debt | null
+  /** Which circle of captains they talk prices with on the docks. Captains of different cliques keep their own counsel. */
+  clique?: string
   /** An outlaw has burned their standing with every empire: fair game for any navy, and welcome only at a haven. */
   outlaw?: boolean
   /** Held by a captor: where, and since when. Null when free. */
