@@ -683,6 +683,45 @@ export function tellAll(state: GameState, from: CharacterId, to: CharacterId): n
   const b = beliefOf(state, to)
   let n = tellPrices(a.prices, b.prices, true, from)
   for (const w of Object.keys(a.traffic) as WorldId[]) n += learnTraffic(b, w, a.traffic[w].filter((k) => state.week - k.movement.week <= 12).map((k) => k.movement), 'heard', state.week)
+  n += tellTies(state, from, to)
+  return n
+}
+
+/**
+ * Talk is never only prices. A captain who tells what they know lets on
+ * who they count a friend and who an enemy, and passes on what they have
+ * heard of others' friendships and feuds. The hearer makes something of
+ * it: a friend's enemy is a little their own enemy, a friend's friend a
+ * little their friend. Returns how many ties were news.
+ */
+export function tellTies(state: GameState, from: CharacterId, to: CharacterId): number {
+  const b = beliefOf(state, to)
+  let n = 0
+  const heard: { key: string; regard: number; teller: CharacterId }[] = []
+  // The teller's own friends and enemies.
+  for (const key of Object.keys(state.relations).sort()) {
+    if (!key.startsWith(`${from}|`)) continue
+    const r = state.relations[key]
+    if (Math.abs(r.regard) < 1.5) continue
+    heard.push({ key, regard: r.regard, teller: from })
+  }
+  // And what the teller has heard of others.
+  const a = beliefOf(state, from)
+  for (const key of Object.keys(a.ties).sort()) heard.push({ key, regard: a.ties[key].regard, teller: a.ties[key].from })
+  for (const h of heard) {
+    const [x, y] = h.key.split('|') as [CharacterId, CharacterId]
+    if (y === to || x === to) continue
+    const known = b.ties[h.key]
+    if (known && known.observed >= state.week) continue
+    b.ties[h.key] = { regard: h.regard, observed: state.week, from: h.teller }
+    n += 1
+    // What it means to the hearer: only the teller's own ties, and only if the teller is a friend.
+    if (h.teller !== from || x !== from) continue
+    const myRegard = regardOf(state, to, from)
+    if (myRegard < 1) continue
+    if (h.regard <= -1.5) deal(state, to, y, -0.3, `${state.characters[from].name} counts ${state.characters[y]?.name ?? y} an enemy`)
+    else if (h.regard >= 1.5) deal(state, to, y, 0.2, `${state.characters[from].name} counts ${state.characters[y]?.name ?? y} a friend`)
+  }
   return n
 }
 

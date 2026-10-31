@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { askCaptain, willingness } from './agents'
+import { askCaptain, tellTies, willingness } from './agents'
 import { beginEncounter, npcChoice, resolveRound, settle } from './combat'
 import { advanceWeek, newGame, PLAYER, playerShip, sellGoods, buyGoods, sail } from './game'
 import { characterLocation } from './mail'
@@ -130,5 +130,29 @@ describe('relationships', () => {
     expect(asked).toBeGreaterThan(0)
     expect(buildPlayerView(state).book.length).toBeGreaterThan(0)
     void sail
+  })
+})
+
+describe('talk of friends and enemies', () => {
+  it('a teller lets on their ties, the hearer makes something of a friend\'s enemy, and the Book shows who said so', () => {
+    const state = newGame(117)
+    const here = characterLocation(state, PLAYER) as WorldId
+    const teller = person('teller', state.worlds[here].empire, { openness: 1 })
+    const foe = person('foe', state.worlds[here].empire)
+    const pal = person('pal', state.worlds[here].empire)
+    for (const x of [teller, foe, pal]) state.characters[x.id] = x
+    deal(state, teller.id, foe.id, -3, 'robbed me')
+    deal(state, teller.id, pal.id, 3, 'saved me')
+    // The player counts the teller a friend already.
+    deal(state, PLAYER, teller.id, 2, 'old friends')
+    state.asked[teller.id] = { week: -1, roll: 0, told: false }
+    const n = tellTies(state, teller.id, PLAYER)
+    expect(n).toBe(2)
+    expect(regardOf(state, PLAYER, foe.id)).toBeLessThan(0)
+    expect(regardOf(state, PLAYER, pal.id)).toBeGreaterThan(0)
+    const page = buildPlayerView(state).book.find((p) => p.id === teller.id)!
+    expect(page.enemies.map((e) => e.name)).toContain('foe')
+    expect(page.friends.map((e) => e.name)).toContain('pal')
+    expect(page.enemies[0].from).toBe('teller')
   })
 })

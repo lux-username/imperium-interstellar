@@ -590,6 +590,12 @@ function Book({ view }: { view: PlayerView }) {
                     Last seen at {view.chart[p.lastSeen.world].name}, {ago(view.week, p.lastSeen.week)}. Their word has proved {p.trust >= 0.7 ? 'good' : p.trust <= 0.3 ? 'bad' : 'neither here nor there'}.
                   </p>
                 )}
+                {(p.friends.length > 0 || p.enemies.length > 0) && (
+                  <p className="muted">
+                    {p.friends.length > 0 && `Counts ${p.friends.map((f) => `${f.name} (so says ${f.from})`).join(', ')} a friend. `}
+                    {p.enemies.length > 0 && `Counts ${p.enemies.map((f) => `${f.name} (so says ${f.from})`).join(', ')} an enemy.`}
+                  </p>
+                )}
                 {p.notes.length > 0 && (
                   <ul className="notes">
                     {p.notes.map((n, i) => (

@@ -169,6 +169,8 @@ export interface Belief {
   lines: Record<string, LineKnown>
   /** What the reader knows of who came and went at each port, newest first, each line stamped with how they know it. */
   traffic: Record<WorldId, TrafficKnown[]>
+  /** Friendships and enmities between others the reader has been told of, keyed `a|b` for a's regard of b. */
+  ties: Record<string, TieKnown>
   /** Last-known price and stock per world and good, from the newest sight of that market. */
   prices: Record<WorldId, Partial<Record<Good, { price: number; stock: number; observed: Week; heard?: boolean; from?: CharacterId }>>>
 }
@@ -281,6 +283,9 @@ export interface BookEntry {
   impression: string[]
   /** Trades of theirs you have seen or heard of, newest first, a few. */
   seenTrading: string[]
+  /** Who they are said to count a friend, and an enemy, with who said so. */
+  friends: { name: string; from: string }[]
+  enemies: { name: string; from: string }[]
 }
 
 /**
@@ -328,6 +333,14 @@ export interface TrafficKnown {
   source: 'seen' | 'register' | 'heard'
   /** When the reader learned it. */
   observed: Week
+}
+
+/** What one person is said to think of another, as the reader heard it. */
+export interface TieKnown {
+  regard: number
+  observed: Week
+  /** Who said so. */
+  from: CharacterId
 }
 
 /** The key of a line between two worlds, whichever way round. */

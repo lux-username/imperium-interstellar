@@ -122,6 +122,8 @@ export function buildPlayerView(state: GameState): PlayerView {
       notes: r ? [...r.notes].reverse() : [],
       impression,
       seenTrading: [],
+      friends: [],
+      enemies: [],
     }
     pages.set(id, p)
     return p
@@ -141,6 +143,16 @@ export function buildPlayerView(state: GameState): PlayerView {
       if (what.length) p.seenTrading.push(`wk ${m.week} at ${state.worlds[w].name}: ${what.join(', ')} [${k.source}]`)
       if (!p.hull) p.hull = m.shipName
     }
+  }
+  for (const key of Object.keys(known.ties).sort()) {
+    const [x, y] = key.split('|') as [CharacterId, CharacterId]
+    const t = known.ties[key]
+    const px = pageFor(x)
+    const other = state.characters[y]
+    if (!px || !other) continue
+    const from = state.characters[t.from]?.name ?? 'someone'
+    if (t.regard >= 1.5) px.friends.push({ name: other.name, from })
+    else if (t.regard <= -1.5) px.enemies.push({ name: other.name, from })
   }
   const book = [...pages.values()].sort((a, b) => b.dealings - a.dealings || (b.lastSeen?.week ?? -1) - (a.lastSeen?.week ?? -1) || (a.name < b.name ? -1 : 1))
 

@@ -14,7 +14,7 @@ import { stanceKey, type Declaration, type EmpireId, type Week, type WorldId } f
 import { isRumour, lineKey, type Belief, type Movement, type PersonSnapshot, type Report, type ShipSnapshot, type TrafficKnown } from './view'
 
 export function emptyBelief(): Belief {
-  return { worlds: {}, ships: {}, people: {}, stances: {}, prices: {}, lines: {}, traffic: {} }
+  return { worlds: {}, ships: {}, people: {}, stances: {}, prices: {}, lines: {}, traffic: {}, ties: {} }
 }
 
 /** A declaration enters where it is newer than what is held for its pair. Returns whether it did. */
