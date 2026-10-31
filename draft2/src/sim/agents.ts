@@ -315,7 +315,10 @@ function somewhereToLook(state: GameState, captain: Character, ship: Ship, at: W
   const belief = beliefOf(state, captain.id)
   const options = reachable(state, at, SHIP_CLASSES[ship.type].jump).filter((w) => {
     const e = belief.worlds[w]?.snapshot.kind === 'world' ? belief.worlds[w].snapshot.world.empire : state.worlds[w].empire
-    return !believesAtWar(belief, captain.empire, e)
+    if (believesAtWar(belief, captain.empire, e)) return false
+    // Nobody goes to look at a dry world on the last tank.
+    if (ship.fuel - 1 < 1 && !fuelAt(state, belief, w)) return false
+    return true
   })
   if (options.length === 0) return null
   const age = (w: WorldId) => {
@@ -464,7 +467,9 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
     noticeUndercut(state, captain, ship, here, lot.good, lot.paid)
     const stale = state.week - lot.week >= PATIENCE
     const net = here.market[lot.good].price * (1 - duty)
-    if (stale && !betterElsewhere(state, belief, captain, ship, at, lot.good, net)) {
+    // Past patience, a captain cuts the loss here unless a neighbour is believed to pay clearly more; past half as long again, she sells wherever she stands.
+    const hopeless = state.week - lot.week >= PATIENCE * 1.5
+    if (hopeless || (stale && !betterElsewhere(state, belief, captain, ship, at, lot.good, net))) {
       const n = unload(ship, lot.good, lot.tons)
       if (n > 0) {
         const credits = trade(state, here, sell(here, lot.good, n, captain.empire), ship, 'sold', lot.good).credits
@@ -491,9 +496,9 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
     }
     if (soldTons > 0) settleTip(state, captain.id, lot, made, here)
   }
-  // Fuel, if it can be had and afforded.
+  // Fuel, if it can be had and afforded: the first tank before anything else, the rest with a cushion.
   const fuel = fuelPrice(here.profile.starport)
-  while (fuel !== null && ship.fuel < SHIP_CLASSES[ship.type].tanks && captain.purse >= fuel + 2000) {
+  while (fuel !== null && ship.fuel < SHIP_CLASSES[ship.type].tanks && captain.purse >= fuel + (ship.fuel === 0 ? 0 : 2000)) {
     captain.purse -= fuel
     ship.fuel += 1
   }
@@ -501,7 +506,7 @@ function captainActs(state: GameState, captain: Character, ship: Ship, at: World
   // A captain with nothing left and the nerve for it turns robber: lies off this port and takes what comes.
   if (turnsRobber(state, captain, ship, here)) return
   // Maintenance when due, if this is a dockyard and the purse allows; a captain lets it slide a while if short.
-  if (state.week - ship.maintained >= 26 - 4 * traitsOf(captain).caution && ['A', 'B'].includes(here.profile.starport) && captain.purse >= maintenanceCost(ship) + 5000 && (overdue(ship, state.week) > 0 || roll(state.rng) >= 7)) {
+  if (state.week - ship.maintained >= 26 - 4 * traitsOf(captain).caution && ['A', 'B'].includes(here.profile.starport) && captain.purse >= maintenanceCost(ship) + (overdue(ship, state.week) > 0 ? 500 : 2500) && (overdue(ship, state.week) > 0 || roll(state.rng) >= 7)) {
     if (layUp(state, ship, here)) return
   }
   // Buy for the best believed plan, or go and look.

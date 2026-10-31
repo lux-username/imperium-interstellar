@@ -18,7 +18,7 @@ import { fuelPrice, MAINTENANCE_EVERY, maintenanceCost, newShip, reachable, setC
 import { SHIP_CLASSES, type Character, type CharacterId, type Duty, type EmpireId, type GameState, type Ship, type ShipId, type WorldId } from './types'
 
 /** Corvettes each empire keeps in the subsector. */
-const CORVETTES = 4
+const CORVETTES = 3
 
 /** Outlaw hulls at the start. */
 const OUTLAWS = 0
