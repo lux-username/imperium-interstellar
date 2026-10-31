@@ -73,7 +73,11 @@ describe('relationships', () => {
     deal(state, b.id, c.id, -1, 'slighted')
     expect(regardOf(state, a.id, c.id)).toBeLessThan(regardOf(state, b.id, c.id))
     expect(standingWord(-2.5)).toBe('enemy')
+    expect(standingWord(-3)).toBe('sworn enemy')
     expect(standingWord(2.5)).toBe('friend')
+    expect(standingWord(3)).toBe('fast friend')
+    expect(standingWord(0.5)).toBe('warm')
+    expect(standingWord(-0.5)).toBe('cool')
   })
 
   it('being robbed makes an enemy; telling makes a friend of sorts; an undercut is remembered', () => {

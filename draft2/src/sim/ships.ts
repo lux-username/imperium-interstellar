@@ -14,8 +14,10 @@ import { recordSailing } from './register'
 const POOL: Record<ShipType, NamedHull> = {
   scout: 'scout',
   free_trader: 'transport',
+  armed_trader: 'transport',
   far_trader: 'transport',
   bulk_freighter: 'transport',
+  patrol_boat: 'escort',
   corvette: 'escort',
   frigate: 'patrol',
 }

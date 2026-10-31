@@ -14,7 +14,7 @@ import { stanceKey, type Declaration, type EmpireId, type Week, type WorldId } f
 import { isRumour, lineKey, type Belief, type Movement, type PersonSnapshot, type Report, type ShipSnapshot, type TrafficKnown } from './view'
 
 export function emptyBelief(): Belief {
-  return { worlds: {}, ships: {}, people: {}, stances: {}, prices: {}, lines: {}, traffic: {}, ties: {} }
+  return { worlds: {}, ships: {}, people: {}, stances: {}, prices: {}, lines: {}, traffic: {}, ties: {}, danger: {}, patrolled: {} }
 }
 
 /** A declaration enters where it is newer than what is held for its pair. Returns whether it did. */
@@ -64,6 +64,7 @@ export function absorb(belief: Belief, report: Report, asOf: Week = Number.POSIT
     const known = belief.lines[k]
     if (!known || report.observed >= known.observed) belief.lines[k] = { line: { ...l }, observed: report.observed, report: report.id }
   }
+  noteDanger(belief, world, report.observed)
   if (world.traffic.length > 0) learnTraffic(belief, world.id, world.traffic, report.channel === 'port' && report.observer === null && world.traffic.every((m) => m.week === report.observed) ? 'seen' : 'register', report.observed)
   const goods = Object.keys(world.market) as (keyof typeof world.market)[]
   if (goods.length > 0) {
@@ -122,4 +123,51 @@ export function learnTraffic(belief: Pick<Belief, 'traffic'> & Partial<Pick<Beli
   known.sort((a, b) => b.movement.week - a.movement.week || (a.movement.ship < b.movement.ship ? -1 : 1))
   belief.traffic[world] = known.filter((k) => observed - k.movement.week < TRAFFIC_WEEKS)
   return news
+}
+
+/** Hull types that count as a patrol when seen. */
+const PATROL_TYPES = new Set(['patrol_boat', 'corvette', 'frigate'])
+
+/**
+ * What a look at a world says of its approaches. A taking in the news
+ * within the month raises the danger sharply; every line of safe trade
+ * on the page eases it a little; a patrol seen in port eases it more.
+ */
+export function noteDanger(belief: Pick<Belief, 'danger' | 'patrolled'>, world: WorldSnapshotLike, observed: Week): void {
+  const known = belief.danger[world.id]
+  if (known && known.observed > observed) return
+  let level = known?.level ?? 0
+  const takings = world.news.filter((n) => observed - n.week <= 4 && /taken in the approaches/.test(n.text)).length
+  if (takings > 0) level = Math.min(1, level + 0.6 * takings)
+  const safeTrades = world.traffic.filter((m) => m.sold.length + m.bought.length > 0).length
+  level = Math.max(0, level - 0.05 * safeTrades)
+  const patrols = world.ships.filter((s) => PATROL_TYPES.has(s.type)).length
+  if (patrols > 0) {
+    level = Math.max(0, level - 0.25 * patrols)
+    belief.patrolled[world.id] = Math.max(belief.patrolled[world.id] ?? -99, observed)
+  }
+  if (level > 0 || known) belief.danger[world.id] = { level: Math.round(level * 100) / 100, observed }
+}
+
+/** The part of a world snapshot the danger rule reads. */
+export interface WorldSnapshotLike {
+  id: WorldId
+  news: { week: Week; text: string }[]
+  traffic: { sold: unknown[]; bought: unknown[] }[]
+  ships: { type: string }[]
+}
+
+/** Word of danger passed on: where the teller's word is newer, the hearer takes it. */
+export function tellDanger(from: Pick<Belief, 'danger' | 'patrolled'>, to: Pick<Belief, 'danger' | 'patrolled'>): number {
+  let n = 0
+  for (const w of Object.keys(from.danger) as WorldId[]) {
+    const theirs = from.danger[w]
+    const mine = to.danger[w]
+    if (!mine || theirs.observed > mine.observed) {
+      to.danger[w] = { ...theirs }
+      n++
+    }
+  }
+  for (const w of Object.keys(from.patrolled) as WorldId[]) if ((to.patrolled[w] ?? -99) < from.patrolled[w]) to.patrolled[w] = from.patrolled[w]
+  return n
 }

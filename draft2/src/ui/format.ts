@@ -36,8 +36,10 @@ export function profileString(p: WorldProfile): string {
 export const TYPE_WORDS: Record<string, string> = {
   scout: 'scout',
   free_trader: 'free trader',
+  armed_trader: 'armed trader',
   far_trader: 'far trader',
   bulk_freighter: 'bulk freighter',
+  patrol_boat: 'patrol boat',
   corvette: 'corvette',
   frigate: 'frigate',
 }

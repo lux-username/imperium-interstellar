@@ -241,7 +241,7 @@ export interface StanceState {
  * stat line. The scout runs the packets and carries the mail; the rest
  * land with the free trader phase.
  */
-export type ShipType = 'scout' | 'free_trader' | 'far_trader' | 'bulk_freighter' | 'corvette' | 'frigate'
+export type ShipType = 'scout' | 'free_trader' | 'armed_trader' | 'far_trader' | 'bulk_freighter' | 'patrol_boat' | 'corvette' | 'frigate'
 
 export interface ShipClass {
   type: ShipType
@@ -259,8 +259,10 @@ export interface ShipClass {
 export const SHIP_CLASSES: Record<ShipType, ShipClass> = {
   scout: { type: 'scout', price: 30000, jump: 3, tanks: 2, hold: 2, guns: 0, crew: 4 },
   free_trader: { type: 'free_trader', price: 60000, jump: 2, tanks: 2, hold: 80, guns: 1, crew: 5 },
+  armed_trader: { type: 'armed_trader', price: 90000, jump: 2, tanks: 2, hold: 60, guns: 2, crew: 8 },
   far_trader: { type: 'far_trader', price: 80000, jump: 3, tanks: 2, hold: 60, guns: 1, crew: 5 },
   bulk_freighter: { type: 'bulk_freighter', price: 150000, jump: 2, tanks: 2, hold: 400, guns: 0, crew: 10 },
+  patrol_boat: { type: 'patrol_boat', price: 120000, jump: 2, tanks: 4, hold: 10, guns: 2, crew: 12 },
   corvette: { type: 'corvette', price: 200000, jump: 2, tanks: 4, hold: 10, guns: 3, crew: 20 },
   frigate: { type: 'frigate', price: 600000, jump: 3, tanks: 4, hold: 20, guns: 6, crew: 60 },
 }
@@ -326,8 +328,8 @@ export interface Ship {
 
 /** A hull's standing employment beyond trade. */
 export type Duty =
-  /** Cruising the empire's worlds, lying off each a week or two. `until`: when to move on. */
-  | { kind: 'patrol'; until: Week }
+  /** Cruising the empire's worlds, lying off each a week or two; or on station at a world sent as dangerous. `until`: when to move on, or the station's end. */
+  | { kind: 'patrol'; until: Week; station?: WorldId | null }
   /** An outlaw: lying off ports to take what comes, and selling it at a haven. */
   | { kind: 'raid'; haven: WorldId; until: Week; since?: Week }
   /** A guild bulk hauler on a line, or idle at the seat when `line` is null. `waited`: weeks spent at a loading end with too little to carry. */

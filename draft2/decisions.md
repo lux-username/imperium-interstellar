@@ -102,3 +102,10 @@
 
 - **No outlaws are born.** A trader turns robber when desperate (in arrears, or under twelve thousand with nothing worth carrying from where she stands) and brave enough (caution ≤ 0.4, greed ≥ 0.4): she lies off the port she is at, sells what she takes at the nearest slack-law port, and goes back to trade once her purse is mended or after three months with nothing taken. **Whom she robs**: never a friend, an enemy gladly, a countryman only if her loyalty is slight, nobody with more guns than hers, never a patrol. **The first hull taken burns her standing**: she is an outlaw thereafter, named in the port's news and hunted by the navies. (User's call.)
 - **Refusal** to talk costs 0.05 regard; **an undercut** costs a full point and is now the chief cause of enmity between captains, as intended.
+
+## 2026-10-31 — armed traders, danger, and boats on station
+
+- **Hulls**: an **armed trader** (two guns, sixty tons, ninety thousand) that a quarter of traders start with; a **patrol boat** (two guns) that the navies sail for now, the corvette (three) kept for later.
+- **Danger** is a number each captain holds per world, 0 to 1: word of a taking there within the month adds 0.6; every line of safe trade on the page eases it 0.05; a patrol seen in port eases it 0.25 and marks the world patrolled. Passed on in talk where newer. It weighs on a leg by the captain's caution (0.3 to 0.9 of it), by their guns (two guns fear half what none does), and halved if the place was seen patrolled within eight weeks.
+- **The navy, as a placeholder**: a boat at the seat is sent to the most dangerous world of the empire by what its captains hold and what the guild's factors have reported, lies off it twelve weeks, and comes home for a new assignment; with nothing dangerous known she cruises as before. The seat's news says where she was sent.
+- **Degrees**: nine words of standing, from sworn enemy to fast friend.

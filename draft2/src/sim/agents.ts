@@ -14,7 +14,7 @@ import { hexDistance } from './hex'
 import { buy, demandLevel, dutyRate, FINE_TIMES_DUTY, GOOD_SPECS, GOODS, inspectionChance, levelOf, marketScale, production, sell, supplyLevel, valueScale, type Good } from './economy'
 import { postNewsItem } from './news'
 import { havens } from './navy'
-import { learnTraffic } from './belief'
+import { learnTraffic, tellDanger } from './belief'
 import { deal, esteemOf, impressed, regardOf, relation, rollTraits, traitsOf } from './people'
 import { beliefOf, characterLocation } from './mail'
 import { officerCulture, personName, rollSex } from './names'
@@ -70,7 +70,9 @@ export function spawnTraders(state: GameState, taken: Set<string>): void {
       // About half carry the guild's ticket.
       if (roll(rng) >= 7) captain.guild = empire
       state.characters[cid] = captain
-      state.ships[sid] = newShip(rng, sid, roll(rng) >= 10 ? 'far_trader' : 'free_trader', empire, { kind: 'personal', character: cid }, id, taken, cid)
+      // Most sail free traders; some a far trader; a quarter an armed trader, dearer and smaller-holded, with two guns.
+      const r = roll(rng)
+      state.ships[sid] = newShip(rng, sid, r >= 11 ? 'far_trader' : r >= 8 ? 'armed_trader' : 'free_trader', empire, { kind: 'personal', character: cid }, id, taken, cid)
     }
   }
 }
@@ -140,11 +142,20 @@ function profileOf(state: GameState, belief: Belief, world: WorldId): WorldProfi
   return snap?.kind === 'world' ? snap.world.profile : state.worlds[world].profile
 }
 
-/** Whether the captain has heard of hulls taken in the approaches of a world lately. */
-function dangerous(state: GameState, belief: Belief, world: WorldId): boolean {
-  const snap = belief.worlds[world]?.snapshot
-  if (snap?.kind !== 'world') return false
-  return snap.world.news.some((n) => state.week - n.week <= 8 && /taken in the approaches/.test(n.text))
+/**
+ * How much the danger a captain holds a world's approaches to have weighs
+ * on a leg there: by their caution, by their guns (two guns shrug off
+ * what one gun fears), and by whether they believe the place patrolled
+ * lately. Returns the fraction of expected profit left.
+ */
+function dangerFactor(state: GameState, belief: Belief, captain: Character, ship: Ship, world: WorldId): number {
+  const d = belief.danger[world]?.level ?? 0
+  if (d <= 0) return 1
+  const t = traitsOf(captain)
+  const guns = SHIP_CLASSES[ship.type].guns
+  const patrolled = (belief.patrolled[world] ?? -99) >= state.week - 8
+  const fear = d * (0.3 + 0.6 * t.caution) * Math.max(0.2, 1 - guns / 4) * (patrolled ? 0.5 : 1)
+  return Math.max(0.1, 1 - fear)
 }
 
 /** Whether fuel can be had at a world, as the chart has it. */
@@ -261,8 +272,8 @@ export function bestPlan(state: GameState, captain: Character, ship: Ship, at: W
     }
     const cargo = taken.length > 0 ? lotsFor(state, belief, captain, here, to, left, spend, true).filter((l) => !avoid.some((x) => x.world === at && x.good === l.good)) : lots
     let profit = freightProfit + cargo.reduce((s, l) => s + l.profit, 0)
-    // Danger weighs on the careful far more than on the bold.
-    if (dangerous(state, belief, to)) profit = Math.round(profit * (0.9 - 0.6 * traitsOf(captain).caution))
+    // Danger weighs on the careful far more than on the bold, and on the unarmed more than the armed.
+    profit = Math.round(profit * dangerFactor(state, belief, captain, ship, to))
     // Every rival in port is after the same lots and the same markets; and every hull seen sailing for the same port
     // with the same goods these last two weeks got there first. A proud captain contests a rival's leg rather than yield it;
     // anyone else gives a rival a wider berth than a stranger.
@@ -823,6 +834,7 @@ export function tellAll(state: GameState, from: CharacterId, to: CharacterId): n
   let n = tellPrices(a.prices, b.prices, true, from)
   for (const w of Object.keys(a.traffic) as WorldId[]) n += learnTraffic(b, w, a.traffic[w].filter((k) => state.week - k.movement.week <= 12).map((k) => k.movement), 'heard', state.week)
   n += tellTies(state, from, to)
+  n += tellDanger(a, b)
   return n
 }
 

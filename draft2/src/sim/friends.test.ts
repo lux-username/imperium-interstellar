@@ -5,6 +5,7 @@ import { beginEncounter, joinEncounter, possibleAllies, resolveRound, settle, wi
 import { advanceWeek, askForRoute, newGame, PLAYER, playerShip } from './game'
 import { characterLocation } from './mail'
 import { deal, greeting, regardOf, relation } from './people'
+import { emptyBelief } from './belief'
 import { buildPlayerView } from './player'
 import { createRng } from './rng'
 import { newShip } from './ships'
@@ -76,7 +77,7 @@ describe('ways to make friends', () => {
     expect(honours(state, bold, asker.id, r3)).toBe(false)
     expect(routesToAvoid(state, friend)).toEqual([{ world, good: 'grain' }])
     // The bold one is seen buying it there: broken.
-    state.beliefs[asker.id] ??= { worlds: {}, ships: {}, people: {}, stances: {}, prices: {}, lines: {}, traffic: {}, ties: {} }
+    state.beliefs[asker.id] ??= emptyBelief()
     state.beliefs[asker.id].traffic[world] = [{ movement: { week: state.week + 1, ship: 's-b' as ShipId, shipName: 'B', type: 'free_trader', empire: bold.empire, captain: bold.id, captainName: 'bold', from: null, to: null, sold: [], bought: [{ good: 'grain', tons: 10, price: 1 }] }, source: 'heard', observed: state.week + 1 }]
     state.week += 1
     checkRequests(state)

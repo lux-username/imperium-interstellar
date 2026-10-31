@@ -7,7 +7,9 @@
  * what they believe.
  */
 import { GOODS, sell } from './economy'
+import { hexRoute } from './chart'
 import { hexDistance } from './hex'
+import { postNewsItem } from './news'
 import { beliefOf } from './mail'
 import { officerCulture, personName, rollSex } from './names'
 import { rollTraits } from './people'
@@ -30,6 +32,13 @@ function newCaptain(state: GameState, id: CharacterId, empire: EmpireId, ship: S
   return c
 }
 
+/** The next hop toward a world over any worlds within jump, or null if none. */
+function hopToward(state: GameState, from: WorldId, to: WorldId): WorldId | null {
+  if (from === to) return null
+  const path = hexRoute(state.worlds, from, to, 2)
+  return path && path.length > 1 ? path[1] : null
+}
+
 /** A world an outlaw can call home: a working port, slack law, not a seat. */
 export function havens(state: GameState): WorldId[] {
   const seats = new Set(Object.values(state.empires).map((e) => e.seat))
@@ -47,8 +56,8 @@ export function spawnHunters(state: GameState, taken: Set<string>): void {
       const sid = `s-navy-${n}` as ShipId
       const cid = `c-navy-${n}` as CharacterId
       n += 1
-      const ship = newShip(state.rng, sid, 'corvette', e.id, { kind: 'organisation', empire: e.id, arm: 'navy' }, e.seat, taken, cid)
-      ship.duty = { kind: 'patrol', until: state.week }
+      const ship = newShip(state.rng, sid, 'patrol_boat', e.id, { kind: 'organisation', empire: e.id, arm: 'navy' }, e.seat, taken, cid)
+      ship.duty = { kind: 'patrol', until: state.week, station: null }
       state.ships[sid] = ship
       state.characters[cid] = newCaptain(state, cid, e.id, sid, 2000)
     }
@@ -78,6 +87,30 @@ function hunters(state: GameState): { captain: Character; ship: Ship; at: WorldI
     out.push({ captain, ship, at: ship.location.world })
   }
   return out
+}
+
+/** Weeks a boat holds a station before coming home for a new one. */
+const STATION_WEEKS = 12
+
+/**
+ * What the navy knows of danger: what its captains hold, and what the
+ * guild's factors have reported to the seat. The most dangerous world of
+ * the empire that no boat is already on station at, if its danger is
+ * worth a boat.
+ */
+function mostDangerous(state: GameState, empire: EmpireId): WorldId | null {
+  const level: Record<string, number> = {}
+  for (const s of Object.values(state.ships)) {
+    if (s.duty?.kind !== 'patrol' || s.owner.kind !== 'organisation' || s.owner.empire !== empire || !s.captain) continue
+    const b = state.beliefs[s.captain]
+    if (!b) continue
+    for (const w of Object.keys(b.danger) as WorldId[]) level[w] = Math.max(level[w] ?? 0, b.danger[w].level)
+  }
+  const g = state.guilds[empire]
+  for (const w of Object.keys(g.danger) as WorldId[]) if (state.week - g.danger[w] <= 16) level[w] = Math.max(level[w] ?? 0, 0.6)
+  const onStation = new Set(Object.values(state.ships).filter((s) => s.duty?.kind === 'patrol' && s.owner.kind === 'organisation' && s.owner.empire === empire).map((s) => (s.duty as { station?: WorldId | null }).station))
+  const candidates = (Object.keys(level) as WorldId[]).filter((w) => state.worlds[w]?.empire === empire && level[w] >= 0.3 && !onStation.has(w)).sort((a, b) => level[b] - level[a] || (a < b ? -1 : 1))
+  return candidates[0] ?? null
 }
 
 /** A patrol's next world: one of her empire's within jump, the one she has seen least lately. */
@@ -114,11 +147,33 @@ export function huntersAct(state: GameState): void {
         if (n > 0) captain.purse += sell(here, lot.good, n, captain.empire, { smuggle: true }).credits
       }
     }
+    // A boat that has reached her station lies off at once, for the station's whole term.
+    if (duty.kind === 'patrol' && duty.station === at && !ship.lyingOff) {
+      ship.lyingOff = true
+      ship.duty = { ...duty, until: Math.max(duty.until, state.week + STATION_WEEKS) }
+      continue
+    }
     if (state.week < duty.until) continue
     if (ship.lyingOff || home) {
       // Time to move. A patrol goes to the next station; an outlaw with plunder goes home, else to a port worth watching.
       let to: WorldId | null = null
-      if (duty.kind === 'patrol') to = nextStation(state, captain, ship, at)
+      if (duty.kind === 'patrol') {
+        const station = duty.station ?? null
+        if (station && at === station && state.week >= duty.until) {
+          // Station held: home for a new assignment.
+          ship.duty = { kind: 'patrol', until: state.week + 1, station: null }
+          to = hopToward(state, at, state.empires[ship.empire].seat)
+        } else if (station && at !== station) {
+          to = hopToward(state, at, station)
+        } else if (!station && at === state.empires[ship.empire].seat) {
+          const worst = mostDangerous(state, ship.empire)
+          if (worst) {
+            ship.duty = { kind: 'patrol', until: state.week + STATION_WEEKS, station: worst }
+            to = hopToward(state, at, worst)
+            postNewsItem(state, at, `The ${ship.name} is sent to lie off ${state.worlds[worst].name}, where there has been trouble.`)
+          } else to = nextStation(state, captain, ship, at)
+        } else to = nextStation(state, captain, ship, at)
+      }
       else if (ship.hold.length > 0 || ship.damage >= 2 || ship.fuel <= 1) to = at === duty.haven ? null : duty.haven
       else {
         const within = reachable(state, at, SHIP_CLASSES[ship.type].jump).filter((w) => w !== duty.haven && state.worlds[w].profile.population > 0)
@@ -130,14 +185,17 @@ export function huntersAct(state: GameState): void {
       if (to && ship.fuel >= 1) {
         setCourse(state, ship, to)
         ship.lyingOff = false
-        ship.duty = { ...duty, until: state.week + 1 + (roll(state.rng) >= 8 ? 2 : 1) }
+        const d = ship.duty as Hunt
+        if (!(d.kind === 'patrol' && d.station)) ship.duty = { ...d, until: state.week + 1 + (roll(state.rng) >= 8 ? 2 : 1) }
       } else if (duty.kind === 'raid' && at === duty.haven) {
         ship.duty = { ...duty, until: state.week + 2 }
       }
     } else {
-      // Just arrived somewhere worth watching: lie off for the term.
+      // Just arrived somewhere worth watching: lie off for the term; on station, for the station's whole term.
       ship.lyingOff = true
-      ship.duty = { ...duty, until: state.week + 1 + (roll(state.rng) >= 8 ? 2 : 1) }
+      const d = ship.duty as Hunt
+      if (d.kind === 'patrol' && d.station === at) ship.duty = { ...d, until: Math.max(d.until, state.week + STATION_WEEKS) }
+      else ship.duty = { ...d, until: state.week + 1 + (roll(state.rng) >= 8 ? 2 : 1) }
     }
   }
 }

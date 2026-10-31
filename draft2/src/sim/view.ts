@@ -173,6 +173,10 @@ export interface Belief {
   traffic: Record<WorldId, TrafficKnown[]>
   /** Friendships and enmities between others the reader has been told of, keyed `a|b` for a's regard of b. */
   ties: Record<string, TieKnown>
+  /** How dangerous the reader holds each world's approaches, 0 to 1: raised by word of a taking, eased by word of safe trade and of patrols. */
+  danger: Record<WorldId, { level: number; observed: Week }>
+  /** The last week the reader saw or heard of a patrol at a world. */
+  patrolled: Record<WorldId, Week>
   /** Last-known price and stock per world and good, from the newest sight of that market. */
   prices: Record<WorldId, Partial<Record<Good, { price: number; stock: number; observed: Week; heard?: boolean; from?: CharacterId }>>>
 }

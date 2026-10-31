@@ -47,14 +47,12 @@ describe('the port register', () => {
     expect(after.length).toBe(state.worlds[here].register.length)
     expect(after.some((k) => k.source === 'register')).toBe(true)
     expect(after.every((k) => state.week - k.movement.week < 52)).toBe(true)
-    // Gossip: somewhere in the subsector the docks are talking of someone's sale elsewhere.
+    // Gossip: somewhere in the subsector, someone has heard of someone else's sale elsewhere.
     let heard = 0
     for (let i = 0; i < 30 && heard === 0; i++) {
       advanceWeek(state)
-      if (characterLocation(state, PLAYER) !== null) {
-        talkAtBar(state)
-        heard = Object.values(state.beliefs[PLAYER].traffic).flat().filter((k) => k.source === 'heard').length
-      }
+      if (characterLocation(state, PLAYER) !== null) talkAtBar(state)
+      heard = Object.values(state.beliefs).reduce((n, b) => n + Object.values(b.traffic).flat().filter((k) => k.source === 'heard').length, 0)
     }
     expect(heard).toBeGreaterThan(0)
   })

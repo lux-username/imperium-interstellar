@@ -182,11 +182,15 @@ export function proved(state: GameState, a: CharacterId, b: CharacterId, good: b
   r.trust = Math.max(0, Math.min(1, r.trust + (good ? 0.1 : -0.2)))
 }
 
-/** The word for how `a` stands to `b`. */
+/** The word for how `a` stands to `b`: nine degrees from sworn enemy to fast friend. */
 export function standingWord(regard: number): string {
+  if (regard >= 2.75) return 'fast friend'
   if (regard >= 2) return 'friend'
   if (regard >= 1) return 'well disposed'
-  if (regard > -1) return 'indifferent'
+  if (regard >= 0.3) return 'warm'
+  if (regard > -0.3) return 'indifferent'
+  if (regard > -1) return 'cool'
   if (regard > -2) return 'rival'
-  return 'enemy'
+  if (regard > -2.75) return 'enemy'
+  return 'sworn enemy'
 }
