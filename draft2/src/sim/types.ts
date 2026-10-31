@@ -262,7 +262,7 @@ export const SHIP_CLASSES: Record<ShipType, ShipClass> = {
   armed_trader: { type: 'armed_trader', price: 90000, jump: 2, tanks: 2, hold: 60, guns: 2, crew: 8 },
   far_trader: { type: 'far_trader', price: 80000, jump: 3, tanks: 2, hold: 60, guns: 1, crew: 5 },
   bulk_freighter: { type: 'bulk_freighter', price: 150000, jump: 2, tanks: 2, hold: 400, guns: 0, crew: 10 },
-  patrol_boat: { type: 'patrol_boat', price: 120000, jump: 2, tanks: 4, hold: 10, guns: 2, crew: 12 },
+  patrol_boat: { type: 'patrol_boat', price: 120000, jump: 3, tanks: 4, hold: 10, guns: 2, crew: 12 },
   corvette: { type: 'corvette', price: 200000, jump: 2, tanks: 4, hold: 10, guns: 3, crew: 20 },
   frigate: { type: 'frigate', price: 600000, jump: 3, tanks: 4, hold: 20, guns: 6, crew: 60 },
 }

@@ -47,14 +47,17 @@ describe('danger as captains hold it', () => {
     state.guilds[e.id].danger[target] = state.week
     let stationed = 0
     let home = false
+    let announced = false
     for (let i = 0; i < 40; i++) {
       advanceWeek(state)
+      if (state.worlds[e.seat].news.some((n) => /sent to lie off/.test(n.text))) announced = true
       const d = boat.duty as { kind: 'patrol'; station?: WorldId | null }
       if (d.station === target && boat.location.kind === 'world' && boat.location.world === target && boat.lyingOff) stationed++
       if (stationed > 0 && boat.location.kind === 'world' && boat.location.world === e.seat) home = true
     }
     expect(stationed).toBeGreaterThan(4)
     expect(home).toBe(true)
-    expect(state.worlds[e.seat].news.some((n) => /sent to lie off/.test(n.text))).toBe(true)
+    // The seat's news said so at the time; news is kept only eight weeks.
+    expect(announced).toBe(true)
   })
 })

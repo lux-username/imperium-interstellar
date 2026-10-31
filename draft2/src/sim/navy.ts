@@ -35,7 +35,7 @@ function newCaptain(state: GameState, id: CharacterId, empire: EmpireId, ship: S
 /** The next hop toward a world over any worlds within jump, or null if none. */
 function hopToward(state: GameState, from: WorldId, to: WorldId): WorldId | null {
   if (from === to) return null
-  const path = hexRoute(state.worlds, from, to, 2)
+  const path = hexRoute(state.worlds, from, to, 3)
   return path && path.length > 1 ? path[1] : null
 }
 

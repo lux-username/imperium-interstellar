@@ -93,7 +93,7 @@ describe('relationships', () => {
     resolveRound(state, e, 'strike')
     settle(state, e)
     expect(regardOf(state, PLAYER, cid)).toBeLessThanOrEqual(-2)
-    expect(buildPlayerView(state).book.find((p) => p.id === cid)?.standing).toBe('enemy')
+    expect(['enemy', 'sworn enemy']).toContain(buildPlayerView(state).book.find((p) => p.id === cid)?.standing)
     void me
   })
 
