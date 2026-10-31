@@ -206,3 +206,12 @@ describe('whole tons', () => {
     expect(Number.isInteger(state.characters[state.player].purse)).toBe(true)
   })
 })
+
+describe('whole tons everywhere', () => {
+  it('no dock ever holds a fraction of a ton after a year of trade', () => {
+    const state = newGame(27)
+    for (let i = 0; i < 52; i++) advanceWeek(state)
+    for (const w of Object.values(state.worlds)) for (const g of GOODS) expect(Number.isInteger(w.market[g].stock), `${w.name} ${g}`).toBe(true)
+    for (const c of Object.values(state.characters)) expect(Number.isInteger(c.purse), c.name).toBe(true)
+  })
+})

@@ -119,7 +119,8 @@ export function consumption(p: WorldProfile, good: Good): number {
   const d = demandLevel(p, good)
   const scale = marketScale(p) * valueScale(good)
   if (scale === 0) return 0
-  return Math.max(d > 0 ? 1 : 0, Math.round((d > 0 ? 6 * d : 0.5) * scale * 10) / 10)
+  // Whole tons: a world eats at least a ton a week of what it wants, and at least one of anything if it is big enough to.
+  return Math.max(d > 0 ? 1 : 0, Math.round((d > 0 ? 6 * d : 0.5) * scale))
 }
 
 /** The stock a world would like to hold: a month of what it makes and eats, and a little besides. */
@@ -176,7 +177,7 @@ export function tickMarket(rng: Rng, world: World): void {
   const p = world.profile
   for (const good of GOODS) {
     const e = world.market[good]
-    e.stock = Math.max(0, e.stock + production(p, good) - consumption(p, good))
+    e.stock = Math.max(0, Math.floor(e.stock) + production(p, good) - consumption(p, good))
     // What nobody makes or eats here slowly goes off, so a heap left by passing trade does not last forever.
     if (production(p, good) === 0) e.stock = Math.max(0, e.stock - Math.ceil(e.stock * 0.03))
     // A maker never heaps more than three months of output: the rest is not brought to the dock.
