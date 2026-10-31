@@ -11,10 +11,10 @@
  * alone, with no pile of mail behind it.
  */
 import { stanceKey, type Declaration, type EmpireId, type Week } from './types'
-import { isRumour, type Belief, type PersonSnapshot, type Report, type ShipSnapshot } from './view'
+import { isRumour, lineKey, type Belief, type PersonSnapshot, type Report, type ShipSnapshot } from './view'
 
 export function emptyBelief(): Belief {
-  return { worlds: {}, ships: {}, people: {}, stances: {}, prices: {} }
+  return { worlds: {}, ships: {}, people: {}, stances: {}, prices: {}, lines: {} }
 }
 
 /** A declaration enters where it is newer than what is held for its pair. Returns whether it did. */
@@ -52,6 +52,18 @@ export function absorb(belief: Belief, report: Report, asOf: Week = Number.POSIT
   for (const ship of world.ships) sight(ship, report.observed)
   for (const person of world.people) meet(person, report.observed)
   for (const d of world.board) if (d.week <= asOf) hear(belief, d)
+  // The lines through this port, as of this look: a line seen before that the port no longer shows is gone.
+  const seen = new Set(world.lines.map((l) => lineKey(l.from, l.to)))
+  for (const k of Object.keys(belief.lines)) {
+    const known = belief.lines[k]
+    const touches = known.line.from === world.id || known.line.to === world.id
+    if (touches && !seen.has(k) && report.observed >= known.observed) delete belief.lines[k]
+  }
+  for (const l of world.lines) {
+    const k = lineKey(l.from, l.to)
+    const known = belief.lines[k]
+    if (!known || report.observed >= known.observed) belief.lines[k] = { line: { ...l }, observed: report.observed, report: report.id }
+  }
   const goods = Object.keys(world.market) as (keyof typeof world.market)[]
   if (goods.length > 0) {
     const prices = (belief.prices[world.id] ??= {})

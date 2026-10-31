@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { codeStrength, isolationOf, priceOf, targetStock } from './economy'
 import { advanceWeek, newGame, PLAYER, playerShip } from './game'
+import { buildPlayerView } from './player'
 import { characterLocation } from './mail'
 import type { WorldId, WorldProfile } from './types'
 
@@ -69,5 +70,30 @@ describe('the lender\'s patience', () => {
     expect(me.body).toEqual({ kind: 'world', world: here })
     expect(me.debt).toBeNull()
     expect(state.worlds[here].news.some((n) => /lender/.test(n.text))).toBe(true)
+  })
+})
+
+describe('what a port says of the guild\'s lines', () => {
+  it('a line is seen at either end, kept in belief by its newest word, and dropped when a later look no longer shows it', () => {
+    const state = newGame(94)
+    const g = Object.values(state.guilds)[0]
+    const worlds = Object.keys(state.worlds).sort() as WorldId[]
+    const from = worlds[0]
+    const to = worlds[1]
+    g.lines = [{ from, to, reckoned: 9999, since: 0, earned: 0, haulers: 1 }]
+    const me = state.characters[PLAYER]
+    me.body = { kind: 'world', world: from }
+    const ship = playerShip(state)!
+    ship.location = { kind: 'world', world: from }
+    advanceWeek(state)
+    const key = `${from}|${to}`
+    expect(state.beliefs[PLAYER].lines[key]?.line.empire).toBe(g.empire)
+    expect(state.beliefs[PLAYER].lines[key].observed).toBe(state.week)
+    const view = buildPlayerView(state)
+    expect(Object.keys(view.known.lines)).toContain(key)
+    g.lines = []
+    g.planned = state.week
+    advanceWeek(state)
+    expect(state.beliefs[PLAYER].lines[key]).toBeUndefined()
   })
 })

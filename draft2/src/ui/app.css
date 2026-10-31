@@ -94,3 +94,8 @@ ul.log li:last-child { color: var(--fg); }
 .lot input.tons { width: 3.5em; padding: 1px 3px; font-size: 11px; }
 .lot .quote { font-size: 11px; white-space: nowrap; }
 button.tiny { padding: 0 4px; font-size: 10px; }
+.map .guildlines line { stroke: var(--none); stroke-width: 5; opacity: 0.35; stroke-linecap: round; }
+.map .guildlines .e0 line { stroke: var(--e0); }
+.map .guildlines .e1 line { stroke: var(--e1); }
+.map .guildlines .e2 line { stroke: var(--e2); }
+.map .guildlines .age { font-size: 7px; text-anchor: middle; fill: var(--muted); }

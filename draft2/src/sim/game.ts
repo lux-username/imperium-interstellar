@@ -110,6 +110,7 @@ function openingChart(state: GameState, reader: CharacterId, home: WorldId): voi
       snapshot.world.board = []
       snapshot.world.market = {}
       snapshot.world.news = []
+      snapshot.world.lines = []
     }
     const report: Report = {
       id: `r-chart-${hexLabel(world.hex)}` as ReportId,

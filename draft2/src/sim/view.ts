@@ -60,6 +60,21 @@ export interface WorldSnapshot {
   market: Partial<Record<Good, { price: number; stock: number }>>
   /** What the port was telling of lately. */
   news: { week: Week; text: string }[]
+  /** Bulk lines a guild runs through this port, as the factor will tell anyone: the two ends and whose guild. */
+  lines: LineSeen[]
+}
+
+export interface LineSeen {
+  from: WorldId
+  to: WorldId
+  empire: EmpireId
+}
+
+/** The newest word of a guild line: keyed by its two ends. */
+export interface LineKnown {
+  line: LineSeen
+  observed: Week
+  report: ReportId
 }
 
 export type Snapshot = { kind: 'world'; world: WorldSnapshot } | { kind: 'ship'; ship: ShipSnapshot }
@@ -148,6 +163,8 @@ export interface Belief {
   people: Record<CharacterId, PersonKnown>
   /** The newest declaration heard of for each pair of empires, keyed as `stanceKey`. */
   stances: Record<string, Declaration>
+  /** Guild bulk lines the reader has seen running, keyed by `lineKey`. */
+  lines: Record<string, LineKnown>
   /** Last-known price and stock per world and good, from the newest sight of that market. */
   prices: Record<WorldId, Partial<Record<Good, { price: number; stock: number; observed: Week; heard?: boolean }>>>
 }
@@ -272,4 +289,9 @@ export interface PlayerView {
   observations: Report[]
   /** Letters the player has sent, newest first. */
   outgoing: Dispatch[]
+}
+
+/** The key of a line between two worlds, whichever way round. */
+export function lineKey(a: WorldId, b: WorldId): string {
+  return a < b ? `${a}|${b}` : `${b}|${a}`
 }

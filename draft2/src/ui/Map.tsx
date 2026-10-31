@@ -75,6 +75,27 @@ export function Map({ view, selected, onSelect, overlay }: Props) {
         })}
       </g>
 
+      <g className="guildlines">
+        {Object.values(view.known.lines).map((k) => {
+          const a = view.chart[k.line.from]
+          const b = view.chart[k.line.to]
+          if (!a || !b) return null
+          const p = hexCenter(a.hex)
+          const q = hexCenter(b.hex)
+          return (
+            <g key={`${k.line.from}|${k.line.to}`} className={empireClass(view, k.line.empire)}>
+              <line x1={p.x} y1={p.y} x2={q.x} y2={q.y} />
+              <text x={(p.x + q.x) / 2} y={(p.y + q.y) / 2 - 4} className="age">
+                guild line · {ago(view.week, k.observed)}
+              </text>
+              <title>
+                {view.empires[k.line.empire]?.name} runs a bulk line {a.name} – {b.name}, seen {ago(view.week, k.observed)}
+              </title>
+            </g>
+          )
+        })}
+      </g>
+
       <g className="worlds">
         {Object.values(view.chart).map((entry) => {
           const { x, y } = hexCenter(entry.hex)

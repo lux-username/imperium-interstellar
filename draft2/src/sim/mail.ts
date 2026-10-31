@@ -93,7 +93,11 @@ export function snapshotWorld(state: GameState, world: World): Snapshot {
     .map((k) => copyDeclaration(world.board[k]))
   const market: WorldSnapshot['market'] = {}
   for (const g of Object.keys(world.market).sort() as (keyof typeof world.market)[]) market[g] = { price: world.market[g].price, stock: world.market[g].stock }
-  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, empire, ships, people: peopleAt(state, id), board, market, news: world.news.map((n) => ({ ...n })) } }
+  const lines: WorldSnapshot['lines'] = []
+  for (const guild of Object.values(state.guilds).sort((a, b) => (a.empire < b.empire ? -1 : 1))) {
+    for (const l of guild.lines) if (l.from === id || l.to === id) lines.push({ from: l.from, to: l.to, empire: guild.empire })
+  }
+  return { kind: 'world', world: { id, name, hex: { ...hex }, profile: { ...profile }, empire, ships, people: peopleAt(state, id), board, market, news: world.news.map((n) => ({ ...n })), lines } }
 }
 
 // ---------------------------------------------------------------------------
